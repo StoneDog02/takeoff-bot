@@ -1,0 +1,377 @@
+{
+  "scope": "framing",
+  "version": "1.0.0",
+  "purpose": "Defines the dependency-driven reading order for framing takeoffs. This file is used to orchestrate page bundle selection, extraction prompts, artifact creation, validation, and review item generation.",
+  "principles": [
+    "Read by information dependency, not sheet number.",
+    "Earlier artifacts feed later artifacts.",
+    "Later stages may refine or override earlier stages.",
+    "Missing or conflicting information creates review items instead of stopping the pipeline.",
+    "Calculators consume artifacts only; they do not decide which plan pages to inspect."
+  ],
+  "stages": [
+    {
+      "id": "project_metadata",
+      "sequence": 100,
+      "name": "Project Metadata",
+      "dependsOn": [],
+      "produces": ["project_metadata", "sheet_catalog"],
+      "extractionTargets": [
+        "project type",
+        "sheet index",
+        "discipline index",
+        "revision information",
+        "drawing scale information",
+        "legends",
+        "symbols",
+        "abbreviations"
+      ],
+      "reviewItemTriggers": [
+        "missing sheet index",
+        "missing scale information",
+        "unreadable sheet catalog",
+        "unknown project type",
+        "conflicting revision dates"
+      ],
+      "downstreamConsumers": [
+        "general_notes",
+        "foundation",
+        "floor_framing",
+        "wall_layout",
+        "wall_types",
+        "openings",
+        "roof_framing",
+        "structural_details",
+        "schedules",
+        "cross_validation"
+      ]
+    },
+    {
+      "id": "general_notes",
+      "sequence": 200,
+      "name": "General Notes",
+      "dependsOn": ["project_metadata"],
+      "produces": ["general_notes"],
+      "extractionTargets": [
+        "general construction notes",
+        "structural notes",
+        "material specifications",
+        "lumber requirements",
+        "fastener requirements",
+        "framing requirements",
+        "deferred submittals",
+        "applicable code references"
+      ],
+      "reviewItemTriggers": [
+        "missing structural notes",
+        "missing material specifications",
+        "conflicting general notes",
+        "unresolved code reference"
+      ],
+      "downstreamConsumers": [
+        "foundation",
+        "floor_framing",
+        "wall_layout",
+        "wall_types",
+        "openings",
+        "roof_framing",
+        "structural_details",
+        "schedules",
+        "cross_validation"
+      ]
+    },
+    {
+      "id": "foundation",
+      "sequence": 300,
+      "name": "Foundation Information",
+      "dependsOn": ["project_metadata", "general_notes"],
+      "produces": ["foundation"],
+      "extractionTargets": [
+        "foundation layout",
+        "bearing locations",
+        "footings",
+        "stem walls",
+        "slab edges",
+        "structural grid",
+        "anchor requirements"
+      ],
+      "reviewItemTriggers": [
+        "missing foundation plan",
+        "unresolved bearing line",
+        "missing anchor requirement",
+        "conflicting foundation dimensions"
+      ],
+      "downstreamConsumers": [
+        "floor_framing",
+        "wall_layout",
+        "wall_types",
+        "cross_validation"
+      ]
+    },
+    {
+      "id": "floor_framing",
+      "sequence": 400,
+      "name": "Floor Framing",
+      "dependsOn": ["project_metadata", "general_notes", "foundation"],
+      "produces": ["floor_framing"],
+      "extractionTargets": [
+        "floor joists",
+        "rim board",
+        "beams",
+        "girders",
+        "LVLs",
+        "PSLs",
+        "glulams",
+        "headers",
+        "hangers",
+        "blocking",
+        "floor sheathing"
+      ],
+      "reviewItemTriggers": [
+        "missing floor framing plan",
+        "unresolved joist size",
+        "unresolved joist spacing",
+        "unresolved beam callout",
+        "missing hanger requirement",
+        "conflicting floor framing notes"
+      ],
+      "downstreamConsumers": [
+        "wall_layout",
+        "wall_types",
+        "roof_framing",
+        "cross_validation"
+      ]
+    },
+    {
+      "id": "wall_layout",
+      "sequence": 500,
+      "name": "Wall Layout",
+      "dependsOn": [
+        "project_metadata",
+        "general_notes",
+        "foundation",
+        "floor_framing"
+      ],
+      "produces": ["wall_layout"],
+      "extractionTargets": [
+        "wall locations",
+        "wall identifiers",
+        "exterior walls",
+        "interior walls",
+        "bearing walls",
+        "non-bearing walls"
+      ],
+      "reviewItemTriggers": [
+        "missing wall layout",
+        "unresolved wall location",
+        "unresolved bearing condition",
+        "wall shown without identifier",
+        "conflicting wall dimensions"
+      ],
+      "downstreamConsumers": [
+        "wall_types",
+        "openings",
+        "roof_framing",
+        "cross_validation"
+      ]
+    },
+    {
+      "id": "wall_types",
+      "sequence": 600,
+      "name": "Wall Types",
+      "dependsOn": ["project_metadata", "general_notes", "wall_layout"],
+      "produces": ["wall_types"],
+      "extractionTargets": [
+        "wall type references",
+        "typical wall assemblies",
+        "stud size",
+        "stud spacing",
+        "plate requirements",
+        "fire-rated walls",
+        "shear walls",
+        "rated assemblies"
+      ],
+      "reviewItemTriggers": [
+        "wall type reference missing",
+        "wall type cannot be resolved",
+        "missing stud size",
+        "missing stud spacing",
+        "conflicting wall assembly information"
+      ],
+      "downstreamConsumers": [
+        "openings",
+        "structural_details",
+        "cross_validation"
+      ]
+    },
+    {
+      "id": "openings",
+      "sequence": 700,
+      "name": "Openings",
+      "dependsOn": [
+        "project_metadata",
+        "general_notes",
+        "wall_layout",
+        "wall_types"
+      ],
+      "produces": ["openings"],
+      "extractionTargets": [
+        "doors",
+        "windows",
+        "garage doors",
+        "cased openings",
+        "rough openings",
+        "header references",
+        "window schedules",
+        "door schedules"
+      ],
+      "reviewItemTriggers": [
+        "missing opening schedule",
+        "opening tag cannot be resolved",
+        "missing rough opening size",
+        "missing header reference",
+        "opening shown on plan but absent from schedule",
+        "schedule item absent from plan"
+      ],
+      "downstreamConsumers": [
+        "structural_details",
+        "schedules",
+        "cross_validation"
+      ]
+    },
+    {
+      "id": "roof_framing",
+      "sequence": 800,
+      "name": "Roof Framing",
+      "dependsOn": [
+        "project_metadata",
+        "general_notes",
+        "wall_layout",
+        "wall_types"
+      ],
+      "produces": ["roof_framing"],
+      "extractionTargets": [
+        "trusses",
+        "rafters",
+        "ridge beams",
+        "valleys",
+        "hips",
+        "roof blocking",
+        "outlookers",
+        "roof sheathing",
+        "roof framing notes"
+      ],
+      "reviewItemTriggers": [
+        "missing roof framing plan",
+        "unresolved truss layout",
+        "unresolved rafter size",
+        "unresolved ridge beam",
+        "missing roof sheathing requirement",
+        "conflicting roof framing notes"
+      ],
+      "downstreamConsumers": [
+        "structural_details",
+        "schedules",
+        "cross_validation"
+      ]
+    },
+    {
+      "id": "structural_details",
+      "sequence": 900,
+      "name": "Structural Details",
+      "dependsOn": [
+        "general_notes",
+        "floor_framing",
+        "wall_types",
+        "openings",
+        "roof_framing"
+      ],
+      "produces": ["structural_details"],
+      "extractionTargets": [
+        "connection details",
+        "typical framing details",
+        "header details",
+        "shear details",
+        "holdowns",
+        "blocking requirements",
+        "framing exceptions"
+      ],
+      "reviewItemTriggers": [
+        "referenced detail missing",
+        "detail callout cannot be resolved",
+        "conflicting detail information",
+        "missing connection requirement",
+        "missing holdown requirement"
+      ],
+      "downstreamConsumers": ["schedules", "cross_validation"]
+    },
+    {
+      "id": "schedules",
+      "sequence": 1000,
+      "name": "Schedules",
+      "dependsOn": [
+        "project_metadata",
+        "general_notes",
+        "openings",
+        "structural_details"
+      ],
+      "produces": ["schedules"],
+      "extractionTargets": [
+        "beam schedules",
+        "header schedules",
+        "column schedules",
+        "opening schedules",
+        "truss schedules",
+        "material schedules"
+      ],
+      "reviewItemTriggers": [
+        "referenced schedule missing",
+        "schedule item cannot be resolved",
+        "member shown on plan but absent from schedule",
+        "schedule item absent from plan",
+        "conflicting schedule value"
+      ],
+      "downstreamConsumers": ["cross_validation"]
+    },
+    {
+      "id": "cross_validation",
+      "sequence": 1100,
+      "name": "Cross Validation",
+      "dependsOn": [
+        "project_metadata",
+        "general_notes",
+        "foundation",
+        "floor_framing",
+        "wall_layout",
+        "wall_types",
+        "openings",
+        "roof_framing",
+        "structural_details",
+        "schedules"
+      ],
+      "produces": ["validation_results", "review_items"],
+      "extractionTargets": [],
+      "validationChecks": [
+        "all wall tags resolve to wall types",
+        "all opening tags resolve to schedules",
+        "all structural member callouts resolve",
+        "all referenced details exist",
+        "all referenced schedules exist",
+        "dimensions do not conflict across sheets",
+        "material specifications do not conflict across sheets"
+      ],
+      "reviewItemTriggers": [
+        "unresolved wall tag",
+        "unresolved wall type",
+        "unresolved opening",
+        "unresolved structural member",
+        "missing referenced detail",
+        "missing referenced schedule",
+        "conflicting dimensions",
+        "conflicting notes",
+        "low confidence extraction"
+      ],
+      "downstreamConsumers": ["framing_calculators", "final_takeoff"]
+    }
+  ]
+}
