@@ -124,12 +124,36 @@ describe("framing domain contracts", () => {
         scopeName: "framing",
         executionMode: "mock",
         status: "completed",
+        wallIds: ["W-001"],
+        wallSegmentIds: ["WS-001"],
+        openingIds: ["O-014"],
+        structuralMemberIds: ["SM-008"],
+        floorFramingSystemIds: ["FFS-001"],
+        floorFramingAreaIds: ["FFA-001"],
+        roofFramingSystemIds: ["RFS-001"],
+        roofPlaneIds: ["RP-001"],
+        sheathingSystemIds: ["SHS-001"],
+        sheathingAreaIds: ["SHA-001"],
+        blockingIds: ["BLK-001"],
+        connectorIds: ["CN-001"],
+        hardwareIds: ["HW-001"],
+        fastenerIds: ["FS-001"],
         confidenceEvaluationId: "CE-001",
         summary: {
           wallCount: 1,
           wallSegmentCount: 1,
-          openingCount: 0,
-          structuralMemberCount: 0,
+          openingCount: 1,
+          structuralMemberCount: 1,
+          floorFramingSystemCount: 1,
+          floorFramingAreaCount: 1,
+          roofFramingSystemCount: 1,
+          roofPlaneCount: 1,
+          sheathingSystemCount: 1,
+          sheathingAreaCount: 1,
+          blockingCount: 1,
+          connectorCount: 1,
+          hardwareCount: 1,
+          fastenerCount: 1,
           materialLineItemCount: 1,
           reviewItemCount: 0,
           validationIssueCount: 0,
@@ -142,5 +166,24 @@ describe("framing domain contracts", () => {
     });
 
     assert.equal(artifact.artifactType, "final-framing-takeoff");
+    assert.deepEqual(artifact.payload.floorFramingSystemIds, ["FFS-001"]);
+    assert.deepEqual(artifact.payload.floorFramingAreaIds, ["FFA-001"]);
+    assert.deepEqual(artifact.payload.roofFramingSystemIds, ["RFS-001"]);
+    assert.deepEqual(artifact.payload.roofPlaneIds, ["RP-001"]);
+    assert.deepEqual(artifact.payload.sheathingSystemIds, ["SHS-001"]);
+    assert.deepEqual(artifact.payload.sheathingAreaIds, ["SHA-001"]);
+    assert.deepEqual(artifact.payload.blockingIds, ["BLK-001"]);
+    assert.deepEqual(artifact.payload.connectorIds, ["CN-001"]);
+    assert.deepEqual(artifact.payload.hardwareIds, ["HW-001"]);
+    assert.deepEqual(artifact.payload.fastenerIds, ["FS-001"]);
+    assert.equal(artifact.payload.summary.floorFramingSystemCount, 1);
+    assert.equal(artifact.payload.summary.roofPlaneCount, 1);
+    assert.equal(artifact.payload.summary.sheathingAreaCount, 1);
+    assert.equal(artifact.payload.summary.blockingCount, 1);
+    assert.equal(artifact.payload.summary.connectorCount, 1);
+    assert.equal(artifact.payload.summary.hardwareCount, 1);
+    assert.equal(artifact.payload.summary.fastenerCount, 1);
+    assert.equal("floorFramingSystems" in artifact.payload, false);
+    assert.equal("connectors" in artifact.payload, false);
   });
 });
