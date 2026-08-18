@@ -5,30 +5,36 @@ import type {
   ArtifactEnvelope,
   ArtifactProducer,
 } from "../../../core/schemas/artifact-envelope.schema.js";
-import { evidenceIdSchema } from "../../../core/schemas/identity.schema.js";
+import { evidenceIdSchema, type PipelineRunId } from "../../../core/schemas/identity.schema.js";
 import { generateArtifactId } from "../../../core/utils/ids.js";
 import { extractFramingEvidenceViaClaude } from "../prompts/extractFramingEvidence.js";
 import {
   buildingAssembliesArtifactSchema,
+  confidenceArtifactSchema,
   extractedFramingEvidenceArtifactSchema,
   extractedFramingEvidencePayloadSchema,
   finalFramingTakeoffArtifactSchema,
   framingCalculationsArtifactSchema,
-  framingObjectsArtifactSchema,
+  openingsArtifactSchema,
   pageClassificationArtifactSchema,
   planReadingOrderArtifactSchema,
-  validationConfidenceArtifactSchema,
+  structuralMembersArtifactSchema,
+  validationArtifactSchema,
   verifiedPlanSetArtifactSchema,
   wallFramingArtifactSchema,
   type BuildingAssembliesPayload,
+  type ConfidencePayload,
   type ExtractedFramingEvidencePayload,
   type FramingCalculationsPayload,
-  type FramingObjectsPayload,
+  type OpeningsPayload,
   type PageClassificationPayload,
   type PlanReadingOrderPayload,
-  type ValidationConfidencePayload,
+  type StructuralMembersPayload,
+  type ValidationPayload,
   type WallFramingPayload,
 } from "../schemas/framing-artifacts.schema.js";
+import { coordinateFramingConfidence } from "../confidence/confidence-coordinator.js";
+import { coordinateFramingValidation } from "../validators/validation-coordinator.js";
 
 const SCHEMA_VERSION = "1.0.0";
 const ENGINE_VERSION = "0.1.0";
@@ -395,28 +401,38 @@ const stages: PipelineStage[] = [
   },
   {
     order: 7,
-    name: "framingObjects",
+    name: "openings",
     async run(context) {
-      const payload: FramingObjectsPayload = {
+      const payload: OpeningsPayload = {
         openings: [],
-        structuralMembers: [],
-        subsystemNotes: [
-          "The explicit mock fixture states that W-001 has no openings.",
-          "No structural member facts were present; none were invented.",
-          "Floor, roof, sheathing, blocking, and hardware produced no resolved objects from the fixture.",
-        ],
       };
       return createArtifact(
         context,
         7,
-        framingObjectsArtifactSchema,
-        "framing-objects",
+        openingsArtifactSchema,
+        "openings",
         payload,
       );
     },
   },
   {
     order: 8,
+    name: "structuralMembers",
+    async run(context) {
+      const payload: StructuralMembersPayload = {
+        structuralMembers: [],
+      };
+      return createArtifact(
+        context,
+        8,
+        structuralMembersArtifactSchema,
+        "structural-members",
+        payload,
+      );
+    },
+  },
+  {
+    order: 9,
     name: "calculations",
     async run(context) {
       const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
@@ -461,7 +477,7 @@ const stages: PipelineStage[] = [
 
       return createArtifact(
         context,
-        8,
+        9,
         framingCalculationsArtifactSchema,
         "framing-calculations",
         payload,
@@ -469,98 +485,88 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 9,
-    name: "validationConfidence",
+    order: 10,
+    name: "validation",
+    async run(context) {
+      const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
+      const openings = getPayload<OpeningsPayload>(context, "openings");
+      const structuralMembers = getPayload<StructuralMembersPayload>(
+        context,
+        "structuralMembers",
+      );
+      const validationPayload = coordinateFramingValidation({
+        wallFraming: wallPayload,
+        openings,
+        structuralMembers,
+      });
+
+      return createArtifact(
+        context,
+        10,
+        validationArtifactSchema,
+        "validation",
+        validationPayload,
+      );
+    },
+  },
+  {
+    order: 11,
+    name: "confidence",
     async run(context) {
       const extracted = getPayload<ExtractedFramingEvidencePayload>(
         context,
         "extractedEvidence",
       );
-      const evidenceIds = extracted.evidence.map((evidence) => evidence.id);
-      const payload = {
-        validationIssues: [],
-        validationResults: [
-          {
-            id: "VR-W001-ASSEMBLY",
-            ruleId: "wall.assembly.resolved",
-            level: "object",
-            target: { kind: "object", objectId: "W-001", objectType: "building-wall" },
-            outcome: "passed",
-            explanation: "Required wall assembly properties are resolved.",
-            validationIssueIds: [],
-            evidenceIds,
-          },
-          {
-            id: "VR-W001-GEOMETRY",
-            ruleId: "wall.geometry.resolved",
-            level: "calculation",
-            target: { kind: "object", objectId: "WS-001", objectType: "wall-segment" },
-            outcome: "passed",
-            explanation: "Wall length is resolved for deterministic calculation.",
-            validationIssueIds: [],
-            evidenceIds,
-          },
-        ],
-        reviewItems: [],
-        confidenceEvaluations: [
-          {
-            id: "CE-TAKEOFF-001",
-            target: {
-              kind: "takeoff",
-              pipelineRunId: context.pipelineRunId,
-              scopeName: "framing",
-            },
-            evidence: {
-              label: "high",
-              explanation: context.useMockAi
-                ? "All demo values are explicit."
-                : "Live extraction completed; interim fixture resolution remains in place.",
-            },
-            resolution: { label: "high", explanation: "No assumptions were used." },
-            validation: { label: "high", explanation: "All implemented rules passed." },
-            overallLabel: "high",
-            completion: { status: "complete", percentage: 100, completedItems: 1, totalItems: 1 },
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
-            quantityImpactWeight: "high",
-            explanation: context.useMockAi
-              ? "The explicit mock wall fixture is fully resolved and calculated."
-              : "Live evidence was extracted; wall quantities still use interim fixture resolution.",
-            evidenceIds,
-            assumptionIds: [],
-            validationIssueIds: [],
-            validationResultIds: ["VR-W001-ASSEMBLY", "VR-W001-GEOMETRY"],
-            reviewItemIds: [],
-            userDecisionIds: [],
-          },
-        ],
-      };
+      const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
+      const openings = getPayload<OpeningsPayload>(context, "openings");
+      const structuralMembers = getPayload<StructuralMembersPayload>(
+        context,
+        "structuralMembers",
+      );
+      const validation = getPayload<ValidationPayload>(context, "validation");
+      const payload = coordinateFramingConfidence({
+        pipelineRunId: context.pipelineRunId as PipelineRunId,
+        scopeName: context.scopeName,
+        validation,
+        wallFraming: wallPayload,
+        openings,
+        structuralMembers,
+        evidenceIds: extracted.evidence.map((evidence) => evidence.id),
+        useExplicitFixture: context.useMockAi,
+      });
 
       return createArtifact(
         context,
-        9,
-        validationConfidenceArtifactSchema,
-        "validation-confidence",
+        11,
+        confidenceArtifactSchema,
+        "confidence",
         payload,
       );
     },
   },
   {
-    order: 10,
+    order: 12,
     name: "report",
     async run(context) {
       const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
-      const objects = getPayload<FramingObjectsPayload>(context, "framingObjects");
+      const openings = getPayload<OpeningsPayload>(context, "openings");
+      const structuralMembers = getPayload<StructuralMembersPayload>(
+        context,
+        "structuralMembers",
+      );
       const calculations = getPayload<FramingCalculationsPayload>(context, "calculations");
-      const validation = getPayload<ValidationConfidencePayload>(context, "validationConfidence");
-      const confidence = validation.confidenceEvaluations[0];
+      const validation = getPayload<ValidationPayload>(context, "validation");
+      const confidencePayload = getPayload<ConfidencePayload>(context, "confidence");
+      const confidence = confidencePayload.confidenceEvaluations.find(
+        (evaluation) => evaluation.target.kind === "takeoff",
+      );
       if (!confidence) {
         throw new Error("Takeoff confidence evaluation is missing.");
       }
 
       return createArtifact(
         context,
-        10,
+        12,
         finalFramingTakeoffArtifactSchema,
         "final-framing-takeoff",
         {
@@ -570,8 +576,10 @@ const stages: PipelineStage[] = [
           status: "completed",
           wallIds: wallPayload.walls.map((wall) => wall.id),
           wallSegmentIds: wallPayload.segments.map((segment) => segment.id),
-          openingIds: objects.openings.map((opening) => opening.id),
-          structuralMemberIds: objects.structuralMembers.map((member) => member.id),
+          openingIds: openings.openings.map((opening) => opening.id),
+          structuralMemberIds: structuralMembers.structuralMembers.map(
+            (member) => member.id,
+          ),
           materials: calculations.materials,
           reviewItemIds: validation.reviewItems.map((item) => item.id),
           validationIssueIds: validation.validationIssues.map((issue) => issue.id),
@@ -579,8 +587,8 @@ const stages: PipelineStage[] = [
           summary: {
             wallCount: wallPayload.walls.length,
             wallSegmentCount: wallPayload.segments.length,
-            openingCount: objects.openings.length,
-            structuralMemberCount: objects.structuralMembers.length,
+            openingCount: openings.openings.length,
+            structuralMemberCount: structuralMembers.structuralMembers.length,
             materialLineItemCount: calculations.materials.length,
             reviewItemCount: validation.reviewItems.length,
             validationIssueCount: validation.validationIssues.length,
