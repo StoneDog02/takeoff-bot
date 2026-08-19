@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Takeoff Bot — Framing Review</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <h1>Framing Takeoff Review</h1>
+        <p class="subtitle">Thin vertical slice — engine-backed review workflow</p>
+      </div>
+      <div class="header-actions">
+        <button id="run-takeoff-btn" type="button">Run Takeoff</button>
+      </div>
+    </header>
+
+    <section id="status-banner" class="status-banner hidden"></section>
+
+    <main id="workspace" class="workspace hidden">
+      <section class="panel run-meta">
+        <h2>Run</h2>
+        <dl id="run-meta"></dl>
+      </section>
+
+      <section class="panel materials-panel">
+        <h2>Material Takeoff</h2>
+        <p id="material-summary" class="panel-summary"></p>
+        <div class="table-wrap">
+          <table id="materials-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit</th>
+                <th>Source Objects</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel review-panel">
+        <h2>Review Items</h2>
+        <p id="review-summary" class="panel-summary"></p>
+        <ul id="review-list" class="review-list"></ul>
+      </section>
+
+      <section class="panel detail-panel">
+        <h2>Review Detail</h2>
+        <div id="review-detail" class="review-detail empty">
+          Select a review item to inspect provenance and impact.
+        </div>
+      </section>
+    </main>
+
+    <section id="empty-state" class="empty-state">
+      <p>Run the demo takeoff to load engine-derived materials and review items.</p>
+    </section>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

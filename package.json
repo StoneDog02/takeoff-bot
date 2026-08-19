@@ -6,8 +6,10 @@
   "main": "dist/app.js",
   "scripts": {
     "dev": "tsx src/app.ts",
+    "ui:dev": "tsx src/ui/startUiServer.ts",
     "build": "tsc",
     "start": "node dist/app.js",
+    "ui": "node dist/ui/startUiServer.js",
     "test": "tsx --test tests/**/*.test.ts",
     "test:live-framing": "TAKEOFF_LIVE_CLAUDE=1 tsx --test tests/integration/framing.live-claude.test.ts",
     "test:live-framing-two-wall": "TAKEOFF_LIVE_CLAUDE=1 tsx --test tests/integration/framing.live-claude-two-wall.test.ts",

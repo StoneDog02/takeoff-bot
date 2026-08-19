@@ -12,6 +12,14 @@ export function generatePipelineRunId(): string {
   return `run-${compactUuid()}`;
 }
 
+export function generateUserDecisionId(): string {
+  return `UD-${compactUuid()}`;
+}
+
+export function generateUiSessionId(): string {
+  return `ui-session-${compactUuid()}`;
+}
+
 export function generateArtifactId(order: number): string {
   return `artifact-${String(order).padStart(2, "0")}-${compactUuid()}`;
 }
