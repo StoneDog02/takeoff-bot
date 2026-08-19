@@ -9,6 +9,7 @@ import {
   deriveValidationConfidence,
 } from "./deriveDimensions.js";
 import { createConfidenceEvaluationId, createTakeoffConfidenceTarget } from "./ids.js";
+import { collectUserDecisionIdsFromEvaluations } from "./collectUserDecisionIds.js";
 
 type EvaluateTakeoffConfidenceInput = {
   pipelineRunId: PipelineRunId;
@@ -61,7 +62,7 @@ export function evaluateTakeoffConfidence(
     : {
         label: "medium" as const,
         explanation:
-          "Live extraction completed; interim fixture resolution remains in place.",
+          "Live extraction completed; walls were resolved from extracted evidence.",
       };
 
   const resolution = input.useExplicitFixture
@@ -71,7 +72,7 @@ export function evaluateTakeoffConfidence(
       }
     : {
         label: "medium" as const,
-        explanation: "Some values still rely on interim fixture resolution.",
+        explanation: "Some values remain unresolved after evidence resolution.",
       };
 
   const highImpactBlocked = input.objectEvaluations.some(
@@ -113,8 +114,8 @@ export function evaluateTakeoffConfidence(
       overallLabel === "blocked"
         ? "Validation blocked one or more high-impact quantities before final takeoff."
         : input.useExplicitFixture
-          ? "The explicit mock wall fixture is fully resolved and calculated."
-          : "Live evidence was extracted; wall quantities still use interim fixture resolution.",
+          ? "The mock wall was resolved from extracted evidence and calculated without assumptions."
+          : "Live evidence was extracted and resolved; calculated quantities use only resolved inputs.",
     evidenceIds: input.evidenceIds,
     assumptionIds: [],
     validationIssueIds: input.validation.validationIssues.map((issue) => issue.id),
@@ -122,6 +123,6 @@ export function evaluateTakeoffConfidence(
       (result) => result.id,
     ),
     reviewItemIds: input.validation.reviewItems.map((item) => item.id),
-    userDecisionIds: [],
+    userDecisionIds: collectUserDecisionIdsFromEvaluations(input.objectEvaluations),
   });
 }

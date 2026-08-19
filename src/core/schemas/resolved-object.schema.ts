@@ -5,6 +5,7 @@ import {
   evidenceIdSchema,
   objectIdSchema,
   reviewItemIdSchema,
+  userDecisionIdSchema,
   validationIssueIdSchema,
 } from "./identity.schema.js";
 import {
@@ -47,6 +48,7 @@ export const propertyResolutionTraceSchema = z.object({
 
   evidenceIds: z.array(evidenceIdSchema).default([]),
   assumptionIds: z.array(assumptionIdSchema).default([]),
+  userDecisionIds: z.array(userDecisionIdSchema).default([]),
   validationIssueIds: z
     .array(validationIssueIdSchema)
     .default([]),

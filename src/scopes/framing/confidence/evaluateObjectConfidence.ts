@@ -22,6 +22,7 @@ import {
   deriveValidationConfidence,
   quantityImpactWeightForObjectType,
 } from "./deriveDimensions.js";
+import { collectUserDecisionIds } from "./collectUserDecisionIds.js";
 import { createConfidenceEvaluationId, createObjectConfidenceTarget } from "./ids.js";
 
 export type ConfidenceObjectInput = {
@@ -99,6 +100,6 @@ export function evaluateObjectConfidence(
     validationIssueIds: issues.map((issue) => issue.id),
     validationResultIds: results.map((result) => result.id),
     reviewItemIds: reviewItems.map((item) => item.id),
-    userDecisionIds: [],
+    userDecisionIds: collectUserDecisionIds(object.resolutionTraces),
   });
 }

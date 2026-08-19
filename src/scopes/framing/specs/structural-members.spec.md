@@ -116,7 +116,7 @@ Construction behavior is defined by these knowledge files and must not be duplic
 
 ### Calculators
 
-- Structural Member Resolver
+- Structural Members Calculator
 
 ### Claude Prompts
 
@@ -133,6 +133,7 @@ Implementation is complete when the subsystem can:
 - Produce the Structural Members Artifact
 - Integrate correctly with upstream and downstream subsystem dependencies
 - Preserve deterministic execution through artifacts
+- Produce deterministic net structural member material quantities from resolved Construction Brain inputs
 - Surface review items rather than unresolved guesses
 - Preserve references to associated connectors and hardware without owning those objects
 

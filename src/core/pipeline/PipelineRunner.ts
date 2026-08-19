@@ -7,6 +7,7 @@ import type {
   PipelineRunResult,
   PipelineStage,
   PipelineStageResult,
+  UserDecisionRunInput,
 } from "./types.js";
 
 export interface PipelineRunnerInput {
@@ -16,6 +17,7 @@ export interface PipelineRunnerInput {
   planIndex: PlanIndex;
   useMockAi: boolean;
   stages: PipelineStage[];
+  userDecisionRunInput?: UserDecisionRunInput;
 }
 
 export class PipelineRunner {
@@ -49,6 +51,7 @@ export class PipelineRunner {
           planIndex: input.planIndex,
           useMockAi: input.useMockAi,
           completedArtifacts,
+          userDecisionRunInput: input.userDecisionRunInput,
         });
 
         const artifactPath = await this.artifactStore.write(

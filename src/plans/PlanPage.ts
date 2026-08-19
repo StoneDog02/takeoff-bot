@@ -2,7 +2,7 @@ export interface PlanPage {
   pageNumber: number;
   sheetId: string | null;
   label: string | null;
-  /** Placeholder text until real PDF parsing is implemented */
+  /** Text-layer content extracted from the PDF page */
   textContent: string;
 }
 

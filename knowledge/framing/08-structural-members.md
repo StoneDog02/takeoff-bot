@@ -716,4 +716,97 @@ Create review items when:
 - Do not infer member size from line weight alone.
 - Missing structural information creates review items, not guessed quantities.
 
+---
+
+# Net Structural Member Material Quantity
+
+This rule defines net physical material linear footage for **one resolved Structural Member object**.
+
+The calculator consumes already-resolved properties. It does not determine quantity, ply count, size, material type, or length.
+
+This is net construction quantity. It is not waste, purchasing optimization, or a complete framing package around the member.
+
+## Quantity
+
+`quantity` is the number of identical resolved member assemblies or occurrences represented by that Structural Member object.
+
+Do not infer `quantity` from the number of callouts or repeated symbols unless resolution has already established that count.
+
+## Ply count
+
+`plyCount` is the number of physical material plies composing **one** explicitly built-up member assembly.
+
+A member is explicitly built-up when its `category` is `built-up-member`.
+
+For an explicitly built-up member, resolved `plyCount` is required to calculate material linear footage.
+
+For a non-built-up / single-piece member, `plyCount` is not required. Null means not applicable, not an assumed value of `1`.
+
+Never substitute `plyCount ?? 1`.
+
+## Length
+
+This quantity uses the member's resolved `lengthFeet` as the linear dimension of one assembly, in feet.
+
+That stored length is the span or height already resolved onto the object. This rule does not convert or invent height separately from `lengthFeet`.
+
+## Net material linear footage
+
+Units: feet of physical material.
+
+Single-piece / non-built-up member:
+
+`netMaterialLinearFeet = lengthFeet × quantity`
+
+Explicitly built-up member:
+
+`netMaterialLinearFeet = lengthFeet × quantity × plyCount`
+
+This value is unrounded net material linear footage, before waste or purchasing-length rounding.
+
+## Output
+
+Emit **linear-foot** material output only.
+
+Do not emit a second `each` line item for assembly occurrence count. `quantity` remains an input to the linear-footage calculation.
+
+## Material identity
+
+Classify the material only from resolved properties:
+
+- `category`
+- `materialType`
+- `size`
+
+Do not infer engineered material type from dimensions.
+
+## Skip behavior
+
+Net material linear footage cannot be calculated when any required input is unresolved:
+
+- `lengthFeet`
+- `quantity`
+- required material identity (`category` other than unknown, `materialType`, and `size`)
+- `plyCount` when the member is explicitly built-up
+
+A non-built-up member does not fail merely because `plyCount` is null or not applicable.
+
+## Exclusions
+
+This rule does not calculate or infer:
+
+- Connectors
+- Hardware
+- Fasteners
+- Bearing requirements
+- Opening-derived framing extras
+- Engineered member sizing
+- Missing ply count
+- Waste
+- Stock lengths
+- Purchasing optimization
+- Pack quantities
+
+---
+
 This file is construction knowledge for Claude extraction context. Do not create a JSON companion.

@@ -111,7 +111,7 @@ Construction behavior is defined by these knowledge files and must not be duplic
 
 ### Calculators
 
-- Wall Resolver
+- Wall Framing Calculator
 
 ### Claude Prompts
 
@@ -129,6 +129,7 @@ Implementation is complete when the subsystem can:
 - Produce the Wall Framing Artifact
 - Integrate correctly with upstream and downstream subsystem dependencies
 - Preserve deterministic execution through artifacts
+- Produce deterministic net wall stud and plate quantities from resolved Construction Brain inputs
 - Surface review items rather than unresolved guesses
 
 ---

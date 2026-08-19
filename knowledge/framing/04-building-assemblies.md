@@ -612,6 +612,159 @@ Create review items for unresolved conflicts.
 
 ---
 
+# Baseline Regularly Spaced Wall Stud Count
+
+This rule defines the baseline regularly spaced stud count for **one wall segment**.
+
+It is not a complete wall stud takeoff.
+
+## Required resolved inputs
+
+- Segment `lengthFeet`
+- Wall `assembly.studSpacingInches`
+
+Height is not required for this count.
+
+Stud size classifies the material. It does not change the baseline count.
+
+If segment length or stud spacing is unresolved, this quantity cannot be calculated. Do not guess spacing.
+
+## Formula
+
+Convert length to inches:
+
+`lengthInches = lengthFeet × 12`
+
+Then:
+
+`spaces = lengthInches / studSpacingInches`
+
+`studCount = ceil(spaces) + 1`
+
+Whole-piece rounding policy for stud counts is defined in `10-assumptions.md`.
+
+## Layout
+
+- Count both endpoints of the segment.
+- Place intermediate studs at the specified on-center spacing from the start of the segment.
+- Always count the far-end stud.
+- The final bay may therefore be shorter than the specified spacing.
+
+## Exclusions
+
+This baseline count does not include:
+
+- Opening deductions
+- King studs
+- Jack studs
+- Cripple studs
+- Corner or intersection extras
+- Shared-corner deductions
+- Multi-stud packs or posts
+- Shear, braced, or other special-condition studs
+- Waste
+- Purchasing or pack rounding
+- Stud piece-length determination
+
+Opening-derived and special-condition members belong to their own assembly and calculation rules.
+
+---
+
+# Net Wall Plate Linear Footage
+
+This rule defines net plate linear footage for **one wall segment**.
+
+In this Chapter 5 context, “net” means a deterministic construction quantity before waste or purchasing conversion. It is not a finished purchasing quantity and is not automatically net of openings.
+
+The calculator consumes already-resolved segment length and wall plate count. It does not determine plate count.
+
+## Required resolved inputs
+
+- Segment `lengthFeet`
+- Wall `assembly.plateCount`
+
+If either input is unresolved, this quantity cannot be calculated. Do not guess `plateCount`.
+
+Height is not required for this quantity.
+
+## Formula
+
+`plateLinearFeet = lengthFeet × plateCount`
+
+Units: linear feet.
+
+Do not round to stock lengths.
+
+## Exclusions
+
+This baseline quantity does not include:
+
+- Door or opening width deductions
+- Changes to plate count because of openings
+- Special plates
+- Laps or splice allowances
+- Corner or intersection extras
+- Waste
+- Purchasing or pack rounding
+
+Opening-related plate cuts or extras require separate explicit authority later.
+
+---
+
+# Net Sheathing Coverage Quantity
+
+This rule defines sheathing coverage square footage for **one Sheathing Area**.
+
+In this Chapter 5 context, “net” means a deterministic construction quantity before waste or purchasing conversion. It does not mean the value is automatically net of all openings.
+
+The calculator consumes already-resolved `areaSquareFeet`. It does not determine coverage geometry and does not subtract openings.
+
+## Coverage
+
+`coverageSquareFeet = areaSquareFeet`
+
+`areaSquareFeet` is the resolved sheathing coverage area, in square feet, for that Sheathing Area.
+
+If openings were excluded from the coverage geometry, that occurred during resolution and is represented through provenance, resolution traces, and assumptions.
+
+`openingIds` are relationship and traceability references. They are not calculator quantity inputs.
+
+Unresolved opening relationships do not by themselves block coverage square footage.
+
+## Application
+
+Application (`wall`, `floor`, or `roof`) classifies the material. It does not change square-footage arithmetic.
+
+## Material identity
+
+A material line requires resolved:
+
+- Application
+- Panel type
+- Thickness
+
+Grade, span rating, exposure rating, and edge treatment remain optional. Include them only when resolved. Do not infer panel type or thickness.
+
+## Output
+
+Emit **square-foot** quantity only.
+
+Emit one material line per Sheathing Area.
+
+Do not merge areas in this calculator.
+
+Do not convert square footage to sheets.
+
+Do not apply waste.
+
+## Skip behavior
+
+Coverage square footage cannot be calculated when `areaSquareFeet` is unresolved.
+
+Material output cannot be emitted when required material identity is unresolved.
+
+---
+
 # Output Expectations
 
 For each recognized assembly, the extraction process should produce:

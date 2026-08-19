@@ -1,53 +1,30 @@
+import { mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+import { convert } from "@opendataloader/pdf";
+
 import type { PlanIndex, PlanPage } from "./PlanIndex.js";
 
-const MOCK_PAGE_TEMPLATES = [
-  { sheetId: "A1.01", label: "Cover Sheet" },
-  { sheetId: "A2.01", label: "Floor Plan - Level 1" },
-  { sheetId: "A2.02", label: "Floor Plan - Level 2" },
-  { sheetId: "S1.01", label: "Structural Plan - Level 1" },
-  { sheetId: "A3.01", label: "Door & Window Schedule" },
-  { sheetId: "A0.01", label: "General Notes" },
-  { sheetId: "A4.01", label: "Wall Section Details" },
-  { sheetId: "A4.02", label: "Header Details" },
-];
-
-function buildMockPageText(pageNumber: number, sheetId: string, label: string): string {
-  const lines = [
-    `Sheet: ${sheetId}`,
-    `Title: ${label}`,
-    `Page: ${pageNumber}`,
-    "",
-    "[MOCK PLAN TEXT — replace with real PDF extraction]",
-    `Placeholder content for ${label}.`,
-    "See structural sheet S1.01 for bearing walls.",
-    "Refer to door schedule A3.01 for opening sizes.",
-  ];
-
-  if (sheetId === "A2.01") {
-    lines.push(
-      "",
-      "[MOCK FIXTURE — EXPLICIT PROJECT VALUE]",
-      "Wall W-001: new exterior non-bearing wood stud wall; length 20 ft; height 8 ft; studs 2x4 at 16 in O.C.; three plates; no openings.",
-    );
-  }
-
-  return lines.join("\n");
-}
+const PAGE_NUMBER_KEY = "page number";
+const CONTENT_KEY = "content";
+const NUMBER_OF_PAGES_KEY = "number of pages";
 
 /**
- * Mock PDF indexing — returns placeholder page text.
- * Designed so real PDF page content can replace textContent later.
+ * Indexes a PDF file into a PlanIndex using OpenDataLoader text/structured
+ * extraction. Page count and textContent come from the PDF. sheetId and label
+ * stay null until a later deterministic parser can derive them from extracted
+ * text without fabricating values.
  */
 export async function indexPlan(pdfPath: string): Promise<PlanIndex> {
-  const pages: PlanPage[] = MOCK_PAGE_TEMPLATES.map((template, index) => {
-    const pageNumber = index + 1;
-    return {
-      pageNumber,
-      sheetId: template.sheetId,
-      label: template.label,
-      textContent: buildMockPageText(pageNumber, template.sheetId, template.label),
-    };
-  });
+  await assertPdfFile(pdfPath);
+
+  let pages: PlanPage[];
+  try {
+    pages = await extractPlanPages(pdfPath);
+  } catch (error) {
+    throw wrapIndexError(pdfPath, error);
+  }
 
   return {
     pdfPath,
@@ -55,4 +32,160 @@ export async function indexPlan(pdfPath: string): Promise<PlanIndex> {
     pages,
     indexedAt: new Date().toISOString(),
   };
+}
+
+async function assertPdfFile(pdfPath: string): Promise<void> {
+  let stats;
+  try {
+    stats = await stat(pdfPath);
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      throw new Error(`PDF file not found: ${pdfPath}`);
+    }
+    throw wrapIndexError(pdfPath, error);
+  }
+
+  if (!stats.isFile()) {
+    throw new Error(`PDF path is not a file: ${pdfPath}`);
+  }
+}
+
+async function extractPlanPages(pdfPath: string): Promise<PlanPage[]> {
+  const resolvedPath = path.resolve(pdfPath);
+  const outputDir = await mkdtemp(path.join(tmpdir(), "takeoff-bot-pdf-index-"));
+
+  try {
+    await convert(resolvedPath, {
+      outputDir,
+      format: "json",
+      imageOutput: "off",
+      quiet: true,
+      keepLineBreaks: true,
+    });
+
+    const document = await readConversionJson(outputDir, resolvedPath);
+    return mapDocumentToPlanPages(document, pdfPath);
+  } finally {
+    await rm(outputDir, { recursive: true, force: true });
+  }
+}
+
+async function readConversionJson(
+  outputDir: string,
+  pdfPath: string,
+): Promise<unknown> {
+  const stem = path.basename(pdfPath, path.extname(pdfPath));
+  const preferredPath = path.join(outputDir, `${stem}.json`);
+
+  try {
+    return JSON.parse(await readFile(preferredPath, "utf8"));
+  } catch (error) {
+    if (!isNodeError(error) || error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  const jsonFiles = (await readdir(outputDir)).filter((name) =>
+    name.endsWith(".json"),
+  );
+  if (jsonFiles.length !== 1) {
+    throw new Error(
+      `OpenDataLoader did not write a JSON text-layer document for '${pdfPath}'.`,
+    );
+  }
+
+  return JSON.parse(await readFile(path.join(outputDir, jsonFiles[0]), "utf8"));
+}
+
+function mapDocumentToPlanPages(document: unknown, pdfPath: string): PlanPage[] {
+  if (!document || typeof document !== "object") {
+    throw new Error(
+      `OpenDataLoader returned a non-object JSON document for '${pdfPath}'.`,
+    );
+  }
+
+  const record = document as Record<string, unknown>;
+  const totalPages = record[NUMBER_OF_PAGES_KEY];
+  if (!Number.isInteger(totalPages) || typeof totalPages !== "number" || totalPages < 1) {
+    throw new Error(
+      `OpenDataLoader reported an invalid page count for '${pdfPath}'.`,
+    );
+  }
+
+  const kids = Array.isArray(record.kids)
+    ? record.kids
+    : record.kids
+      ? [record.kids]
+      : [];
+  const contentByPage = new Map<number, string[]>();
+  collectPageContent(kids, contentByPage, totalPages, pdfPath);
+
+  const pages: PlanPage[] = [];
+  for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+    pages.push({
+      pageNumber,
+      sheetId: null,
+      label: null,
+      textContent: (contentByPage.get(pageNumber) ?? []).join("\n"),
+    });
+  }
+
+  return pages;
+}
+
+function collectPageContent(
+  node: unknown,
+  contentByPage: Map<number, string[]>,
+  totalPages: number,
+  pdfPath: string,
+): void {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      collectPageContent(child, contentByPage, totalPages, pdfPath);
+    }
+    return;
+  }
+
+  if (!node || typeof node !== "object") {
+    return;
+  }
+
+  const record = node as Record<string, unknown>;
+  const pageNumber = record[PAGE_NUMBER_KEY];
+  const content = record[CONTENT_KEY];
+
+  if (typeof pageNumber === "number") {
+    if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > totalPages) {
+      throw new Error(
+        `OpenDataLoader returned an out-of-range page number for '${pdfPath}'.`,
+      );
+    }
+
+    if (typeof content === "string" && content.length > 0) {
+      const chunks = contentByPage.get(pageNumber) ?? [];
+      chunks.push(content);
+      contentByPage.set(pageNumber, chunks);
+    }
+  }
+
+  for (const value of Object.values(record)) {
+    if (Array.isArray(value) && value.some((item) => item && typeof item === "object")) {
+      collectPageContent(value, contentByPage, totalPages, pdfPath);
+    }
+  }
+}
+
+function wrapIndexError(pdfPath: string, error: unknown): Error {
+  if (error instanceof Error && error.message.startsWith("Failed to index PDF ")) {
+    return error;
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  return new Error(`Failed to index PDF '${pdfPath}': ${message}`, {
+    cause: error instanceof Error ? error : undefined,
+  });
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && "code" in error;
 }

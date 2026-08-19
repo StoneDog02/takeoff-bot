@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { ArtifactEnvelope } from "../schemas/artifact-envelope.schema.js";
@@ -32,5 +32,34 @@ export class ArtifactStore {
     );
 
     return artifactPath;
+  }
+
+  async writeExternal(
+    projectId: string,
+    scopeName: string,
+    fileName: string,
+    artifact: ArtifactEnvelope<unknown>,
+  ): Promise<string> {
+    const directory = path.resolve(
+      this.rootDirectory,
+      projectId,
+      scopeName,
+      "external",
+    );
+    await mkdir(directory, { recursive: true });
+
+    const artifactPath = path.join(directory, fileName);
+    await writeFile(
+      artifactPath,
+      `${JSON.stringify(artifact, null, 2)}\n`,
+      "utf8",
+    );
+
+    return artifactPath;
+  }
+
+  async read(artifactPath: string): Promise<ArtifactEnvelope<unknown>> {
+    const content = await readFile(artifactPath, "utf8");
+    return JSON.parse(content) as ArtifactEnvelope<unknown>;
   }
 }

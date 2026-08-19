@@ -5,6 +5,7 @@ import type {
   ArtifactEnvelope,
   ArtifactProducer,
 } from "../../../core/schemas/artifact-envelope.schema.js";
+import type { ArtifactId } from "../../../core/schemas/identity.schema.js";
 import { evidenceIdSchema, type PipelineRunId } from "../../../core/schemas/identity.schema.js";
 import { generateArtifactId } from "../../../core/utils/ids.js";
 import { extractFramingEvidenceViaClaude } from "../prompts/extractFramingEvidence.js";
@@ -33,8 +34,11 @@ import {
   type ValidationPayload,
   type WallFramingPayload,
 } from "../schemas/framing-artifacts.schema.js";
+import { coordinateFramingCalculations } from "../calculators/calculation-coordinator.js";
 import { coordinateFramingConfidence } from "../confidence/confidence-coordinator.js";
+import { resolveWallFraming } from "../resolvers/resolveWallFraming.js";
 import { coordinateFramingValidation } from "../validators/validation-coordinator.js";
+import { resolveStructuralMembers } from "../resolvers/resolveStructuralMembers.js";
 
 const SCHEMA_VERSION = "1.0.0";
 const ENGINE_VERSION = "0.1.0";
@@ -47,7 +51,13 @@ function getPayload<T>(context: PipelineStageContext, stageName: string): T {
   return artifact.payload as T;
 }
 
-function createArtifact<TSchema extends z.ZodTypeAny>(
+function uniqueSortedArtifactIds(ids: readonly ArtifactId[]): ArtifactId[] {
+  return [...new Set(ids)].sort((left, right) =>
+    left < right ? -1 : left > right ? 1 : 0,
+  ) as ArtifactId[];
+}
+
+export function createFramingStageArtifact<TSchema extends z.ZodTypeAny>(
   context: PipelineStageContext,
   order: number,
   schema: TSchema,
@@ -57,6 +67,7 @@ function createArtifact<TSchema extends z.ZodTypeAny>(
     type: "system",
     identifier: "framing-pipeline",
   },
+  additionalInputArtifactIds: readonly ArtifactId[] = [],
 ): ArtifactEnvelope<unknown> {
   const now = new Date().toISOString();
   const priorArtifacts = [...context.completedArtifacts.values()];
@@ -72,7 +83,10 @@ function createArtifact<TSchema extends z.ZodTypeAny>(
     createdAt: now,
     lastModifiedAt: now,
     producer,
-    inputArtifactIds: priorArtifacts.map((artifact) => artifact.artifactId),
+    inputArtifactIds: uniqueSortedArtifactIds([
+      ...priorArtifacts.map((artifact) => artifact.artifactId),
+      ...additionalInputArtifactIds,
+    ]),
     parentArtifactIds: previousArtifact ? [previousArtifact.artifactId] : [],
     payload,
   });
@@ -83,19 +97,19 @@ function createArtifact<TSchema extends z.ZodTypeAny>(
 function buildMockExtractedEvidence(
   context: PipelineStageContext,
 ): ExtractedFramingEvidencePayload {
-  const page = context.planIndex.pages.find(
-    (candidate) => candidate.sheetId === "A2.01",
+  const page = context.planIndex.pages.find((candidate) =>
+    candidate.textContent.split(/\r?\n/).some((line) => /\bW-001\b/.test(line)),
   );
   if (!page) {
-    throw new Error("Mock fixture sheet A2.01 is missing.");
+    throw new Error(
+      "Mock extracted-evidence fixture requires indexed page text containing W-001.",
+    );
   }
 
-  const originalText = page.textContent
-    .split("\n")
-    .find((line) => line.startsWith("Wall W-001:"));
-  if (!originalText) {
-    throw new Error("Explicit mock wall fixture is missing from A2.01.");
-  }
+  const originalText =
+    page.textContent
+      .split(/\r?\n/)
+      .find((line) => /\bW-001\b/.test(line)) ?? page.textContent;
 
   const source = {
     page: {
@@ -114,35 +128,86 @@ function buildMockExtractedEvidence(
     noteReference: null,
   };
 
+  function fixtureEvidence(
+    id: string,
+    type: "note" | "dimension",
+    description: string,
+    propertyPath: string,
+    candidateValue: string | number | boolean | null,
+  ) {
+    return {
+      id: evidenceIdSchema.parse(id),
+      type,
+      relationship: "supports" as const,
+      description,
+      source,
+      originalText,
+      references: [],
+      subjectKind: "wall" as const,
+      subjectKey: "W-001",
+      propertyPath,
+      candidateValue,
+    };
+  }
+
   return extractedFramingEvidencePayloadSchema.parse({
     evidence: [
-      {
-        id: evidenceIdSchema.parse("E-W001-CLASS"),
-        type: "note",
-        relationship: "supports",
-        description: "Explicit wall classification and assembly.",
-        source,
-        originalText,
-        references: [],
-      },
-      {
-        id: evidenceIdSchema.parse("E-W001-GEOMETRY"),
-        type: "dimension",
-        relationship: "supports",
-        description: "Explicit wall length and height.",
-        source,
-        originalText,
-        references: [],
-      },
-      {
-        id: evidenceIdSchema.parse("E-W001-FRAMING"),
-        type: "note",
-        relationship: "supports",
-        description: "Explicit stud size, spacing, and plate count.",
-        source,
-        originalText,
-        references: [],
-      },
+      fixtureEvidence(
+        "E-W001-CLASS",
+        "note",
+        "Explicit wall type classification.",
+        "wallType",
+        "wood stud wall",
+      ),
+      fixtureEvidence(
+        "E-W001-LOCATION",
+        "note",
+        "Explicit wall location.",
+        "location",
+        "exterior",
+      ),
+      fixtureEvidence(
+        "E-W001-BEARING",
+        "note",
+        "Explicit wall bearing classification.",
+        "bearingStatus",
+        "non-bearing",
+      ),
+      fixtureEvidence(
+        "E-W001-GEOMETRY",
+        "dimension",
+        "Explicit wall segment length.",
+        "lengthFeet",
+        20,
+      ),
+      fixtureEvidence(
+        "E-W001-HEIGHT",
+        "dimension",
+        "Explicit wall height.",
+        "assembly.heightFeet",
+        8,
+      ),
+      fixtureEvidence(
+        "E-W001-FRAMING",
+        "note",
+        "Explicit stud size.",
+        "assembly.studSize",
+        "2x4",
+      ),
+      fixtureEvidence(
+        "E-W001-SPACING",
+        "dimension",
+        "Explicit stud spacing.",
+        "assembly.studSpacingInches",
+        16,
+      ),
+      fixtureEvidence(
+        "E-W001-PLATES",
+        "note",
+        "Explicit plate count.",
+        "assembly.plateCount",
+        3,
+      ),
     ],
   });
 }
@@ -174,7 +239,7 @@ const stages: PipelineStage[] = [
     order: 1,
     name: "verifiedPlanSet",
     async run(context) {
-      return createArtifact(
+      return createFramingStageArtifact(
         context,
         1,
         verifiedPlanSetArtifactSchema,
@@ -187,7 +252,7 @@ const stages: PipelineStage[] = [
     order: 2,
     name: "pageClassification",
     async run(context) {
-      return createArtifact(
+      return createFramingStageArtifact(
         context,
         2,
         pageClassificationArtifactSchema,
@@ -214,7 +279,7 @@ const stages: PipelineStage[] = [
       const availablePages = new Set(
         context.planIndex.pages.map((page) => page.pageNumber),
       );
-      return createArtifact(
+      return createFramingStageArtifact(
         context,
         3,
         planReadingOrderArtifactSchema,
@@ -236,7 +301,7 @@ const stages: PipelineStage[] = [
     order: 4,
     name: "buildingAssemblies",
     async run(context) {
-      return createArtifact(
+      return createFramingStageArtifact(
         context,
         4,
         buildingAssembliesArtifactSchema,
@@ -272,7 +337,7 @@ const stages: PipelineStage[] = [
             ),
           });
 
-      return createArtifact(
+      return createFramingStageArtifact(
         context,
         5,
         extractedFramingEvidenceArtifactSchema,
@@ -292,110 +357,22 @@ const stages: PipelineStage[] = [
         context,
         "extractedEvidence",
       );
-      const evidenceIds = extracted.evidence.map((evidence) => evidence.id);
-      const classEvidenceIds = evidenceIds.filter((id) =>
-        /CLASS|TYPE|ASSEMBLY/i.test(id),
-      );
-      const geometryEvidenceIds = evidenceIds.filter((id) =>
-        /GEOMETRY|LENGTH|HEIGHT|DIM/i.test(id),
-      );
-      const framingEvidenceIds = evidenceIds.filter((id) =>
-        /FRAMING|STUD|PLATE|SPACING/i.test(id),
-      );
-      const completion = {
-        status: "complete",
-        percentage: 100,
-        completedItems: 1,
-        totalItems: 1,
-      } as const;
-      const payload = {
-        walls: [
-          {
-            id: "W-001",
-            objectType: "building-wall",
-            completion,
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
-            evidenceIds,
-            assumptionIds: [],
-            validationIssueIds: [],
-            reviewItemIds: [],
-            resolutionTraces: [
-              {
-                propertyPath: "assembly",
-                method: "explicit-project-value",
-                explanation: context.useMockAi
-                  ? "Assembly values were parsed from the explicit mock fixture statement."
-                  : "Interim fixture resolution after live evidence extraction; deterministic wall resolution is not fully wired yet.",
-                evidenceIds:
-                  classEvidenceIds.length > 0 || framingEvidenceIds.length > 0
-                    ? [...classEvidenceIds, ...framingEvidenceIds]
-                    : evidenceIds,
-                assumptionIds: [],
-                validationIssueIds: [],
-                reviewItemIds: [],
-              },
-            ],
-            name: "Mock exterior wall W-001",
-            level: "Level 1",
-            wallType: "exterior-wood-stud-wall",
-            location: "exterior",
-            bearingStatus: "non-bearing",
-            isShearOrBraced: false,
-            fireRating: null,
-            constructionPhase: "new",
-            assembly: {
-              material: "dimensional-lumber",
-              studSize: "2x4",
-              studSpacingInches: 16,
-              heightFeet: 8,
-              plateCount: 3,
-              sheathing: null,
-            },
-            segmentIds: ["WS-001"],
-          },
-        ],
-        segments: [
-          {
-            id: "WS-001",
-            objectType: "wall-segment",
-            completion,
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
-            evidenceIds:
-              geometryEvidenceIds.length > 0 ? geometryEvidenceIds : evidenceIds,
-            assumptionIds: [],
-            validationIssueIds: [],
-            reviewItemIds: [],
-            resolutionTraces: [
-              {
-                propertyPath: "lengthFeet",
-                method: "explicit-project-value",
-                explanation: context.useMockAi
-                  ? "Length is explicitly stated in the mock fixture."
-                  : "Interim fixture length after live evidence extraction; deterministic geometry resolution is not fully wired yet.",
-                evidenceIds:
-                  geometryEvidenceIds.length > 0
-                    ? geometryEvidenceIds
-                    : evidenceIds,
-                assumptionIds: [],
-                validationIssueIds: [],
-                reviewItemIds: [],
-              },
-            ],
-            parentWallId: "W-001",
-            lengthFeet: 20,
-            openingIds: [],
-          },
-        ],
-      };
+      const userDecisionRunInput = context.userDecisionRunInput;
+      const payload = userDecisionRunInput
+        ? resolveWallFraming(extracted.evidence, {
+            userDecisions: userDecisionRunInput.userDecisions,
+            reviewItemsById: userDecisionRunInput.reviewItemsById,
+          })
+        : resolveWallFraming(extracted.evidence);
 
-      return createArtifact(
+      return createFramingStageArtifact(
         context,
         6,
         wallFramingArtifactSchema,
         "wall-framing",
         payload,
+        { type: "system", identifier: "framing-pipeline" },
+        userDecisionRunInput?.inputArtifactIds ?? [],
       );
     },
   },
@@ -406,7 +383,7 @@ const stages: PipelineStage[] = [
       const payload: OpeningsPayload = {
         openings: [],
       };
-      return createArtifact(
+      return createFramingStageArtifact(
         context,
         7,
         openingsArtifactSchema,
@@ -419,73 +396,24 @@ const stages: PipelineStage[] = [
     order: 8,
     name: "structuralMembers",
     async run(context) {
-      const payload: StructuralMembersPayload = {
-        structuralMembers: [],
-      };
-      return createArtifact(
+      const extracted = getPayload<ExtractedFramingEvidencePayload>(
+        context,
+        "extractedEvidence",
+      );
+      const payload = resolveStructuralMembers(extracted.evidence);
+
+      return createFramingStageArtifact(
         context,
         8,
         structuralMembersArtifactSchema,
         "structural-members",
         payload,
+        { type: "system", identifier: "framing-pipeline" },
       );
     },
   },
   {
     order: 9,
-    name: "calculations",
-    async run(context) {
-      const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
-      const wall = wallPayload.walls[0];
-      const segment = wallPayload.segments[0];
-      if (!wall || !segment || segment.lengthFeet === null) {
-        throw new Error("Resolved wall geometry is required for calculations.");
-      }
-      const spacing = wall.assembly.studSpacingInches;
-      const plateCount = wall.assembly.plateCount;
-      if (spacing === null || plateCount === null || wall.assembly.studSize === null) {
-        throw new Error("Resolved wall assembly is required for calculations.");
-      }
-
-      const studCount = Math.ceil((segment.lengthFeet * 12) / spacing) + 1;
-      const payload: FramingCalculationsPayload = {
-        materials: [
-          {
-            id: "MAT-W001-STUDS",
-            category: "lumber",
-            description: `${wall.assembly.studSize} studs at ${spacing} in O.C.`,
-            canonicalClassification: `stud-${wall.assembly.studSize}`,
-            quantity: studCount,
-            unit: "each",
-            sourceObjectIds: [wall.id, segment.id],
-            assumptionIds: [],
-            reviewItemIds: [],
-          },
-          {
-            id: "MAT-W001-PLATES",
-            category: "lumber",
-            description: `${wall.assembly.studSize} wall plates`,
-            canonicalClassification: `plate-${wall.assembly.studSize}`,
-            quantity: segment.lengthFeet * plateCount,
-            unit: "linear-foot",
-            sourceObjectIds: [wall.id, segment.id],
-            assumptionIds: [],
-            reviewItemIds: [],
-          },
-        ],
-      };
-
-      return createArtifact(
-        context,
-        9,
-        framingCalculationsArtifactSchema,
-        "framing-calculations",
-        payload,
-      );
-    },
-  },
-  {
-    order: 10,
     name: "validation",
     async run(context) {
       const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
@@ -500,12 +428,37 @@ const stages: PipelineStage[] = [
         structuralMembers,
       });
 
-      return createArtifact(
+      return createFramingStageArtifact(
         context,
-        10,
+        9,
         validationArtifactSchema,
         "validation",
         validationPayload,
+      );
+    },
+  },
+  {
+    order: 10,
+    name: "calculations",
+    async run(context) {
+      const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
+      const structuralMembers = getPayload<StructuralMembersPayload>(
+        context,
+        "structuralMembers",
+      );
+      const validation = getPayload<ValidationPayload>(context, "validation");
+      const payload = coordinateFramingCalculations({
+        wallFraming: wallPayload,
+        structuralMembers,
+        validation,
+      });
+
+      return createFramingStageArtifact(
+        context,
+        10,
+        framingCalculationsArtifactSchema,
+        "framing-calculations",
+        payload,
       );
     },
   },
@@ -535,7 +488,7 @@ const stages: PipelineStage[] = [
         useExplicitFixture: context.useMockAi,
       });
 
-      return createArtifact(
+      return createFramingStageArtifact(
         context,
         11,
         confidenceArtifactSchema,
@@ -564,7 +517,7 @@ const stages: PipelineStage[] = [
         throw new Error("Takeoff confidence evaluation is missing.");
       }
 
-      return createArtifact(
+      return createFramingStageArtifact(
         context,
         12,
         finalFramingTakeoffArtifactSchema,

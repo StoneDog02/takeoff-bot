@@ -59,18 +59,102 @@ function selectPagesForExtraction(
 function buildSystemPrompt(knowledgeBlock: string): string {
   return `You extract framing evidence from construction plan page text for a deterministic takeoff engine.
 
+Evidence is extracted candidate state, not resolved construction truth.
+Do not assign final ObjectIds, create ResolutionTraces, apply assumptions,
+choose a winner among conflicting candidates, or calculate quantities.
+
 Rules:
 - Extract only what is supported by the provided page text.
 - Do not invent walls, dimensions, assemblies, openings, or quantities.
-- Prefer multiple atomic evidence records over one overloaded record.
+- Do not copy sheet IDs, titles, originalText, or candidate values from the
+  example JSON unless they appear in the provided page text.
+- Prior-stage assembly names are context only, not plan evidence.
+- Emit one Evidence record per subjectKind + subjectKey + propertyPath + candidateValue.
+- Do not hide multiple construction properties inside one description.
 - Never calculate material quantities.
-- Missing or unclear facts should simply omit evidence; do not guess.
+- If a property is not evidenced, omit the record. Do not guess.
+- Use candidateValue null only when the source mentions the property but
+  does not provide an extractable value.
 - Leave source.region null unless coordinates are explicitly provided.
-- Use evidence IDs matching this pattern: E-<OBJECT>-<ASPECT> (example: E-W001-GEOMETRY).
+- Use evidence IDs matching this pattern: E-<SUBJECT>-<ASPECT>
+  (example: E-W001-SPACING). Make IDs unique when the same property has
+  more than one candidate (example: E-W001-SPACING-NOTE).
 - IDs may only use letters, numbers, and . _ : -
 - originalText must quote or closely paraphrase the supporting plan text.
 - source.page.pageNumber and sheetId must match the provided page catalog.
-- relationship should be "supports" unless the text clearly conflicts.
+- relationship should be "supports" for the candidate this record extracts.
+  Use "conflicts" only when the same source text is explicitly contradicting
+  another stated value. Use "context" for supporting context that is not
+  itself a candidate value. Never drop a competing candidate.
+
+subjectKind:
+- Emit the extraction domain for every record.
+- For wall extraction, use "wall".
+- For explicitly identified structural members in this stage, use
+  "structural-member".
+- First controlled structural-member scope: single-piece headers only.
+- subjectKind + subjectKey identify the extraction cluster; propertyPath identifies
+  the candidate within that cluster.
+- Do not mint ObjectIds or resolved object types here.
+- The same Stage 5 Evidence artifact may contain both "wall" and
+  "structural-member" records simultaneously.
+
+subjectKey:
+- Use the most stable plan-derived identifier for the future object/cluster.
+- Prefer a wall tag, schedule key, callout, or other extraction-stable label.
+- When a bare wall tag line is present (example: W-001, W-002), use that exact
+  string as subjectKey.
+- When a bare structural member tag line is present (example: HDR-001), use that
+  exact string as subjectKey for every property belonging to that member.
+- When multiple labeled wall tags appear, emit separate Evidence clusters for
+  each tag. Reuse the same subjectKey for every property belonging to that wall.
+- Never merge facts from one labeled wall into another wall's subjectKey.
+- Never merge facts from one labeled structural member into another member's
+  subjectKey.
+- Conflicting values stay separate Evidence records within the appropriate
+  subjectKey only.
+- This is an extraction cluster key, not a resolved ObjectId.
+- Evidence from multiple pages/sheets that concerns the same tagged object
+  must reuse the same subjectKey.
+- Wall-level properties and segment length may share the same subjectKey.
+- If no tag or schedule key exists, use the exact source label/callout text.
+  Do not mint an ObjectId.
+
+propertyPath:
+- Use an object-relative path compatible with later ResolutionTraces.
+- Examples for walls/segments: wallType, location, bearingStatus,
+  isShearOrBraced, fireRating, constructionPhase, assembly.studSize,
+  assembly.studSpacingInches, assembly.heightFeet, assembly.plateCount,
+  assembly.material, assembly.sheathing, lengthFeet.
+- Examples for structural members (headers in this stage): category,
+  materialType, size, lengthFeet, quantity, location.
+- These are examples, not an exhaustive enum. Do not invent resolved
+  nested objects.
+
+structural-member extraction rules (headers only in this stage):
+- Emit one Evidence record per atomic property candidate.
+- Do not infer missing quantity as 1.
+- Do not infer category from ambiguous wording.
+- Do not infer materialType from size.
+- Do not infer location if not explicitly evidenced.
+- Do not calculate linear footage.
+- Do not infer built-up plyCount.
+- Do not infer relationships to walls, openings, or other objects.
+- Do not create review items or resolve competing candidates.
+
+candidateValue:
+- Emit only the extracted scalar: string, number, boolean, or null.
+- Do not wrap values in objects or add units as a separate field.
+- Emit a number only when the source states a numeric quantity in the
+  unit implied by the property path, or in unambiguous feet-inch notation
+  for *Feet paths, or inches/O.C. for *Inches paths.
+- Examples: "20 ft" -> 20 for lengthFeet; "16 in O.C." -> 16 for
+  assembly.studSpacingInches; 8 ft or 8'-0" -> 8 for assembly.heightFeet;
+  "three plates" -> 3 for assembly.plateCount.
+- If the unit is missing, mixed, or would require a guess, emit the quoted
+  source string instead of a number.
+- Do not coerce extracted text into resolved enumerations. Preserve the
+  plan wording when it is the candidate (example: "wood stud wall").
 
 Return JSON only. No markdown. No explanation.
 
@@ -81,7 +165,7 @@ JSON shape:
       "id": "E-W001-CLASS",
       "type": "note",
       "relationship": "supports",
-      "description": "...",
+      "description": "Plan note states the wall type.",
       "source": {
         "page": {
           "documentId": null,
@@ -98,8 +182,152 @@ JSON shape:
         "scheduleName": null,
         "noteReference": null
       },
-      "originalText": "...",
-      "references": []
+      "originalText": "Wall W-001: new exterior non-bearing wood stud wall",
+      "references": [],
+      "subjectKind": "wall",
+      "subjectKey": "W-001",
+      "propertyPath": "wallType",
+      "candidateValue": "wood stud wall"
+    },
+    {
+      "id": "E-W001-SPACING",
+      "type": "dimension",
+      "relationship": "supports",
+      "description": "Plan note states stud spacing.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": "A2.01",
+          "sheetTitle": "Floor Plan - Level 1",
+          "pageLabel": "Floor Plan - Level 1",
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W-001",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "studs 2x4 at 16 in O.C.",
+      "references": [],
+      "subjectKind": "wall",
+      "subjectKey": "W-001",
+      "propertyPath": "assembly.studSpacingInches",
+      "candidateValue": 16
+    },
+    {
+      "id": "E-W002-LENGTH",
+      "type": "dimension",
+      "relationship": "supports",
+      "description": "Plan note states wall length for W-002.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": "A2.01",
+          "sheetTitle": "Floor Plan - Level 1",
+          "pageLabel": "Floor Plan - Level 1",
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W-002",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "12 ft",
+      "references": [],
+      "subjectKind": "wall",
+      "subjectKey": "W-002",
+      "propertyPath": "lengthFeet",
+      "candidateValue": 12
+    },
+    {
+      "id": "E-HDR-001-CATEGORY",
+      "type": "note",
+      "relationship": "supports",
+      "description": "Plan note states the header category.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": "A2.01",
+          "sheetTitle": "Floor Plan - Level 1",
+          "pageLabel": "Floor Plan - Level 1",
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "HDR-001",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "HDR-001 Header LVL 1.75x11.875 6 ft Quantity: 1 Over Window W-001",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "HDR-001",
+      "propertyPath": "category",
+      "candidateValue": "header"
+    },
+    {
+      "id": "E-HDR-001-MATERIAL",
+      "type": "note",
+      "relationship": "supports",
+      "description": "Plan note states the header material.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": "A2.01",
+          "sheetTitle": "Floor Plan - Level 1",
+          "pageLabel": "Floor Plan - Level 1",
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "HDR-001",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "Material: lvl",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "HDR-001",
+      "propertyPath": "materialType",
+      "candidateValue": "lvl"
+    },
+    {
+      "id": "E-HDR-001-LENGTH",
+      "type": "dimension",
+      "relationship": "supports",
+      "description": "Plan note states the header length.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": "A2.01",
+          "sheetTitle": "Floor Plan - Level 1",
+          "pageLabel": "Floor Plan - Level 1",
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "HDR-001",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "Length: 6 ft",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "HDR-001",
+      "propertyPath": "lengthFeet",
+      "candidateValue": 6
     }
   ]
 }
@@ -132,7 +360,7 @@ function buildUserPrompt(input: {
 
   return `Extract framing evidence from these plan pages.
 
-Known assemblies from prior stage:
+Known assemblies from prior stage (context only, not plan text):
 ${JSON.stringify(input.buildingAssemblies, null, 2)}
 
 Page text:
@@ -171,4 +399,4 @@ export async function extractFramingEvidenceViaClaude(
   });
 }
 
-export { selectPagesForExtraction };
+export { buildSystemPrompt, selectPagesForExtraction };

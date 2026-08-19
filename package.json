@@ -8,13 +8,27 @@
     "dev": "tsx src/app.ts",
     "build": "tsc",
     "start": "node dist/app.js",
-    "test": "tsx --test tests/**/*.test.ts"
+    "test": "tsx --test tests/**/*.test.ts",
+    "test:live-framing": "TAKEOFF_LIVE_CLAUDE=1 tsx --test tests/integration/framing.live-claude.test.ts",
+    "test:live-framing-two-wall": "TAKEOFF_LIVE_CLAUDE=1 tsx --test tests/integration/framing.live-claude-two-wall.test.ts",
+    "test:live-framing-two-wall-conflict": "TAKEOFF_LIVE_CLAUDE=1 tsx --test tests/integration/framing.live-claude-two-wall-conflict.test.ts",
+    "test:live-framing-mixed-domain": "TAKEOFF_LIVE_CLAUDE=1 tsx --test tests/integration/framing.live-claude-mixed-domain.test.ts",
+    "proof:live-framing": "tsx src/app.ts --live --pdf tests/fixtures/wall-w001-text-layer.pdf --scope framing --project live-proof-w001",
+    "proof:live-framing-two-wall": "tsx src/app.ts --live --pdf tests/fixtures/wall-w001-w002-text-layer.pdf --scope framing --project live-proof-w001-w002",
+    "proof:live-framing-two-wall-conflict": "tsx src/app.ts --live --pdf tests/fixtures/wall-w001-w002-conflict-text-layer.pdf --scope framing --project live-proof-w001-w002-conflict",
+    "proof:live-framing-causality": "npm run proof:live-framing-20ft && npm run proof:live-framing-24ft",
+    "proof:live-framing-20ft": "tsx src/app.ts --live --pdf tests/fixtures/wall-w001-text-layer.pdf --scope framing --project live-proof-w001-20ft",
+    "proof:live-framing-24ft": "tsx src/app.ts --live --pdf tests/fixtures/wall-w001-24ft-text-layer.pdf --scope framing --project live-proof-w001-24ft",
+    "proof:live-framing-mixed-domain-6ft": "tsx src/app.ts --live --pdf tests/fixtures/wall-w001-hdr001-text-layer.pdf --scope framing --project live-proof-w001-hdr001-6ft",
+    "proof:live-framing-mixed-domain-8ft": "tsx src/app.ts --live --pdf tests/fixtures/wall-w001-hdr001-8ft-text-layer.pdf --scope framing --project live-proof-w001-hdr001-8ft",
+    "proof:live-framing-mixed-domain-causality": "npm run proof:live-framing-mixed-domain-6ft && npm run proof:live-framing-mixed-domain-8ft"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@opendataloader/pdf": "^2.5.1",
     "dotenv": "^16.4.7",
     "zod": "^3.24.1"
   },

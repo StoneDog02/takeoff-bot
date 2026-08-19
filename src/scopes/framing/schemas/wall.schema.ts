@@ -34,7 +34,11 @@ export const wallAssemblySchema = z.object({
 export const buildingWallSchema = resolvedObjectBaseSchema.extend({
   objectType: z.literal("building-wall"),
   name: z.string().trim().min(1),
-  level: z.string().trim().min(1),
+  /**
+   * Building level is a construction fact. It stays null until Evidence
+   * (or a later assumption slice) can resolve it. Do not invent a floor.
+   */
+  level: z.string().trim().min(1).nullable().default(null),
   wallType: z.string().trim().min(1).nullable().default(null),
   location: wallLocationSchema,
   bearingStatus: wallBearingStatusSchema,

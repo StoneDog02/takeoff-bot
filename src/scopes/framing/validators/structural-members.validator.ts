@@ -49,6 +49,21 @@ function isLengthResolved(member: StructuralMember): boolean {
   );
 }
 
+function isQuantityResolved(member: StructuralMember): boolean {
+  if (member.quantity === null) {
+    return false;
+  }
+
+  const trace = member.resolutionTraces.find(
+    (entry) => entry.propertyPath === "quantity",
+  );
+  if (trace?.method === "unresolved") {
+    return false;
+  }
+
+  return true;
+}
+
 function isPlyCountResolved(member: StructuralMember): boolean {
   return (
     member.plyCount !== null ||
@@ -284,6 +299,66 @@ function validateLengthResolved(member: StructuralMember): ValidationBatch {
         type: "provide-value",
         instruction: "Provide the structural member length in feet.",
         targetProperty: "lengthFeet",
+      },
+      reviewStatus: "review-required",
+      blockingStatus: "blocked",
+      affectedObjects: [{ objectId: member.id, objectType: member.objectType }],
+      quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
+      evidenceIds,
+    },
+  );
+}
+
+function validateQuantityResolved(member: StructuralMember): ValidationBatch {
+  const target = createObjectTarget(member.id, member.objectType);
+  const ruleId = STRUCTURAL_MEMBER_RULE_IDS.quantityResolved;
+  const evidenceIds = collectEvidenceIds(member);
+
+  if (isQuantityResolved(member)) {
+    return buildPassedBatch(
+      ruleId,
+      "object",
+      target,
+      `Structural member ${member.id} has resolved quantity.`,
+      evidenceIds,
+    );
+  }
+
+  const quantityImpacts = [
+    {
+      quantityKey: STRUCTURAL_MEMBER_QUANTITY_KEYS.material,
+      description:
+        "Member material takeoff requires a resolved member quantity or occurrence count.",
+      canCalculate: false,
+    },
+  ];
+
+  const explanation = `Structural member ${member.id} is missing quantity or occurrence count.`;
+
+  return buildFailedBatch(
+    {
+      ruleId,
+      level: "object",
+      severity: "critical",
+      ruleViolated:
+        "Structural member quantity or occurrence count must be resolved before net material linear footage can be calculated.",
+      explanation,
+      target,
+      recommendedUserAction:
+        "Confirm how many identical member assemblies or occurrences this object represents.",
+      evidenceIds,
+      quantityImpacts,
+    },
+    {
+      ruleId,
+      target,
+      title: `Resolve quantity for structural member ${member.id}`,
+      description: explanation,
+      action: {
+        type: "provide-value",
+        instruction:
+          "Provide the number of identical member assemblies or occurrences represented by this structural member.",
+        targetProperty: "quantity",
       },
       reviewStatus: "review-required",
       blockingStatus: "blocked",
@@ -593,6 +668,7 @@ export function validateStructuralMembers(
       validateMaterialResolved(member),
       validateSizeResolved(member),
       validateLengthResolved(member),
+      validateQuantityResolved(member),
       validatePlyCountResolved(member),
       validateAssociatedObjectsResolved(member, input.relatedObjectsById),
       validateSupportedObjectsResolved(member, input.relatedObjectsById),

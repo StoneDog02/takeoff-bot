@@ -1,5 +1,14 @@
 import type { ArtifactEnvelope } from "../schemas/artifact-envelope.schema.js";
+import type { ArtifactId, ReviewItemId } from "../schemas/identity.schema.js";
+import type { ReviewItem } from "../schemas/review-item.schema.js";
+import type { UserDecision } from "../schemas/user-decision.schema.js";
 import type { PlanIndex } from "../../plans/PlanIndex.js";
+
+export type UserDecisionRunInput = {
+  userDecisions: readonly UserDecision[];
+  reviewItemsById: ReadonlyMap<ReviewItemId, ReviewItem>;
+  inputArtifactIds?: readonly ArtifactId[];
+};
 
 export interface PipelineStageContext {
   projectId: string;
@@ -12,6 +21,7 @@ export interface PipelineStageContext {
     string,
     ArtifactEnvelope<unknown>
   >;
+  userDecisionRunInput?: UserDecisionRunInput;
 }
 
 export interface PipelineStage {

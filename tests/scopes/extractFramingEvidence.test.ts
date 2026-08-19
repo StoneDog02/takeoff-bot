@@ -1,8 +1,46 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { selectPagesForExtraction } from "../../src/scopes/framing/prompts/extractFramingEvidence.js";
 import type { PlanIndex } from "../../src/plans/PlanIndex.js";
+import {
+  buildSystemPrompt,
+  selectPagesForExtraction,
+} from "../../src/scopes/framing/prompts/extractFramingEvidence.js";
+import { extractedFramingEvidencePayloadSchema } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
+
+const source = {
+  page: {
+    documentId: null,
+    pageNumber: 2,
+    sheetId: "A2.01",
+    sheetTitle: "Floor Plan - Level 1",
+    pageLabel: "Floor Plan - Level 1",
+    revision: null,
+  },
+  region: null,
+  elementLabel: "W-001",
+  detailNumber: null,
+  sectionNumber: null,
+  scheduleName: null,
+  noteReference: null,
+};
+
+function createEvidenceRecord(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "E-W001-SPACING",
+    type: "dimension",
+    relationship: "supports",
+    description: "Plan note states stud spacing.",
+    source,
+    originalText: "studs 2x4 at 16 in O.C.",
+    references: [],
+    subjectKind: "wall",
+    subjectKey: "W-001",
+    propertyPath: "assembly.studSpacingInches",
+    candidateValue: 16,
+    ...overrides,
+  };
+}
 
 describe("extractFramingEvidence prompts", () => {
   it("selects framing-relevant pages in reading order", () => {
@@ -69,5 +107,253 @@ describe("extractFramingEvidence prompts", () => {
       selected.map((page) => page.pageNumber),
       [3, 2],
     );
+  });
+
+  it("selects a one-page unclassified fixture for live extraction", () => {
+    const planIndex: PlanIndex = {
+      pdfPath: "./tests/fixtures/wall-w001-text-layer.pdf",
+      totalPages: 1,
+      indexedAt: new Date().toISOString(),
+      pages: [
+        {
+          pageNumber: 1,
+          sheetId: null,
+          label: null,
+          textContent:
+            "W-001\nWall type: wood stud wall\n20 ft\n2x4\n16 in O.C.\n8 ft wall height\n3 plates",
+        },
+      ],
+    };
+
+    const selected = selectPagesForExtraction(
+      planIndex,
+      {
+        pages: [
+          {
+            pageNumber: 1,
+            sheetId: null,
+            discipline: "other",
+            pageType: "other",
+            relevantToFraming: true,
+          },
+        ],
+      },
+      {
+        orderedPageNumbers: [1],
+        rationale: ["single indexed page"],
+      },
+    );
+
+    assert.equal(selected.length, 1);
+    assert.equal(selected[0]?.pageNumber, 1);
+    assert.match(selected[0]?.textContent ?? "", /W-001/);
+  });
+
+  it("instructs Claude to emit atomic candidate evidence, not resolved objects", () => {
+    const prompt = buildSystemPrompt("construction-brain-context");
+
+    assert.match(prompt, /"subjectKind"/);
+    assert.match(prompt, /"subjectKey"/);
+    assert.match(prompt, /For wall extraction, use "wall"/);
+    assert.match(prompt, /"structural-member"/);
+    assert.match(prompt, /category,\s*materialType,\s*size,\s*lengthFeet,\s*quantity,\s*location/);
+    assert.match(prompt, /"subjectKind": "structural-member"/);
+    assert.match(prompt, /"subjectKey": "HDR-001"/);
+    assert.match(prompt, /subjectKind \+ subjectKey identify the extraction cluster/);
+    assert.match(prompt, /"propertyPath"/);
+    assert.match(prompt, /"candidateValue"/);
+    assert.match(prompt, /one Evidence record per subjectKind \+ subjectKey \+ propertyPath \+ candidateValue/);
+    assert.match(prompt, /not a resolved ObjectId/);
+    assert.match(prompt, /Never drop a competing candidate/);
+    assert.match(prompt, /Do not assign final ObjectIds, create ResolutionTraces/);
+    assert.match(prompt, /Do not copy sheet IDs, titles, originalText, or candidate values/);
+    assert.match(prompt, /Prior-stage assembly names are context only/);
+    assert.match(prompt, /multiple labeled wall tags appear/);
+    assert.match(prompt, /Never merge facts from one labeled wall into another/);
+    assert.match(prompt, /"subjectKey": "W-002"/);
+    assert.match(prompt, /construction-brain-context/);
+  });
+});
+
+describe("extracted framing evidence output contract", () => {
+  it("parses valid structured Claude evidence through the payload schema", () => {
+    const payload = extractedFramingEvidencePayloadSchema.parse({
+      evidence: [
+        createEvidenceRecord({
+          id: "E-W001-CLASS",
+          type: "note",
+          description: "Plan note states the wall type.",
+          originalText: "Wall W-001: new exterior non-bearing wood stud wall",
+          propertyPath: "wallType",
+          candidateValue: "wood stud wall",
+        }),
+        createEvidenceRecord(),
+      ],
+    });
+
+    assert.equal(payload.evidence.length, 2);
+    assert.equal(payload.evidence[0]?.subjectKey, "W-001");
+    assert.equal(payload.evidence[0]?.subjectKind, "wall");
+    assert.equal(payload.evidence[0]?.propertyPath, "wallType");
+    assert.equal(payload.evidence[0]?.candidateValue, "wood stud wall");
+    assert.equal(payload.evidence[1]?.candidateValue, 16);
+  });
+
+  it("rejects evidence missing subjectKind", () => {
+    const result = extractedFramingEvidencePayloadSchema.safeParse({
+      evidence: [
+        {
+          ...createEvidenceRecord(),
+          subjectKind: undefined,
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+  });
+
+  it("rejects evidence missing subjectKey", () => {
+    const result = extractedFramingEvidencePayloadSchema.safeParse({
+      evidence: [
+        {
+          ...createEvidenceRecord(),
+          subjectKey: undefined,
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+  });
+
+  it("rejects evidence missing propertyPath", () => {
+    const result = extractedFramingEvidencePayloadSchema.safeParse({
+      evidence: [
+        {
+          ...createEvidenceRecord(),
+          propertyPath: undefined,
+        },
+      ],
+    });
+
+    assert.equal(result.success, false);
+  });
+
+  it("rejects an invalid candidateValue shape", () => {
+    const objectValue = extractedFramingEvidencePayloadSchema.safeParse({
+      evidence: [
+        createEvidenceRecord({
+          candidateValue: { value: 16, unit: "in" },
+        }),
+      ],
+    });
+    const emptyString = extractedFramingEvidencePayloadSchema.safeParse({
+      evidence: [createEvidenceRecord({ candidateValue: "" })],
+    });
+    const arrayValue = extractedFramingEvidencePayloadSchema.safeParse({
+      evidence: [createEvidenceRecord({ candidateValue: [16] })],
+    });
+
+    assert.equal(objectValue.success, false);
+    assert.equal(emptyString.success, false);
+    assert.equal(arrayValue.success, false);
+  });
+
+  it("parses multiple atomic properties for the same subjectKey", () => {
+    const payload = extractedFramingEvidencePayloadSchema.parse({
+      evidence: [
+        createEvidenceRecord({
+          id: "E-W001-CLASS",
+          type: "note",
+          propertyPath: "wallType",
+          candidateValue: "wood stud wall",
+        }),
+        createEvidenceRecord({
+          id: "E-W001-LOCATION",
+          type: "note",
+          propertyPath: "location",
+          candidateValue: "exterior",
+        }),
+        createEvidenceRecord({
+          id: "E-W001-BEARING",
+          type: "note",
+          propertyPath: "bearingStatus",
+          candidateValue: "non-bearing",
+        }),
+        createEvidenceRecord({
+          id: "E-W001-LENGTH",
+          propertyPath: "lengthFeet",
+          candidateValue: 20,
+        }),
+      ],
+    });
+
+    assert.equal(payload.evidence.length, 4);
+    assert.deepEqual(
+      [...new Set(payload.evidence.map((record) => record.subjectKey))],
+      ["W-001"],
+    );
+    assert.deepEqual(
+      payload.evidence.map((record) => record.propertyPath),
+      ["wallType", "location", "bearingStatus", "lengthFeet"],
+    );
+  });
+
+  it("preserves conflicting candidates as separate evidence records", () => {
+    const payload = extractedFramingEvidencePayloadSchema.parse({
+      evidence: [
+        createEvidenceRecord({
+          id: "E-W001-SPACING-SCHEDULE",
+          type: "schedule",
+          description: "Wall schedule states 16 in O.C.",
+          originalText: "W1 2x4 @ 16\" O.C.",
+          candidateValue: 16,
+        }),
+        createEvidenceRecord({
+          id: "E-W001-SPACING-NOTE",
+          type: "note",
+          relationship: "supports",
+          description: "Architectural note states 24 in O.C.",
+          originalText: "studs at 24 in O.C.",
+          candidateValue: 24,
+        }),
+      ],
+    });
+
+    assert.equal(payload.evidence.length, 2);
+    assert.equal(payload.evidence[0]?.subjectKey, payload.evidence[1]?.subjectKey);
+    assert.equal(
+      payload.evidence[0]?.propertyPath,
+      payload.evidence[1]?.propertyPath,
+    );
+    assert.deepEqual(
+      payload.evidence.map((record) => record.candidateValue),
+      [16, 24],
+    );
+  });
+
+  it("preserves source provenance on parsed extraction output", () => {
+    const payload = extractedFramingEvidencePayloadSchema.parse({
+      evidence: [
+        createEvidenceRecord({
+          references: [
+            {
+              type: "schedule",
+              originalText: "See Wall Type Schedule",
+              target: null,
+              description: "Schedule reference on A2.01",
+            },
+          ],
+        }),
+      ],
+    });
+
+    const evidence = payload.evidence[0];
+    assert.equal(evidence?.source.page.sheetId, "A2.01");
+    assert.equal(evidence?.source.page.pageNumber, 2);
+    assert.equal(evidence?.source.elementLabel, "W-001");
+    assert.equal(evidence?.originalText, "studs 2x4 at 16 in O.C.");
+    assert.equal(evidence?.references[0]?.type, "schedule");
+    assert.equal(evidence?.type, "dimension");
+    assert.equal(evidence?.relationship, "supports");
   });
 });

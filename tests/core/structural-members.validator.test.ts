@@ -169,6 +169,218 @@ describe("validateStructuralMembers", () => {
     assert.equal(issue.severity, "critical");
   });
 
+  it("fails missing quantity", () => {
+    const batch = validateStructuralMembers({
+      payload: {
+        structuralMembers: [
+          buildCompleteMember({
+            quantity: null,
+            resolutionTraces: [],
+          }),
+        ],
+      },
+      ...buildRelatedMaps(),
+    });
+
+    const issue = batch.validationIssues.find(
+      (entry) => entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.quantityResolved,
+    );
+    const reviewItem = batch.reviewItems.find((entry) =>
+      entry.validationIssueIds.includes(issue!.id),
+    );
+
+    assert.ok(issue);
+    assert.equal(issue.severity, "critical");
+    assert.equal(
+      issue.quantityImpacts[0]?.quantityKey,
+      STRUCTURAL_MEMBER_QUANTITY_KEYS.material,
+    );
+    assert.equal(issue.quantityImpacts[0]?.canCalculate, false);
+    assert.ok(reviewItem);
+    assert.equal(reviewItem.action?.targetProperty, "quantity");
+    assert.deepEqual(reviewItem.affectedObjects, [
+      { objectId: "SM-008", objectType: "structural-member" },
+    ]);
+  });
+
+  it("fails conflicting quantity without reinterpreting resolver traces", () => {
+    const batch = validateStructuralMembers({
+      payload: {
+        structuralMembers: [
+          buildCompleteMember({
+            quantity: null,
+            resolutionTraces: [
+              ...buildCompleteMember().resolutionTraces,
+              {
+                propertyPath: "quantity",
+                method: "unresolved",
+                explanation: "Conflicting candidate values (1, 2).",
+                evidenceIds: ["E-QTY-A", "E-QTY-B"],
+                assumptionIds: [],
+                validationIssueIds: [],
+                reviewItemIds: [],
+              },
+            ],
+          }),
+        ],
+      },
+      ...buildRelatedMaps(),
+    });
+
+    const issue = batch.validationIssues.find(
+      (entry) => entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.quantityResolved,
+    );
+
+    assert.ok(issue);
+    assert.equal(issue.quantityImpacts[0]?.canCalculate, false);
+  });
+
+  it("passes resolved quantity", () => {
+    const batch = validateStructuralMembers({
+      payload: {
+        structuralMembers: [
+          buildCompleteMember({
+            quantity: 3,
+            resolutionTraces: [
+              ...buildCompleteMember().resolutionTraces,
+              {
+                propertyPath: "quantity",
+                method: "explicit-project-value",
+                explanation: "Quantity is explicit on the schedule.",
+                evidenceIds: ["E-008"],
+                assumptionIds: [],
+                validationIssueIds: [],
+                reviewItemIds: [],
+              },
+            ],
+          }),
+        ],
+      },
+      ...buildRelatedMaps(),
+    });
+
+    const result = batch.validationResults.find(
+      (entry) => entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.quantityResolved,
+    );
+
+    assert.equal(result?.outcome, "passed");
+    assert.equal(
+      batch.validationIssues.some(
+        (entry) => entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.quantityResolved,
+      ),
+      false,
+    );
+  });
+
+  it("does not block material LF when only location is null", () => {
+    const batch = validateStructuralMembers({
+      payload: {
+        structuralMembers: [buildCompleteMember({ location: null })],
+      },
+      ...buildRelatedMaps(),
+    });
+
+    assert.equal(
+      batch.validationIssues.some(
+        (entry) => entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.quantityResolved,
+      ),
+      false,
+    );
+    assert.equal(
+      batch.validationIssues.some((entry) =>
+        entry.ruleId.includes("location"),
+      ),
+      false,
+    );
+  });
+
+  it("blocks only the unresolved member in a mixed quantity payload", () => {
+    const batch = validateStructuralMembers({
+      payload: {
+        structuralMembers: [
+          buildCompleteMember({
+            id: "SM-HDR-001",
+            quantity: 1,
+            lengthFeet: 6,
+          }),
+          buildCompleteMember({
+            id: "SM-HDR-002",
+            quantity: null,
+            lengthFeet: 8,
+            resolutionTraces: [],
+          }),
+        ],
+      },
+      ...buildRelatedMaps(),
+    });
+
+    const hdr001Issue = batch.validationIssues.find(
+      (entry) =>
+        entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.quantityResolved &&
+        entry.target.objectId === "SM-HDR-001",
+    );
+    const hdr002Issue = batch.validationIssues.find(
+      (entry) =>
+        entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.quantityResolved &&
+        entry.target.objectId === "SM-HDR-002",
+    );
+
+    assert.equal(hdr001Issue, undefined);
+    assert.ok(hdr002Issue);
+  });
+
+  it("keeps plyCount validation independent from quantity validation", () => {
+    const quantityUnresolvedBuiltUp = validateStructuralMembers({
+      payload: {
+        structuralMembers: [
+          buildCompleteMember({
+            category: "built-up-member",
+            quantity: null,
+            plyCount: 2,
+            resolutionTraces: [],
+          }),
+        ],
+      },
+      ...buildRelatedMaps(),
+    });
+    const plyCountUnresolvedBuiltUp = validateStructuralMembers({
+      payload: {
+        structuralMembers: [
+          buildCompleteMember({
+            category: "built-up-member",
+            quantity: 1,
+            plyCount: null,
+            resolutionTraces: [],
+          }),
+        ],
+      },
+      ...buildRelatedMaps(),
+    });
+
+    assert.ok(
+      quantityUnresolvedBuiltUp.validationIssues.some(
+        (entry) => entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.quantityResolved,
+      ),
+    );
+    assert.equal(
+      quantityUnresolvedBuiltUp.validationIssues.some(
+        (entry) => entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.plyCountResolved,
+      ),
+      false,
+    );
+    assert.ok(
+      plyCountUnresolvedBuiltUp.validationIssues.some(
+        (entry) => entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.plyCountResolved,
+      ),
+    );
+    assert.equal(
+      plyCountUnresolvedBuiltUp.validationIssues.some(
+        (entry) => entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.quantityResolved,
+      ),
+      false,
+    );
+  });
+
   it("fails missing member length", () => {
     const batch = validateStructuralMembers({
       payload: {

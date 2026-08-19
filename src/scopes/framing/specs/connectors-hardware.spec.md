@@ -121,7 +121,7 @@ Construction behavior is defined by these knowledge files and must not be duplic
 
 ### Calculators
 
-- Connectors & Hardware Resolver
+- Fastener Calculator
 
 ### Claude Prompts
 
@@ -138,6 +138,7 @@ Implementation is complete when the subsystem can:
 - Produce valid Hardware schema instances
 - Produce valid Fastener schema instances
 - Produce the Connectors & Hardware Artifact
+- Produce deterministic specified fastener quantities from resolved Construction Brain inputs
 - Integrate correctly with upstream and downstream subsystem dependencies
 - Preserve deterministic execution through artifacts
 - Surface review items rather than unresolved guesses

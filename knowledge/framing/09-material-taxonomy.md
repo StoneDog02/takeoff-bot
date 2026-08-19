@@ -264,6 +264,48 @@ Extract:
 
 Do not infer fastener schedules.
 
+## Specified Fastener Quantity
+
+This rule defines material quantity for **one resolved Fastener object**.
+
+The calculator consumes an already-resolved specified `quantity`. It does not determine fastener count.
+
+`materialQuantityEach = quantity`
+
+Units: `each`.
+
+Emit the specified quantity exactly. Do not alter, round, or scale it.
+
+Emit one material line per Fastener. Do not merge Fastener objects.
+
+Required resolved inputs:
+
+- Fastener type
+- `quantity`
+
+If either required input is unresolved, this quantity cannot be calculated. Do not guess quantity.
+
+Diameter, length, and coating classify the material only when already resolved. They are not required and must not be invented.
+
+`associatedObjectIds` are relationship and traceability references. They are not calculator quantity inputs.
+
+This is specified quantity only. It is not waste, pack conversion, or a fastening schedule.
+
+### Exclusions
+
+Do not derive fastener quantity from:
+
+- Sheathing area
+- Wall, floor, or roof geometry
+- Nailing spacing or schedules
+- Connector relationships
+- Hardware relationships
+- Member count
+- Construction convention
+- Typical fastening assumptions
+
+Do not infer a fastening or nailing schedule.
+
 ---
 
 # Hardware

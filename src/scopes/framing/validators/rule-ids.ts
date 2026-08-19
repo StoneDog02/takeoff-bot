@@ -48,6 +48,7 @@ export const STRUCTURAL_MEMBER_RULE_IDS = {
   materialResolved: "member.material.resolved",
   sizeResolved: "member.size.resolved",
   lengthResolved: "member.length.resolved",
+  quantityResolved: "member.quantity.resolved",
   plyCountResolved: "member.plyCount.resolved",
   associatedObjectsResolved: "member.associatedObjects.resolved",
   supportedObjectsResolved: "member.supportedObjects.resolved",

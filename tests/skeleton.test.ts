@@ -14,6 +14,6 @@ describe("takeoff-bot skeleton", () => {
     registerScopes();
     const scope = scopeRegistry.get("framing");
     assert.equal(scope.name, "framing");
-    assert.equal(scope.stages.length, 10);
+    assert.equal(scope.stages.length, 12);
   });
 });
