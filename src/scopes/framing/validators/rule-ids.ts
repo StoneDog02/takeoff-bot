@@ -33,6 +33,9 @@ export const OPENINGS_RULE_IDS = {
   nominalDimensionsResolved: "opening.dimensions.nominal.resolved",
   roughDimensionsResolved: "opening.dimensions.rough.resolved",
   headerReferenceResolved: "opening.header.reference.resolved",
+  quantityResolved: "opening.quantity.resolved",
+  kingStudCountDefault: "opening.kingStudCount.default",
+  roughSillSizeDefault: "opening.roughSillSize.default",
 } as const;
 
 export type OpeningsRuleId =
@@ -41,6 +44,8 @@ export type OpeningsRuleId =
 export const OPENING_QUANTITY_KEYS = {
   framing: "opening.framing",
   header: "opening.header",
+  kingStuds: "opening.king-studs",
+  roughSill: "opening.rough-sill",
 } as const;
 
 export const STRUCTURAL_MEMBER_RULE_IDS = {

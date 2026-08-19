@@ -23,11 +23,13 @@ import {
   buildUserDecisionIndex,
   findAppliedUserDecision,
   createUserOverrideTrace,
+  filterUserDecisionsForPropertyPaths,
   type UserDecisionIndex,
 } from "./applyUserDecisions.js";
 import { createWallObjectId, createWallSegmentObjectId } from "./ids.js";
 import {
   isSegmentPropertyPath,
+  isWallFramingPropertyPath,
   normalizeWallFramingCandidate,
   SEGMENT_PROPERTY_PATHS,
   WALL_PROPERTY_PATHS,
@@ -479,11 +481,14 @@ function buildUserDecisionContext(
   }
 
   return buildUserDecisionIndex(
-    {
-      userDecisions,
-      reviewItemsById: options.reviewItemsById,
-      evidenceById: buildEvidenceById(evidence),
-    },
+    filterUserDecisionsForPropertyPaths(
+      {
+        userDecisions,
+        reviewItemsById: options.reviewItemsById,
+        evidenceById: buildEvidenceById(evidence),
+      },
+      isWallFramingPropertyPath,
+    ),
     buildSubjectKeyByObjectId(subjectKeys),
   );
 }

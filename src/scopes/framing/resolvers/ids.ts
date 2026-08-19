@@ -78,3 +78,25 @@ export function createStructuralMemberObjectId(subjectKey: string): ObjectId {
   const candidate = sanitized.startsWith("SM-") ? sanitized : `SM-${sanitized}`;
   return objectIdSchema.parse(candidate);
 }
+
+/**
+ * Deterministic Opening identity for the Openings resolver.
+ *
+ * 1. Sanitize `subjectKey` with the shared subject-key discipline.
+ * 2. Prefix `O-` when the sanitized value is not already O-prefixed.
+ *    Example: subjectKey `O-001` → ObjectId `O-001`.
+ *
+ * Distinct subjectKeys that sanitize to the same ObjectId are rejected by
+ * `resolveOpenings`; IDs are never silently suffixed or merged.
+ */
+export function createOpeningObjectId(subjectKey: string): ObjectId {
+  const sanitized = sanitizeSubjectKey(subjectKey);
+  if (sanitized.length === 0) {
+    throw new Error(
+      `Cannot derive an Opening ObjectId from subjectKey "${subjectKey}".`,
+    );
+  }
+
+  const candidate = sanitized.startsWith("O-") ? sanitized : `O-${sanitized}`;
+  return objectIdSchema.parse(candidate);
+}

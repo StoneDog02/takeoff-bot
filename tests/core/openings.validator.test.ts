@@ -84,6 +84,7 @@ function buildCompleteOpening(
     scheduleReference: "Window Schedule",
     headerMemberId: "SM-008",
     fireRating: null,
+    kingStudCount: null,
     ...overrides,
   };
 }
@@ -101,6 +102,27 @@ function buildParentMaps() {
 }
 
 describe("validateOpenings", () => {
+  it("passes when parentObjectId is null during independent resolution", () => {
+    const batch = validateOpenings({
+      payload: {
+        openings: [
+          buildCompleteOpening({
+            parentObjectId: null,
+            parentWallId: null,
+            headerMemberId: null,
+          }),
+        ],
+      },
+    });
+
+    const parentResult = batch.validationResults.find(
+      (entry) => entry.ruleId === OPENINGS_RULE_IDS.parentResolved,
+    );
+
+    assert.equal(parentResult?.outcome, "passed");
+    assert.equal(batch.validationIssues.length, 0);
+  });
+
   it("accepts a complete opening with passing results", () => {
     const maps = buildParentMaps();
     const batch = validateOpenings({
@@ -108,11 +130,32 @@ describe("validateOpenings", () => {
       ...maps,
     });
 
-    assert.equal(batch.validationIssues.length, 0);
-    assert.equal(batch.reviewItems.length, 0);
+    assert.equal(batch.validationIssues.length, 2);
+    assert.equal(batch.reviewItems.length, 2);
+    assert.ok(
+      batch.reviewItems.some((item) => item.title.includes("Confirm king stud count")),
+    );
+    assert.ok(
+      batch.reviewItems.some((item) => item.title.includes("Confirm rough sill size")),
+    );
+    assert.ok(
+      batch.validationIssues.some(
+        (issue) => issue.ruleId === OPENINGS_RULE_IDS.kingStudCountDefault,
+      ),
+    );
+    assert.ok(
+      batch.validationIssues.some(
+        (issue) => issue.ruleId === OPENINGS_RULE_IDS.roughSillSizeDefault,
+      ),
+    );
     assert.ok(batch.validationResults.length > 0);
     assert.ok(
-      batch.validationResults.every((result) => result.outcome === "passed"),
+      batch.validationResults.every(
+        (result) =>
+          result.outcome === "passed" ||
+          result.ruleId === OPENINGS_RULE_IDS.kingStudCountDefault ||
+          result.ruleId === OPENINGS_RULE_IDS.roughSillSizeDefault,
+      ),
     );
   });
 
@@ -231,6 +274,12 @@ describe("validateOpenings", () => {
         (impact) => impact.quantityKey === OPENING_QUANTITY_KEYS.framing,
       )?.canCalculate,
       true,
+    );
+    assert.equal(
+      issue.quantityImpacts.find(
+        (impact) => impact.quantityKey === OPENING_QUANTITY_KEYS.roughSill,
+      )?.canCalculate,
+      false,
     );
   });
 

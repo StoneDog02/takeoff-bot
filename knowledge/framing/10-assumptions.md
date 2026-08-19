@@ -328,6 +328,32 @@ Rounding rules should be documented separately from construction assumptions.
 
 ---
 
+## Opening Wall Framing
+
+Opening-derived framing assumptions are governed by `13-opening-wall-framing-calculations.md`.
+
+### Allowed (with assumption record + review)
+
+- King stud count = `2` when no explicit count evidence exists (low structural risk relative to jacks)
+- Cripple stud count from rough opening width ÷ wall stud spacing (layout continuation formula)
+- Rough sill size = wall stud size when detail is silent
+- Conventional wood stud wall when `assembly.material` is null but context supports wood framing
+
+### Forbidden
+
+- Jack stud count from opening width, header span, bearing status, or IRC/code tables
+- Jack stud length from linked header horizontal span
+- King stud count from IRC Table R602.7.5 or wind/seismic tables
+- Header size, ply count, or bearing from opening width
+- Rough opening dimensions from nominal size alone
+- Net baseline stud deductions without opening position or explicit deduction count
+- Garage-door portal framing without structural detail
+- Seismic/high-wind/load-bearing doubled jack assumptions
+
+When forbidden facts are missing, block the affected quantity and create review items.
+
+---
+
 # Forbidden Framing Assumptions
 
 Never assume:

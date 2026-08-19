@@ -8,15 +8,28 @@ import type {
   ExtractedFramingEvidencePayload,
   FramingCalculationsPayload,
   StructuralMembersPayload,
+  OpeningsPayload,
   ValidationPayload,
   WallFramingPayload,
 } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 import type { FramingTakeoff } from "../../src/scopes/framing/schemas/framing-takeoff.schema.js";
+import type { Opening } from "../../src/scopes/framing/schemas/opening.schema.js";
 import type { BuildingWall, WallSegment } from "../../src/scopes/framing/schemas/wall.schema.js";
 import {
+  openingsArtifactSchema,
+  structuralMembersArtifactSchema,
+  wallFramingArtifactSchema,
+} from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
+import {
+  OPENING_QUANTITY_KEYS,
   STRUCTURAL_MEMBER_QUANTITY_KEYS,
   WALL_QUANTITY_KEYS,
 } from "../../src/scopes/framing/validators/rule-ids.js";
+
+export const WALL_FRAMING_OPENING_LINKS_COMPANION_SUFFIX = "wall-framing-links";
+export const OPENINGS_HEADER_LINKS_COMPANION_SUFFIX = "openings-header-links";
+export const STRUCTURAL_MEMBERS_OPENING_LINKS_COMPANION_SUFFIX =
+  "structural-members-opening-links";
 
 export function materialLineItemId(
   quantityKey: string,
@@ -130,10 +143,29 @@ export function segmentById(
   return wallFraming.segments.find((segment) => segment.id === segmentId);
 }
 
+export function openingById(
+  openings: OpeningsPayload,
+  openingId: ObjectId,
+): Opening | undefined {
+  return openings.openings.find((opening) => opening.id === openingId);
+}
+
+export function evidenceForSubjectKind(
+  evidence: readonly Evidence[],
+  subjectKind: Evidence["subjectKind"],
+  subjectKey: string,
+): Evidence[] {
+  return evidence.filter(
+    (record) =>
+      record.subjectKind === subjectKind && record.subjectKey === subjectKey,
+  );
+}
+
 export interface LiveFramingPipelineSnapshot {
   pageText: string;
   evidence: ExtractedFramingEvidencePayload["evidence"];
   wallFraming: WallFramingPayload;
+  openings: OpeningsPayload;
   structuralMembers: StructuralMembersPayload;
   validation: ValidationPayload;
   calculations: FramingCalculationsPayload;
@@ -163,6 +195,60 @@ async function readStagePayload<T>(
   return artifact.payload;
 }
 
+export async function readCanonicalWallFramingFromDisk(
+  stageResults: PipelineRunResult["stageResults"],
+): Promise<WallFramingPayload> {
+  const openingsStage = stageResults.find((entry) => entry.name === "openings");
+  const companion = openingsStage?.companionArtifacts?.find(
+    (entry) => entry.fileSuffix === WALL_FRAMING_OPENING_LINKS_COMPANION_SUFFIX,
+  );
+
+  if (companion) {
+    const artifact = wallFramingArtifactSchema.parse(
+      JSON.parse(await readFile(companion.artifactPath, "utf8")),
+    );
+    return artifact.payload;
+  }
+
+  return readStagePayload<WallFramingPayload>(stageResults, "wallFraming");
+}
+
+export async function readCanonicalOpeningsFromDisk(
+  stageResults: PipelineRunResult["stageResults"],
+): Promise<OpeningsPayload> {
+  const membersStage = stageResults.find((entry) => entry.name === "structuralMembers");
+  const companion = membersStage?.companionArtifacts?.find(
+    (entry) => entry.fileSuffix === OPENINGS_HEADER_LINKS_COMPANION_SUFFIX,
+  );
+
+  if (companion) {
+    const artifact = openingsArtifactSchema.parse(
+      JSON.parse(await readFile(companion.artifactPath, "utf8")),
+    );
+    return artifact.payload;
+  }
+
+  return readStagePayload<OpeningsPayload>(stageResults, "openings");
+}
+
+export async function readCanonicalStructuralMembersFromDisk(
+  stageResults: PipelineRunResult["stageResults"],
+): Promise<StructuralMembersPayload> {
+  const membersStage = stageResults.find((entry) => entry.name === "structuralMembers");
+  const companion = membersStage?.companionArtifacts?.find(
+    (entry) => entry.fileSuffix === STRUCTURAL_MEMBERS_OPENING_LINKS_COMPANION_SUFFIX,
+  );
+
+  if (companion) {
+    const artifact = structuralMembersArtifactSchema.parse(
+      JSON.parse(await readFile(companion.artifactPath, "utf8")),
+    );
+    return artifact.payload;
+  }
+
+  return readStagePayload<StructuralMembersPayload>(stageResults, "structuralMembers");
+}
+
 export async function snapshotLiveFramingPipeline(
   pageText: string,
   result: PipelineRunResult,
@@ -171,13 +257,10 @@ export async function snapshotLiveFramingPipeline(
     result.stageResults,
     "extractedEvidence",
   );
-  const wallFraming = await readStagePayload<WallFramingPayload>(
+  const wallFraming = await readCanonicalWallFramingFromDisk(result.stageResults);
+  const openings = await readCanonicalOpeningsFromDisk(result.stageResults);
+  const structuralMembers = await readCanonicalStructuralMembersFromDisk(
     result.stageResults,
-    "wallFraming",
-  );
-  const structuralMembers = await readStagePayload<StructuralMembersPayload>(
-    result.stageResults,
-    "structuralMembers",
   );
   const validation = await readStagePayload<ValidationPayload>(
     result.stageResults,
@@ -200,6 +283,7 @@ export async function snapshotLiveFramingPipeline(
     pageText,
     evidence: evidence.evidence,
     wallFraming,
+    openings,
     structuralMembers,
     validation,
     calculations,
@@ -307,6 +391,75 @@ export function assertNoCrossDomainTraceContamination(
         `Structural member resolution traces incorrectly reference wall Evidence ${evidenceId}.`,
       );
     }
+  }
+}
+
+export function assertNoWallOpeningTraceContamination(
+  wallFraming: WallFramingPayload,
+  openings: OpeningsPayload,
+  wallEvidenceIds: readonly string[],
+  openingEvidenceIds: readonly string[],
+): void {
+  const wallTraces = [
+    ...wallFraming.walls.flatMap((wall) => wall.resolutionTraces),
+    ...wallFraming.segments.flatMap((segment) => segment.resolutionTraces),
+  ];
+  const openingTraces = openings.openings.flatMap(
+    (opening) => opening.resolutionTraces,
+  );
+
+  for (const evidenceId of openingEvidenceIds) {
+    if (
+      wallTraces.some((trace) => trace.evidenceIds.includes(evidenceId as never))
+    ) {
+      throw new Error(
+        `Wall resolution traces incorrectly reference opening Evidence ${evidenceId}.`,
+      );
+    }
+  }
+
+  for (const evidenceId of wallEvidenceIds) {
+    if (
+      openingTraces.some((trace) => trace.evidenceIds.includes(evidenceId as never))
+    ) {
+      throw new Error(
+        `Opening resolution traces incorrectly reference wall Evidence ${evidenceId}.`,
+      );
+    }
+  }
+}
+
+export function kingStudMaterialForOpening(
+  calculations: FramingCalculationsPayload,
+  openingId: ObjectId = "O-001",
+): FramingCalculationsPayload["materials"][number] | undefined {
+  return calculations.materials.find(
+    (item) =>
+      item.id === materialLineItemId(OPENING_QUANTITY_KEYS.kingStuds, openingId),
+  );
+}
+
+export function roughSillMaterialForOpening(
+  calculations: FramingCalculationsPayload,
+  openingId: ObjectId = "O-001",
+): FramingCalculationsPayload["materials"][number] | undefined {
+  return calculations.materials.find(
+    (item) =>
+      item.id === materialLineItemId(OPENING_QUANTITY_KEYS.roughSill, openingId),
+  );
+}
+
+export function assertNoOpeningMaterialLines(
+  calculations: FramingCalculationsPayload,
+): void {
+  const openingMaterials = calculations.materials.filter((item) =>
+    item.id.includes("opening-framing") || item.id.includes("opening-header"),
+  );
+
+  if (openingMaterials.length > 0) {
+    throw new Error(
+      `Expected no Opening material lines, found ${openingMaterials.map((item) => item.id).join(", ")}.`,
+    );
   }
 }
 

@@ -26,14 +26,19 @@ export const openingDimensionsSchema = z.object({
 export const openingSchema = resolvedObjectBaseSchema.extend({
   objectType: z.literal("opening"),
   category: openingCategorySchema,
-  parentObjectId: objectIdSchema,
+  parentObjectId: objectIdSchema.nullable().default(null),
   parentWallId: objectIdSchema.nullable().default(null),
   dimensions: openingDimensionsSchema,
-  quantity: z.number().int().positive(),
+  quantity: z.number().int().positive().nullable().default(null),
   scheduleReference: z.string().trim().min(1).nullable().default(null),
   detailReference: z.string().trim().min(1).nullable().default(null),
   headerMemberId: objectIdSchema.nullable().default(null),
   fireRating: z.string().trim().min(1).nullable().default(null),
+  /**
+   * Explicit king stud count for this opening when project evidence resolves it.
+   * Null until evidence or an approved assumption path supplies a value.
+   */
+  kingStudCount: z.number().int().positive().nullable().default(null),
 });
 
 export type OpeningCategory = z.infer<typeof openingCategorySchema>;

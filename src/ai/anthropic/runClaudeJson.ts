@@ -9,17 +9,18 @@ export interface RunClaudeJsonInput<T extends z.ZodTypeAny> {
   userPrompt: string;
   schema: T;
   label?: string;
+  maxTokens?: number;
 }
 
 export async function runClaudeJson<T extends z.ZodTypeAny>(
   input: RunClaudeJsonInput<T>,
 ): Promise<z.infer<T>> {
-  const { systemPrompt, userPrompt, schema, label = "Claude response" } = input;
+  const { systemPrompt, userPrompt, schema, label = "Claude response", maxTokens = 4096 } = input;
   const client = getAnthropicClient();
 
   const response = await client.messages.create({
     model: env.anthropicModel,
-    max_tokens: 4096,
+    max_tokens: maxTokens,
     system: systemPrompt,
     messages: [{ role: "user", content: userPrompt }],
   });
@@ -44,7 +45,7 @@ ${textBlock.text}`;
 
     const repairResponse = await client.messages.create({
       model: env.anthropicModel,
-      max_tokens: 4096,
+      max_tokens: maxTokens,
       system: systemPrompt,
       messages: [
         { role: "user", content: userPrompt },

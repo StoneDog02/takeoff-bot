@@ -19,3 +19,11 @@ export function generateArtifactId(order: number): string {
 export function formatStageArtifactName(order: number, name: string): string {
   return `${String(order).padStart(2, "0")}-${name}.json`;
 }
+
+export function formatCompanionArtifactName(
+  order: number,
+  stageName: string,
+  fileSuffix: string,
+): string {
+  return `${String(order).padStart(2, "0")}-${stageName}.${fileSuffix}.json`;
+}

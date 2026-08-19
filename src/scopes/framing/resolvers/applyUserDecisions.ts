@@ -11,10 +11,19 @@ import type { UserDecision } from "../../../core/schemas/user-decision.schema.js
 import { userDecisionSchema } from "../../../core/schemas/user-decision.schema.js";
 import type { UserDecisionValue } from "../../../core/schemas/user-decision.schema.js";
 import {
+  isOpeningPropertyPath,
+  normalizeOpeningCandidate,
+  type OpeningPropertyPath,
+} from "./openingPropertyPaths.js";
+import {
   normalizeWallFramingCandidate,
   type WallFramingPropertyPath,
   isWallFramingPropertyPath,
 } from "./wallFramingPropertyPaths.js";
+
+export type UserDecisionPropertyPath =
+  | WallFramingPropertyPath
+  | OpeningPropertyPath;
 
 export type UserDecisionResolutionContext = {
   userDecisions: readonly UserDecision[];
@@ -26,9 +35,10 @@ export type AppliedUserDecision = {
   decision: UserDecision;
   reviewItem: ReviewItem;
   objectId: ObjectId;
-  propertyPath: WallFramingPropertyPath;
+  propertyPath: UserDecisionPropertyPath;
   subjectKey: string;
   value: string | number | boolean;
+  resolutionKind: "conflict-resolved" | "value-provided";
   acceptedEvidenceIds: EvidenceId[];
   rejectedEvidenceIds: EvidenceId[];
 };
@@ -45,6 +55,26 @@ function uniqueSortedIds(ids: readonly string[]): EvidenceId[] {
 
 function decisionTargetKey(objectId: ObjectId, propertyPath: string): string {
   return `${objectId}\0${propertyPath}`;
+}
+
+export function filterUserDecisionsForPropertyPaths(
+  context: UserDecisionResolutionContext,
+  isSupportedPropertyPath: (propertyPath: string) => boolean,
+): UserDecisionResolutionContext {
+  if (context.userDecisions.length === 0) {
+    return context;
+  }
+
+  const filteredDecisions = context.userDecisions.filter((decision) => {
+    const reviewItem = context.reviewItemsById.get(decision.reviewItemId);
+    const propertyPath = reviewItem?.action.targetProperty;
+    return propertyPath != null && isSupportedPropertyPath(propertyPath);
+  });
+
+  return {
+    ...context,
+    userDecisions: filteredDecisions,
+  };
 }
 
 function candidateKey(value: string | number | boolean): string {
@@ -77,7 +107,7 @@ function assertConflictResolvedDecision(decision: UserDecision): asserts decisio
 function validateReviewItemTarget(
   reviewItem: ReviewItem,
   objectId: ObjectId,
-  propertyPath: WallFramingPropertyPath,
+  propertyPath: string,
 ): void {
   if (reviewItem.affectedObjects.length !== 1) {
     throw new Error(
@@ -233,8 +263,56 @@ function validateConflictResolvedDecision(
     propertyPath,
     subjectKey,
     value: normalizedDecisionValue,
+    resolutionKind: "conflict-resolved",
     acceptedEvidenceIds: uniqueSortedIds(result.acceptedEvidenceIds),
     rejectedEvidenceIds: uniqueSortedIds(result.rejectedEvidenceIds),
+  };
+}
+
+function validateValueProvidedDecision(
+  decision: UserDecision,
+  reviewItem: ReviewItem,
+  objectId: ObjectId,
+  propertyPath: OpeningPropertyPath,
+  subjectKey: string,
+): AppliedUserDecision {
+  userDecisionSchema.parse(decision);
+  validateReviewItemTarget(reviewItem, objectId, propertyPath);
+
+  const result = decision.result;
+  if (result.type !== "value-provided") {
+    throw new Error(
+      `User Decision ${decision.id} must use result.type "value-provided" for opening property ${propertyPath}.`,
+    );
+  }
+
+  if (reviewItem.action.type !== "provide-value") {
+    throw new Error(
+      `Review Item ${reviewItem.id} must use action.type "provide-value" for opening value-provided decisions.`,
+    );
+  }
+
+  const scalarDecisionValue = assertScalarDecisionValue(result.value, decision.id);
+  const normalizedDecisionValue = normalizeOpeningCandidate(
+    propertyPath,
+    scalarDecisionValue,
+  );
+  if (normalizedDecisionValue === undefined) {
+    throw new Error(
+      `User Decision ${decision.id} value is not valid for property ${propertyPath}.`,
+    );
+  }
+
+  return {
+    decision,
+    reviewItem,
+    objectId,
+    propertyPath,
+    subjectKey,
+    value: normalizedDecisionValue,
+    resolutionKind: "value-provided",
+    acceptedEvidenceIds: [],
+    rejectedEvidenceIds: [],
   };
 }
 
@@ -289,12 +367,6 @@ export function buildUserDecisionIndex(
       );
     }
 
-    if (!isWallFramingPropertyPath(propertyPath)) {
-      throw new Error(
-        `Review Item ${reviewItem.id} targets unsupported property ${propertyPath}.`,
-      );
-    }
-
     const subjectKey = subjectKeyByObjectId.get(objectId);
     if (!subjectKey) {
       throw new Error(
@@ -302,14 +374,29 @@ export function buildUserDecisionIndex(
       );
     }
 
-    const applied = validateConflictResolvedDecision(
-      decision,
-      reviewItem,
-      objectId,
-      propertyPath,
-      subjectKey,
-      context.evidenceById,
-    );
+    let applied: AppliedUserDecision;
+    if (isWallFramingPropertyPath(propertyPath)) {
+      applied = validateConflictResolvedDecision(
+        decision,
+        reviewItem,
+        objectId,
+        propertyPath,
+        subjectKey,
+        context.evidenceById,
+      );
+    } else if (isOpeningPropertyPath(propertyPath)) {
+      applied = validateValueProvidedDecision(
+        decision,
+        reviewItem,
+        objectId,
+        propertyPath,
+        subjectKey,
+      );
+    } else {
+      throw new Error(
+        `Review Item ${reviewItem.id} targets unsupported property ${propertyPath}.`,
+      );
+    }
 
     const key = decisionTargetKey(objectId, propertyPath);
     if (index.has(key)) {
@@ -327,7 +414,7 @@ export function buildUserDecisionIndex(
 export function findAppliedUserDecision(
   index: UserDecisionIndex,
   objectId: ObjectId,
-  propertyPath: WallFramingPropertyPath,
+  propertyPath: UserDecisionPropertyPath,
 ): AppliedUserDecision | undefined {
   return index.get(decisionTargetKey(objectId, propertyPath));
 }
@@ -335,16 +422,24 @@ export function findAppliedUserDecision(
 export function createUserOverrideTrace(
   applied: AppliedUserDecision,
 ): PropertyResolutionTrace {
-  const conflictingEvidenceIds = uniqueSortedIds([
-    ...applied.acceptedEvidenceIds,
-    ...applied.rejectedEvidenceIds,
-  ]);
+  const explanation =
+    applied.resolutionKind === "value-provided"
+      ? `Resolved from User Decision ${applied.decision.id} providing reviewer value without plan evidence.`
+      : `Resolved from User Decision ${applied.decision.id} selecting explicit project evidence ${applied.acceptedEvidenceIds.join(", ")} after conflicting candidates remained unresolved.`;
+
+  const evidenceIds =
+    applied.resolutionKind === "value-provided"
+      ? []
+      : uniqueSortedIds([
+          ...applied.acceptedEvidenceIds,
+          ...applied.rejectedEvidenceIds,
+        ]);
 
   return {
     propertyPath: applied.propertyPath,
     method: "user-override",
-    explanation: `Resolved from User Decision ${applied.decision.id} selecting explicit project evidence ${applied.acceptedEvidenceIds.join(", ")} after conflicting candidates remained unresolved.`,
-    evidenceIds: conflictingEvidenceIds,
+    explanation,
+    evidenceIds,
     assumptionIds: [],
     userDecisionIds: [applied.decision.id],
     validationIssueIds: [],
@@ -352,4 +447,5 @@ export function createUserOverrideTrace(
   };
 }
 
+export type { OpeningPropertyPath } from "./openingPropertyPaths.js";
 export type { WallFramingPropertyPath } from "./wallFramingPropertyPaths.js";

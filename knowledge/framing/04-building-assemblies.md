@@ -257,6 +257,10 @@ Create review items when:
 - Header size is unresolved
 - Bearing/post requirement is unclear
 
+Opening-derived wall framing member **calculation rules** (king, jack, cripple, rough sill) and baseline stud interaction are defined in `13-opening-wall-framing-calculations.md`.
+
+Header material quantity remains owned by Structural Member calculation in `08-structural-members.md`.
+
 ---
 
 ## Stair Opening / Floor Opening Assembly
@@ -667,6 +671,10 @@ This baseline count does not include:
 - Stud piece-length determination
 
 Opening-derived and special-condition members belong to their own assembly and calculation rules.
+
+Those rules are defined in `13-opening-wall-framing-calculations.md`.
+
+Default behavior: baseline count is unchanged; opening assembly studs are additive until opening position along the segment (or explicit stud-deduction count) resolves for net-mode deductions.
 
 ---
 

@@ -56,6 +56,56 @@ describe("openings artifact contract", () => {
     assert.equal("structuralMembers" in artifact.payload, false);
   });
 
+  it("accepts a partially unresolved opening with null parent and quantity", () => {
+    const artifact = openingsArtifactSchema.parse({
+      artifactId: "ART-013B",
+      artifactType: "openings",
+      schemaVersion: "1.0.0",
+      artifactVersion: 1,
+      engineVersion: "0.1.0",
+      pipelineRunId: "RUN-001",
+      projectId: "demo-project",
+      createdAt: timestamp,
+      lastModifiedAt: timestamp,
+      producer: { type: "system", identifier: "framing-pipeline" },
+      inputArtifactIds: ["ART-006"],
+      parentArtifactIds: ["ART-006"],
+      payload: {
+        openings: [
+          {
+            id: "O-001",
+            objectType: "opening",
+            completion: {
+              status: "partial",
+              percentage: 50,
+              completedItems: 3,
+              totalItems: 6,
+            },
+            reviewStatus: "no-review-required",
+            blockingStatus: "not-blocked",
+            category: "window",
+            parentObjectId: null,
+            parentWallId: null,
+            dimensions: {
+              nominalWidthFeet: 3,
+              nominalHeightFeet: 4,
+              roughWidthFeet: null,
+              roughHeightFeet: null,
+            },
+            quantity: null,
+            scheduleReference: null,
+            detailReference: null,
+            headerMemberId: null,
+            fireRating: null,
+          },
+        ],
+      },
+    });
+
+    assert.equal(artifact.payload.openings[0]?.parentObjectId, null);
+    assert.equal(artifact.payload.openings[0]?.quantity, null);
+  });
+
   it("rejects an openings envelope with the wrong artifact type", () => {
     const result = openingsArtifactSchema.safeParse({
       artifactId: "ART-013",

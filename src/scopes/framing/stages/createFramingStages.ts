@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import type { PipelineStage, PipelineStageContext } from "../../../core/pipeline/types.js";
+import type { PipelineStage, PipelineStageContext, UserDecisionRunInput } from "../../../core/pipeline/types.js";
 import type {
   ArtifactEnvelope,
   ArtifactProducer,
@@ -38,10 +38,36 @@ import { coordinateFramingCalculations } from "../calculators/calculation-coordi
 import { coordinateFramingConfidence } from "../confidence/confidence-coordinator.js";
 import { resolveWallFraming } from "../resolvers/resolveWallFraming.js";
 import { coordinateFramingValidation } from "../validators/validation-coordinator.js";
+import { resolveOpenings } from "../resolvers/resolveOpenings.js";
+import { isOpeningPropertyPath } from "../resolvers/openingPropertyPaths.js";
+import { isWallFramingPropertyPath } from "../resolvers/wallFramingPropertyPaths.js";
+import { applyWallOpeningBacklinks } from "../resolvers/applyWallOpeningBacklinks.js";
+import {
+  linkOpeningHeaderRelationships,
+  openingHeaderLinksChanged,
+  structuralMemberOpeningLinksChanged,
+} from "../resolvers/linkOpeningHeaderRelationships.js";
 import { resolveStructuralMembers } from "../resolvers/resolveStructuralMembers.js";
 
 const SCHEMA_VERSION = "1.0.0";
 const ENGINE_VERSION = "0.1.0";
+
+function userDecisionInputArtifactIds(
+  userDecisionRunInput: UserDecisionRunInput | undefined,
+  isPropertyPath: (propertyPath: string) => boolean,
+): readonly ArtifactId[] {
+  if (!userDecisionRunInput?.inputArtifactIds?.length) {
+    return [];
+  }
+
+  const hasApplicableDecision = userDecisionRunInput.userDecisions.some((decision) => {
+    const reviewItem = userDecisionRunInput.reviewItemsById.get(decision.reviewItemId);
+    const propertyPath = reviewItem?.action.targetProperty;
+    return propertyPath != null && isPropertyPath(propertyPath);
+  });
+
+  return hasApplicableDecision ? userDecisionRunInput.inputArtifactIds : [];
+}
 
 function getPayload<T>(context: PipelineStageContext, stageName: string): T {
   const artifact = context.completedArtifacts.get(stageName);
@@ -92,6 +118,137 @@ export function createFramingStageArtifact<TSchema extends z.ZodTypeAny>(
   });
 
   return parsed as ArtifactEnvelope<unknown>;
+}
+
+const WALL_FRAMING_OPENING_LINKS_COMPANION_SUFFIX = "wall-framing-links";
+const OPENINGS_HEADER_LINKS_COMPANION_SUFFIX = "openings-header-links";
+const STRUCTURAL_MEMBERS_OPENING_LINKS_COMPANION_SUFFIX =
+  "structural-members-opening-links";
+
+function wallFramingOpeningLinksChanged(
+  before: WallFramingPayload,
+  after: WallFramingPayload,
+): boolean {
+  if (before.segments.length !== after.segments.length) {
+    return true;
+  }
+
+  return before.segments.some((segment, index) => {
+    const updated = after.segments[index];
+    if (!updated || segment.id !== updated.id) {
+      return true;
+    }
+
+    if (segment.openingIds.length !== updated.openingIds.length) {
+      return true;
+    }
+
+    return segment.openingIds.some(
+      (openingId, openingIndex) => openingId !== updated.openingIds[openingIndex],
+    );
+  });
+}
+
+function createLinkedWallFramingArtifact(
+  context: PipelineStageContext,
+  payload: WallFramingPayload,
+  sourceWallFramingArtifactId: ArtifactId,
+  openingsArtifactId: ArtifactId,
+): ArtifactEnvelope<unknown> {
+  const now = new Date().toISOString();
+
+  return wallFramingArtifactSchema.parse({
+    artifactId: generateArtifactId(7),
+    artifactType: "wall-framing",
+    schemaVersion: SCHEMA_VERSION,
+    artifactVersion: 2,
+    engineVersion: ENGINE_VERSION,
+    pipelineRunId: context.pipelineRunId,
+    projectId: context.projectId,
+    createdAt: now,
+    lastModifiedAt: now,
+    producer: {
+      type: "system",
+      identifier: "framing-pipeline",
+    },
+    inputArtifactIds: uniqueSortedArtifactIds([
+      sourceWallFramingArtifactId,
+      openingsArtifactId,
+    ]),
+    parentArtifactIds: uniqueSortedArtifactIds([
+      sourceWallFramingArtifactId,
+      openingsArtifactId,
+    ]),
+    payload,
+  });
+}
+
+function createLinkedOpeningsArtifact(
+  context: PipelineStageContext,
+  payload: OpeningsPayload,
+  sourceOpeningsArtifactId: ArtifactId,
+  sourceStructuralMembersArtifactId: ArtifactId,
+): ArtifactEnvelope<unknown> {
+  const now = new Date().toISOString();
+
+  return openingsArtifactSchema.parse({
+    artifactId: generateArtifactId(8),
+    artifactType: "openings",
+    schemaVersion: SCHEMA_VERSION,
+    artifactVersion: 2,
+    engineVersion: ENGINE_VERSION,
+    pipelineRunId: context.pipelineRunId,
+    projectId: context.projectId,
+    createdAt: now,
+    lastModifiedAt: now,
+    producer: {
+      type: "system",
+      identifier: "framing-pipeline",
+    },
+    inputArtifactIds: uniqueSortedArtifactIds([
+      sourceOpeningsArtifactId,
+      sourceStructuralMembersArtifactId,
+    ]),
+    parentArtifactIds: uniqueSortedArtifactIds([
+      sourceOpeningsArtifactId,
+      sourceStructuralMembersArtifactId,
+    ]),
+    payload,
+  });
+}
+
+function createLinkedStructuralMembersArtifact(
+  context: PipelineStageContext,
+  payload: StructuralMembersPayload,
+  sourceStructuralMembersArtifactId: ArtifactId,
+  sourceOpeningsArtifactId: ArtifactId,
+): ArtifactEnvelope<unknown> {
+  const now = new Date().toISOString();
+
+  return structuralMembersArtifactSchema.parse({
+    artifactId: generateArtifactId(8),
+    artifactType: "structural-members",
+    schemaVersion: SCHEMA_VERSION,
+    artifactVersion: 2,
+    engineVersion: ENGINE_VERSION,
+    pipelineRunId: context.pipelineRunId,
+    projectId: context.projectId,
+    createdAt: now,
+    lastModifiedAt: now,
+    producer: {
+      type: "system",
+      identifier: "framing-pipeline",
+    },
+    inputArtifactIds: uniqueSortedArtifactIds([
+      sourceStructuralMembersArtifactId,
+      sourceOpeningsArtifactId,
+    ]),
+    parentArtifactIds: uniqueSortedArtifactIds([
+      sourceStructuralMembersArtifactId,
+      sourceOpeningsArtifactId,
+    ]),
+    payload,
+  });
 }
 
 function buildMockExtractedEvidence(
@@ -372,7 +529,7 @@ const stages: PipelineStage[] = [
         "wall-framing",
         payload,
         { type: "system", identifier: "framing-pipeline" },
-        userDecisionRunInput?.inputArtifactIds ?? [],
+        userDecisionInputArtifactIds(userDecisionRunInput, isWallFramingPropertyPath),
       );
     },
   },
@@ -380,16 +537,57 @@ const stages: PipelineStage[] = [
     order: 7,
     name: "openings",
     async run(context) {
-      const payload: OpeningsPayload = {
-        openings: [],
-      };
-      return createFramingStageArtifact(
+      const extracted = getPayload<ExtractedFramingEvidencePayload>(
+        context,
+        "extractedEvidence",
+      );
+      const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
+      const userDecisionRunInput = context.userDecisionRunInput;
+      const payload = resolveOpenings(extracted.evidence, {
+        wallFraming: wallPayload,
+        ...(userDecisionRunInput
+          ? {
+              userDecisions: userDecisionRunInput.userDecisions,
+              reviewItemsById: userDecisionRunInput.reviewItemsById,
+            }
+          : {}),
+      });
+      const updatedWallPayload = applyWallOpeningBacklinks(wallPayload, payload);
+
+      const openingsArtifact = createFramingStageArtifact(
         context,
         7,
         openingsArtifactSchema,
         "openings",
         payload,
+        { type: "system", identifier: "framing-pipeline" },
+        userDecisionInputArtifactIds(userDecisionRunInput, isOpeningPropertyPath),
       );
+
+      if (wallFramingOpeningLinksChanged(wallPayload, updatedWallPayload)) {
+        const sourceWallFramingArtifact = context.completedArtifacts.get("wallFraming");
+        if (!sourceWallFramingArtifact) {
+          throw new Error("Required artifact from stage 'wallFraming' is missing.");
+        }
+
+        const linkedWallFramingArtifact = createLinkedWallFramingArtifact(
+          context,
+          updatedWallPayload,
+          sourceWallFramingArtifact.artifactId,
+          openingsArtifact.artifactId,
+        );
+
+        context.stageSideEffects.publishArtifactOverride(
+          "wallFraming",
+          linkedWallFramingArtifact,
+        );
+        context.stageSideEffects.publishCompanionArtifact(
+          WALL_FRAMING_OPENING_LINKS_COMPANION_SUFFIX,
+          linkedWallFramingArtifact,
+        );
+      }
+
+      return openingsArtifact;
     },
   },
   {
@@ -400,16 +598,67 @@ const stages: PipelineStage[] = [
         context,
         "extractedEvidence",
       );
-      const payload = resolveStructuralMembers(extracted.evidence);
+      const openingsPayload = getPayload<OpeningsPayload>(context, "openings");
+      const scalarPayload = resolveStructuralMembers(extracted.evidence);
+      const linked = linkOpeningHeaderRelationships(
+        extracted.evidence,
+        openingsPayload,
+        scalarPayload,
+      );
 
-      return createFramingStageArtifact(
+      const structuralMembersArtifact = createFramingStageArtifact(
         context,
         8,
         structuralMembersArtifactSchema,
         "structural-members",
-        payload,
+        scalarPayload,
         { type: "system", identifier: "framing-pipeline" },
       );
+
+      const sourceOpeningsArtifact = context.completedArtifacts.get("openings");
+      if (!sourceOpeningsArtifact) {
+        throw new Error("Required artifact from stage 'openings' is missing.");
+      }
+
+      if (openingHeaderLinksChanged(openingsPayload, linked.openings)) {
+        const linkedOpeningsArtifact = createLinkedOpeningsArtifact(
+          context,
+          linked.openings,
+          sourceOpeningsArtifact.artifactId,
+          structuralMembersArtifact.artifactId,
+        );
+
+        context.stageSideEffects.publishArtifactOverride(
+          "openings",
+          linkedOpeningsArtifact,
+        );
+        context.stageSideEffects.publishCompanionArtifact(
+          OPENINGS_HEADER_LINKS_COMPANION_SUFFIX,
+          linkedOpeningsArtifact,
+        );
+      }
+
+      if (
+        structuralMemberOpeningLinksChanged(scalarPayload, linked.structuralMembers)
+      ) {
+        const linkedStructuralMembersArtifact = createLinkedStructuralMembersArtifact(
+          context,
+          linked.structuralMembers,
+          structuralMembersArtifact.artifactId,
+          sourceOpeningsArtifact.artifactId,
+        );
+
+        context.stageSideEffects.publishArtifactOverride(
+          "structuralMembers",
+          linkedStructuralMembersArtifact,
+        );
+        context.stageSideEffects.publishCompanionArtifact(
+          STRUCTURAL_MEMBERS_OPENING_LINKS_COMPANION_SUFFIX,
+          linkedStructuralMembersArtifact,
+        );
+      }
+
+      return structuralMembersArtifact;
     },
   },
   {
@@ -442,6 +691,7 @@ const stages: PipelineStage[] = [
     name: "calculations",
     async run(context) {
       const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
+      const openings = getPayload<OpeningsPayload>(context, "openings");
       const structuralMembers = getPayload<StructuralMembersPayload>(
         context,
         "structuralMembers",
@@ -449,6 +699,7 @@ const stages: PipelineStage[] = [
       const validation = getPayload<ValidationPayload>(context, "validation");
       const payload = coordinateFramingCalculations({
         wallFraming: wallPayload,
+        openings,
         structuralMembers,
         validation,
       });

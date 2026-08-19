@@ -1,0 +1,65 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /ProcSet [/PDF /Text] /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 384 >>
+stream
+BT
+/F1 12 Tf
+16 TL
+72 720 Td
+(W-001) Tj
+T*
+(Wall type: wood stud wall) Tj
+T*
+(20 ft) Tj
+T*
+(2x4) Tj
+T*
+(16 in O.C.) Tj
+T*
+(8 ft wall height) Tj
+T*
+(3 plates) Tj
+T*
+(O-001) Tj
+T*
+(Opening type: window) Tj
+T*
+(Nominal width: 3 ft) Tj
+T*
+(Nominal height: 4 ft) Tj
+T*
+(Rough opening width: 3.5 ft) Tj
+T*
+(Rough opening height: 4.5 ft) Tj
+T*
+(Quantity: 1) Tj
+T*
+(O-001 in Wall W-001) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000263 00000 n 
+0000000698 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+768
+%%EOF

@@ -61,6 +61,7 @@ export const evidenceSubjectKeySchema = z
 export const evidenceSubjectKindSchema = z.enum([
   "wall",
   "structural-member",
+  "opening",
 ]);
 
 /**

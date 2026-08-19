@@ -320,8 +320,16 @@ describe("coordinateFramingValidation", () => {
   it("resolves cross-artifact opening and member references when artifacts are supplied together", () => {
     const payload = coordinateFramingValidation(buildIntegratedInput());
 
-    assert.equal(payload.validationIssues.length, 0);
-    assert.equal(payload.reviewItems.length, 0);
+    assert.equal(payload.validationIssues.length, 1);
+    assert.equal(payload.reviewItems.length, 1);
+    assert.ok(
+      payload.reviewItems.some((item) => item.title.includes("Confirm rough sill size")),
+    );
+    assert.ok(
+      payload.validationIssues.some(
+        (issue) => issue.ruleId === OPENINGS_RULE_IDS.roughSillSizeDefault,
+      ),
+    );
     assert.ok(
       payload.validationResults.some(
         (result) =>

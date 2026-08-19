@@ -207,6 +207,19 @@ describe("evidence contract", () => {
     );
   });
 
+  it("accepts opening subjectKind", () => {
+    const evidence = evidenceSchema.parse({
+      ...createEvidence(),
+      id: "E-O001-CATEGORY",
+      subjectKind: "opening",
+      subjectKey: "O-001",
+      propertyPath: "category",
+      candidateValue: "window",
+    });
+
+    assert.equal(evidence.subjectKind, "opening");
+  });
+
   it("parses candidate values deterministically across reruns", () => {
     const input = createEvidence({
       candidateValue: 16,

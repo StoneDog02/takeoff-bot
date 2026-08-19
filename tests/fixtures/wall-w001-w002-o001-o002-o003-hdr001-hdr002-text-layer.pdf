@@ -1,0 +1,183 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /ProcSet [/PDF /Text] /Font << /F1 7 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 992 >>
+stream
+BT
+/F1 12 Tf
+16 TL
+72 720 Td
+(FRAMING PLAN NOTES - LEVEL 1) Tj
+T*
+(WALL W-001) Tj
+T*
+(Wall type: wood stud wall) Tj
+T*
+(Location: exterior) Tj
+T*
+(Bearing: non-bearing) Tj
+T*
+(20 ft) Tj
+T*
+(2x4) Tj
+T*
+(16 in O.C.) Tj
+T*
+(8 ft wall height) Tj
+T*
+(3 plates) Tj
+T*
+(WALL W-002) Tj
+T*
+(Wall type: wood stud wall) Tj
+T*
+(Location: interior) Tj
+T*
+(Bearing: non-bearing) Tj
+T*
+(12 ft) Tj
+T*
+(2x6) Tj
+T*
+(24 in O.C.) Tj
+T*
+(9 ft wall height) Tj
+T*
+(2 plates) Tj
+T*
+(OPENING SCHEDULE) Tj
+T*
+(O-001) Tj
+T*
+(Type: window) Tj
+T*
+(Wall: W-001) Tj
+T*
+(Nominal width: 3 ft) Tj
+T*
+(Nominal height: 4 ft) Tj
+T*
+(Rough opening width: 3.5 ft) Tj
+T*
+(Rough opening height: 4.5 ft) Tj
+T*
+(Quantity: 1) Tj
+T*
+(King studs: 3) Tj
+T*
+(Header: HDR-001) Tj
+T*
+(O-001 in Wall W-001) Tj
+T*
+(O-002) Tj
+T*
+(Type: window) Tj
+T*
+(Wall: W-001) Tj
+T*
+(Nominal width: 4 ft) Tj
+T*
+(Nominal height: 5 ft) Tj
+T*
+(Rough opening width: 4 ft) Tj
+T*
+(Rough opening height: 5.5 ft) Tj
+T*
+(Quantity: 1) Tj
+T*
+(O-002 in Wall W-001) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 6 0 R /Resources << /ProcSet [/PDF /Text] /Font << /F1 7 0 R >> >> >>
+endobj
+6 0 obj
+<< /Length 702 >>
+stream
+BT
+/F1 12 Tf
+16 TL
+72 720 Td
+(O-003) Tj
+T*
+(Type: door) Tj
+T*
+(Wall: W-002) Tj
+T*
+(Nominal width: 3 ft) Tj
+T*
+(Nominal height: 7 ft) Tj
+T*
+(Rough opening width: 3.25 ft) Tj
+T*
+(Rough opening height: 7.5 ft) Tj
+T*
+(Quantity: 1) Tj
+T*
+(Header: HDR-002) Tj
+T*
+(O-003 in Wall W-002) Tj
+T*
+(HEADER SCHEDULE) Tj
+T*
+(HDR-001) Tj
+T*
+(Category: header) Tj
+T*
+(Material: lvl) Tj
+T*
+(Size: 1.75x11.875) Tj
+T*
+(Length: 6 ft) Tj
+T*
+(Quantity: 1) Tj
+T*
+(Opening: O-001) Tj
+T*
+(Header HDR-001 at Opening O-001) Tj
+T*
+(HDR-002) Tj
+T*
+(Category: header) Tj
+T*
+(Material: dimensional-lumber) Tj
+T*
+(Size: 2x12) Tj
+T*
+(Length: 8 ft) Tj
+T*
+(Quantity: 1) Tj
+T*
+(Opening: O-003) Tj
+T*
+(Header HDR-002 at Opening O-003) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000269 00000 n 
+0000001312 00000 n 
+0000001460 00000 n 
+0000002213 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+2283
+%%EOF

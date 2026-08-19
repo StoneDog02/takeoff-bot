@@ -56,6 +56,54 @@ function isRoughHeightResolved(opening: Opening): boolean {
   );
 }
 
+const KING_STUD_ELIGIBLE_CATEGORIES = new Set<Opening["category"]>([
+  "door",
+  "window",
+  "cased",
+]);
+
+const ROUGH_SILL_ELIGIBLE_CATEGORIES = new Set<Opening["category"]>(["window"]);
+
+function roughSillQuantityImpact(widthResolved: boolean) {
+  return {
+    quantityKey: OPENING_QUANTITY_KEYS.roughSill,
+    description: widthResolved
+      ? "Rough sill linear footage uses resolved rough opening width."
+      : "Rough sill takeoff requires resolved rough opening width.",
+    canCalculate: widthResolved,
+  };
+}
+
+function isQuantityResolved(opening: Opening): boolean {
+  if (opening.quantity === null) {
+    return false;
+  }
+
+  const trace = opening.resolutionTraces.find(
+    (entry) => entry.propertyPath === "quantity",
+  );
+  if (trace?.method === "unresolved") {
+    return false;
+  }
+
+  return true;
+}
+
+function isKingStudCountExplicitlyResolved(opening: Opening): boolean {
+  if (opening.kingStudCount === null) {
+    return false;
+  }
+
+  const trace = opening.resolutionTraces.find(
+    (entry) => entry.propertyPath === "kingStudCount",
+  );
+  if (trace?.method === "unresolved") {
+    return false;
+  }
+
+  return true;
+}
+
 function validateParentResolved(
   opening: Opening,
   parentObjectsById: ReadonlyMap<ObjectId, OpeningsParentObject> | undefined,
@@ -63,6 +111,16 @@ function validateParentResolved(
   const target = createObjectTarget(opening.id, opening.objectType);
   const ruleId = OPENINGS_RULE_IDS.parentResolved;
   const evidenceIds = collectEvidenceIds(opening);
+
+  if (opening.parentObjectId === null) {
+    return buildPassedBatch(
+      ruleId,
+      "relationship",
+      target,
+      `Opening ${opening.id} has no explicit parent object reference to validate.`,
+      evidenceIds,
+    );
+  }
 
   if (parentObjectsById === undefined) {
     return buildSkippedBatch(
@@ -377,6 +435,7 @@ function validateRoughDimensionsResolved(opening: Opening): ValidationBatch {
             "Nominal dimensions may still support partial opening framing takeoff.",
           canCalculate: true,
         },
+        roughSillQuantityImpact(widthResolved),
       ]
     : [
         {
@@ -385,6 +444,7 @@ function validateRoughDimensionsResolved(opening: Opening): ValidationBatch {
             "Rough opening dimensions remain unresolved without nominal fallback.",
           canCalculate: false,
         },
+        roughSillQuantityImpact(widthResolved),
       ];
 
   const explanation = `Opening ${opening.id} is missing ${missing.join(" and ")}.`;
@@ -504,6 +564,258 @@ function validateHeaderReferenceResolved(
   );
 }
 
+function validateQuantityResolved(opening: Opening): ValidationBatch {
+  const target = createObjectTarget(opening.id, opening.objectType);
+  const ruleId = OPENINGS_RULE_IDS.quantityResolved;
+  const evidenceIds = collectEvidenceIds(opening);
+
+  if (isQuantityResolved(opening)) {
+    return buildPassedBatch(
+      ruleId,
+      "object",
+      target,
+      `Opening ${opening.id} has resolved quantity.`,
+      evidenceIds,
+    );
+  }
+
+  const quantityImpacts = [
+    {
+      quantityKey: OPENING_QUANTITY_KEYS.framing,
+      description:
+        "Opening framing quantities require a resolved occurrence count.",
+      canCalculate: false,
+    },
+    {
+      quantityKey: OPENING_QUANTITY_KEYS.kingStuds,
+      description:
+        "King stud takeoff requires a resolved opening occurrence count.",
+      canCalculate: false,
+    },
+    {
+      quantityKey: OPENING_QUANTITY_KEYS.roughSill,
+      description:
+        "Rough sill takeoff requires a resolved opening occurrence count.",
+      canCalculate: false,
+    },
+  ];
+
+  const explanation = `Opening ${opening.id} is missing quantity or occurrence count.`;
+
+  return buildFailedBatch(
+    {
+      ruleId,
+      level: "object",
+      severity: "critical",
+      ruleViolated:
+        "Opening quantity must be resolved before opening-framing quantities can be calculated.",
+      explanation,
+      target,
+      recommendedUserAction:
+        "Confirm how many identical opening occurrences this object represents.",
+      evidenceIds,
+      quantityImpacts,
+    },
+    {
+      ruleId,
+      target,
+      title: `Resolve quantity for opening ${opening.id}`,
+      description: explanation,
+      action: {
+        type: "provide-value",
+        instruction:
+          "Provide the opening occurrence count from plans, schedules, or notes.",
+        targetProperty: "quantity",
+      },
+      reviewStatus: "review-required",
+      blockingStatus: "blocked",
+      affectedObjects: [{ objectId: opening.id, objectType: opening.objectType }],
+      quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
+      evidenceIds,
+    },
+  );
+}
+
+function validateKingStudCountDefault(opening: Opening): ValidationBatch {
+  const target = createObjectTarget(opening.id, opening.objectType);
+  const ruleId = OPENINGS_RULE_IDS.kingStudCountDefault;
+  const evidenceIds = collectEvidenceIds(opening);
+
+  if (!KING_STUD_ELIGIBLE_CATEGORIES.has(opening.category)) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Opening ${opening.id} category does not use king stud default validation.`,
+      evidenceIds,
+    );
+  }
+
+  if (!isQuantityResolved(opening)) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `King stud default validation skipped until opening quantity resolves.`,
+      evidenceIds,
+    );
+  }
+
+  if (opening.parentObjectId === null) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `King stud default validation skipped until opening parent segment resolves.`,
+      evidenceIds,
+    );
+  }
+
+  if (isKingStudCountExplicitlyResolved(opening)) {
+    return buildPassedBatch(
+      ruleId,
+      "object",
+      target,
+      `Opening ${opening.id} has explicit king stud count evidence.`,
+      evidenceIds,
+    );
+  }
+
+  const quantityImpacts = [
+    {
+      quantityKey: OPENING_QUANTITY_KEYS.kingStuds,
+      description:
+        "King stud count will use the Construction Brain industry default of 2 per occurrence.",
+      canCalculate: true,
+    },
+  ];
+
+  const explanation = `Opening ${opening.id} has no explicit king stud count; industry default may apply.`;
+
+  return buildFailedBatch(
+    {
+      ruleId,
+      level: "object",
+      severity: "warning",
+      ruleViolated:
+        "King stud count should be confirmed when explicit project evidence is absent.",
+      explanation,
+      target,
+      recommendedUserAction:
+        "Confirm king stud count from plans or accept the industry default of 2 per occurrence.",
+      evidenceIds,
+      quantityImpacts,
+    },
+    {
+      ruleId,
+      target,
+      title: `Confirm king stud count for opening ${opening.id}`,
+      description: explanation,
+      action: {
+        type: "provide-value",
+        instruction:
+          "Provide explicit king stud count evidence or confirm the industry default of 2.",
+        targetProperty: "kingStudCount",
+      },
+      reviewStatus: "review-recommended",
+      blockingStatus: "not-blocked",
+      affectedObjects: [{ objectId: opening.id, objectType: opening.objectType }],
+      quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
+      evidenceIds,
+    },
+  );
+}
+
+function validateRoughSillSizeDefault(opening: Opening): ValidationBatch {
+  const target = createObjectTarget(opening.id, opening.objectType);
+  const ruleId = OPENINGS_RULE_IDS.roughSillSizeDefault;
+  const evidenceIds = collectEvidenceIds(opening);
+
+  if (!ROUGH_SILL_ELIGIBLE_CATEGORIES.has(opening.category)) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Opening ${opening.id} category does not use rough sill size default validation.`,
+      evidenceIds,
+    );
+  }
+
+  if (!isQuantityResolved(opening)) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Rough sill size default validation skipped until opening quantity resolves.`,
+      evidenceIds,
+    );
+  }
+
+  if (opening.parentObjectId === null) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Rough sill size default validation skipped until opening parent segment resolves.`,
+      evidenceIds,
+    );
+  }
+
+  if (!isRoughWidthResolved(opening)) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Rough sill size default validation skipped until rough opening width resolves.`,
+      evidenceIds,
+    );
+  }
+
+  const quantityImpacts = [
+    {
+      quantityKey: OPENING_QUANTITY_KEYS.roughSill,
+      description:
+        "Rough sill size will inherit the parent wall stud size when explicit sill size is absent.",
+      canCalculate: true,
+    },
+  ];
+
+  const explanation = `Opening ${opening.id} has no explicit rough sill size; wall stud size may apply.`;
+
+  return buildFailedBatch(
+    {
+      ruleId,
+      level: "object",
+      severity: "warning",
+      ruleViolated:
+        "Rough sill size should be confirmed when explicit project evidence is absent.",
+      explanation,
+      target,
+      recommendedUserAction:
+        "Confirm rough sill size from plans or accept inheritance from the parent wall stud size.",
+      evidenceIds,
+      quantityImpacts,
+    },
+    {
+      ruleId,
+      target,
+      title: `Confirm rough sill size for opening ${opening.id}`,
+      description: explanation,
+      action: {
+        type: "provide-value",
+        instruction:
+          "Provide explicit rough sill size evidence or confirm inheritance from the parent wall stud size.",
+        targetProperty: "roughSillSize",
+      },
+      reviewStatus: "review-recommended",
+      blockingStatus: "not-blocked",
+      affectedObjects: [{ objectId: opening.id, objectType: opening.objectType }],
+      quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
+      evidenceIds,
+    },
+  );
+}
+
 export function validateOpenings(input: OpeningsValidationInput): ValidationBatch {
   const batches: ValidationBatch[] = [];
 
@@ -515,6 +827,9 @@ export function validateOpenings(input: OpeningsValidationInput): ValidationBatc
       validateNominalDimensionsResolved(opening),
       validateRoughDimensionsResolved(opening),
       validateHeaderReferenceResolved(opening, input.structuralMembersById),
+      validateQuantityResolved(opening),
+      validateKingStudCountDefault(opening),
+      validateRoughSillSizeDefault(opening),
     );
   }
 

@@ -3,6 +3,7 @@ import type { ArtifactId, ReviewItemId } from "../schemas/identity.schema.js";
 import type { ReviewItem } from "../schemas/review-item.schema.js";
 import type { UserDecision } from "../schemas/user-decision.schema.js";
 import type { PlanIndex } from "../../plans/PlanIndex.js";
+import type { PipelineStageSideEffects } from "./PipelineStageSideEffects.js";
 
 export type UserDecisionRunInput = {
   userDecisions: readonly UserDecision[];
@@ -17,10 +18,8 @@ export interface PipelineStageContext {
   pipelineRunId: string;
   planIndex: PlanIndex;
   useMockAi: boolean;
-  completedArtifacts: ReadonlyMap<
-    string,
-    ArtifactEnvelope<unknown>
-  >;
+  completedArtifacts: ReadonlyMap<string, ArtifactEnvelope<unknown>>;
+  stageSideEffects: PipelineStageSideEffects;
   userDecisionRunInput?: UserDecisionRunInput;
 }
 
@@ -32,12 +31,20 @@ export interface PipelineStage {
   ): Promise<ArtifactEnvelope<unknown>>;
 }
 
+export interface PipelineStageCompanionResult {
+  fileSuffix: string;
+  artifactId: string;
+  artifactType: string;
+  artifactPath: string;
+}
+
 export interface PipelineStageResult {
   order: number;
   name: string;
   artifactId: string;
   artifactType: string;
   artifactPath: string;
+  companionArtifacts?: PipelineStageCompanionResult[];
 }
 
 export interface PipelineRunResult {

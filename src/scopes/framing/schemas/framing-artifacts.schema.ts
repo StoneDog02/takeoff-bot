@@ -146,6 +146,7 @@ export const framingObjectsPayloadSchema = z.object({
 
 export const framingCalculationsPayloadSchema = z.object({
   materials: z.array(framingMaterialLineItemSchema),
+  assumptions: z.array(assumptionSchema).default([]),
 });
 
 export const validationConfidencePayloadSchema = z.object({

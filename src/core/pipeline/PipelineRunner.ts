@@ -3,9 +3,11 @@ import { logger } from "../logging/logger.js";
 import type { ArtifactEnvelope } from "../schemas/artifact-envelope.schema.js";
 import { generatePipelineRunId } from "../utils/ids.js";
 import type { PlanIndex } from "../../plans/PlanIndex.js";
+import { PipelineStageSideEffects } from "./PipelineStageSideEffects.js";
 import type {
   PipelineRunResult,
   PipelineStage,
+  PipelineStageCompanionResult,
   PipelineStageResult,
   UserDecisionRunInput,
 } from "./types.js";
@@ -43,6 +45,7 @@ export class PipelineRunner {
           stage: stage.name,
         });
 
+        const stageSideEffects = new PipelineStageSideEffects();
         const artifact = await stage.run({
           projectId: input.projectId,
           pdfPath: input.pdfPath,
@@ -51,8 +54,12 @@ export class PipelineRunner {
           planIndex: input.planIndex,
           useMockAi: input.useMockAi,
           completedArtifacts,
+          stageSideEffects,
           userDecisionRunInput: input.userDecisionRunInput,
         });
+
+        const { artifactOverrides, companionArtifacts } =
+          stageSideEffects.consume();
 
         const artifactPath = await this.artifactStore.write(
           input.projectId,
@@ -62,13 +69,37 @@ export class PipelineRunner {
           artifact,
         );
 
+        const companionResults: PipelineStageCompanionResult[] = [];
+        for (const companion of companionArtifacts) {
+          const companionPath = await this.artifactStore.writeCompanion(
+            input.projectId,
+            input.scopeName,
+            stage.order,
+            stage.name,
+            companion.fileSuffix,
+            companion.artifact,
+          );
+          companionResults.push({
+            fileSuffix: companion.fileSuffix,
+            artifactId: companion.artifact.artifactId,
+            artifactType: companion.artifact.artifactType,
+            artifactPath: companionPath,
+          });
+        }
+
         completedArtifacts.set(stage.name, artifact);
+        for (const [stageKey, overrideArtifact] of artifactOverrides) {
+          completedArtifacts.set(stageKey, overrideArtifact);
+        }
+
         stageResults.push({
           order: stage.order,
           name: stage.name,
           artifactId: artifact.artifactId,
           artifactType: artifact.artifactType,
           artifactPath,
+          companionArtifacts:
+            companionResults.length > 0 ? companionResults : undefined,
         });
         reportPath = artifactPath;
       } catch (error) {

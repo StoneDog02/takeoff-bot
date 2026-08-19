@@ -92,12 +92,14 @@ subjectKind:
 - For wall extraction, use "wall".
 - For explicitly identified structural members in this stage, use
   "structural-member".
+- For explicitly identified openings in this stage, use "opening".
 - First controlled structural-member scope: single-piece headers only.
+- First controlled opening scope: scalar opening facts only.
 - subjectKind + subjectKey identify the extraction cluster; propertyPath identifies
   the candidate within that cluster.
 - Do not mint ObjectIds or resolved object types here.
-- The same Stage 5 Evidence artifact may contain both "wall" and
-  "structural-member" records simultaneously.
+- The same Stage 5 Evidence artifact may contain "wall", "structural-member",
+  and "opening" records simultaneously.
 
 subjectKey:
 - Use the most stable plan-derived identifier for the future object/cluster.
@@ -106,11 +108,14 @@ subjectKey:
   string as subjectKey.
 - When a bare structural member tag line is present (example: HDR-001), use that
   exact string as subjectKey for every property belonging to that member.
+- When a bare opening tag line is present (example: O-001), use that exact
+  string as subjectKey for every property belonging to that opening.
 - When multiple labeled wall tags appear, emit separate Evidence clusters for
   each tag. Reuse the same subjectKey for every property belonging to that wall.
 - Never merge facts from one labeled wall into another wall's subjectKey.
 - Never merge facts from one labeled structural member into another member's
   subjectKey.
+- Never merge facts from one labeled opening into another opening's subjectKey.
 - Conflicting values stay separate Evidence records within the appropriate
   subjectKey only.
 - This is an extraction cluster key, not a resolved ObjectId.
@@ -128,6 +133,14 @@ propertyPath:
   assembly.material, assembly.sheathing, lengthFeet.
 - Examples for structural members (headers in this stage): category,
   materialType, size, lengthFeet, quantity, location.
+- Examples for openings (scalar facts in this stage): category,
+  dimensions.nominalWidthFeet, dimensions.nominalHeightFeet,
+  dimensions.roughWidthFeet, dimensions.roughHeightFeet, quantity,
+  kingStudCount, scheduleReference, detailReference, fireRating.
+- Examples for openings (explicit wall association in this stage):
+  parentWallTag with the exact plan wall tag such as W-001.
+- Examples for openings (explicit header association in this stage):
+  headerMemberTag with the exact plan header tag such as HDR-001.
 - These are examples, not an exhaustive enum. Do not invent resolved
   nested objects.
 
@@ -141,6 +154,52 @@ structural-member extraction rules (headers only in this stage):
 - Do not infer built-up plyCount.
 - Do not infer relationships to walls, openings, or other objects.
 - Do not create review items or resolve competing candidates.
+
+opening extraction rules (scalar facts only in this stage):
+- Emit one Evidence record per atomic property candidate.
+- Do not infer missing quantity as 1.
+- Do not infer category from ambiguous wording.
+- Do not infer rough opening dimensions from nominal dimensions.
+- Do not infer king/jack/cripple/sill framing requirements.
+- Do not calculate framing quantities.
+- Do not create review items or resolve competing candidates.
+
+opening kingStudCount extraction rules (this stage):
+- Emit kingStudCount only when the page text explicitly states the king-stud
+  count for that opening (examples: "King studs: 2", "2 king studs",
+  "3 king studs").
+- Use propertyPath kingStudCount with a positive integer candidateValue.
+- Do not infer kingStudCount from opening category, opening width, wall type,
+  header presence, conventional framing practice, number of sides, or diagrams
+  unless the source explicitly states the count.
+- If the source does not explicitly state a king-stud count, omit kingStudCount
+  Evidence entirely. Do not default to 2 or any other value in extraction.
+
+opening wall-association extraction rules (this stage):
+- Emit parentWallTag only when the page text explicitly states which wall
+  tag owns the opening (example: "O-001 in Wall W-001").
+- Use the exact wall tag string from the plan as candidateValue.
+- Do not emit ObjectIds, WS-* segment IDs, or parentObjectId values.
+- Do not infer a parent wall from proximity, layout, or header references.
+- Do not infer parentWallTag when the association is missing or ambiguous.
+
+opening header-association extraction rules (this stage):
+- Emit headerMemberTag only when the page text explicitly states which header
+  tag serves the opening (example: "Header HDR-001 at Opening O-001" may also
+  be represented on the opening as headerMemberTag HDR-001).
+- Use the exact header tag string from the plan as candidateValue.
+- Do not emit ObjectIds, SM-* IDs, or headerMemberId values.
+- Do not infer header associations from opening width, category, or proximity.
+- Do not infer headerMemberTag when the association is missing or ambiguous.
+
+structural-member opening-association extraction rules (this stage):
+- Emit supportedOpeningTag only when the page text explicitly states which
+  opening tag the header serves (example: "Header HDR-001 at Opening O-001").
+- Use the exact opening tag string from the plan as candidateValue.
+- Do not emit ObjectIds or supportedObjectIds values.
+- Do not infer supportedOpeningTag from location wording unless an explicit
+  opening tag is present in the source text.
+- Do not infer supportedOpeningTag when the association is missing or ambiguous.
 
 candidateValue:
 - Emit only the extracted scalar: string, number, boolean, or null.
@@ -396,6 +455,8 @@ export async function extractFramingEvidenceViaClaude(
     }),
     schema: extractedFramingEvidencePayloadSchema,
     label: "extracted framing evidence",
+    // Multi-object plan slices can exceed 8192 output tokens; 16k covers the current proof fixture.
+    maxTokens: 16384,
   });
 }
 

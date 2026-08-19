@@ -524,6 +524,22 @@ Create review items when:
 
 ---
 
+# Opening Wall Framing Calculation Authority
+
+Deterministic opening-derived wall framing quantities are defined in `13-opening-wall-framing-calculations.md`.
+
+That document governs:
+
+- King, jack, cripple, and rough sill formulas
+- Header ownership boundary (header material stays on Structural Member)
+- Baseline regular stud interaction (additive default; optional net deductions)
+- Multiple openings and `opening.quantity` multiplication
+- Assumption policy and blocking conditions
+
+Do not implement opening-framing calculators from component lists in this file alone.
+
+---
+
 # Extraction Output Expectations
 
 For every opening produce:

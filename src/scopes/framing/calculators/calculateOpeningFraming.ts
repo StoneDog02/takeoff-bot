@@ -1,0 +1,424 @@
+import type { Assumption } from "../../../core/schemas/assumption.schema.js";
+import type {
+  AssumptionId,
+  ObjectId,
+  ReviewItemId,
+} from "../../../core/schemas/identity.schema.js";
+import type {
+  OpeningsPayload,
+  ValidationPayload,
+  WallFramingPayload,
+} from "../schemas/framing-artifacts.schema.js";
+import {
+  framingMaterialLineItemSchema,
+  type FramingMaterialLineItem,
+} from "../schemas/material.schema.js";
+import type { BuildingWall, WallSegment } from "../schemas/wall.schema.js";
+import type { Opening, OpeningCategory } from "../schemas/opening.schema.js";
+import { createObjectTarget, createReviewItemId } from "../validators/ids.js";
+import {
+  OPENING_QUANTITY_KEYS,
+  OPENINGS_RULE_IDS,
+} from "../validators/rule-ids.js";
+import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
+import {
+  createOpeningKingStudCountAssumption,
+  KING_STUD_COUNT_DEFAULT,
+} from "./createOpeningKingStudCountAssumption.js";
+import { createOpeningRoughSillSizeAssumption } from "./createOpeningRoughSillSizeAssumption.js";
+import { createMaterialLineItemId } from "./ids.js";
+import { isQuantityBlocked } from "./isQuantityBlocked.js";
+import { isQuantityInputResolved } from "./isQuantityInputResolved.js";
+
+const ELIGIBLE_CATEGORIES = new Set<OpeningCategory>([
+  "door",
+  "window",
+  "cased",
+]);
+
+const QUANTITY_PROPERTY_PATH = "quantity";
+const KING_STUD_COUNT_PROPERTY_PATH = "kingStudCount";
+const ROUGH_WIDTH_PROPERTY_PATH = "dimensions.roughWidthFeet";
+const STUD_SIZE_PROPERTY_PATH = "assembly.studSize";
+const HEIGHT_PROPERTY_PATH = "assembly.heightFeet";
+
+export type OpeningFramingCalculationResult = {
+  materials: FramingMaterialLineItem[];
+  assumptions: Assumption[];
+};
+
+function compareIds(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function emitLineItem(
+  item: FramingMaterialLineItem,
+): FramingMaterialLineItem | null {
+  if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+    return null;
+  }
+
+  return framingMaterialLineItemSchema.parse(item);
+}
+
+function normalizeToken(value: string): string {
+  return value.trim().toLowerCase().replaceAll(/\s+/g, "-");
+}
+
+function isWoodStudWall(wall: BuildingWall): boolean {
+  const material = normalizeToken(wall.assembly.material ?? "");
+  if (material.includes("metal") || material.includes("gauge")) {
+    return false;
+  }
+
+  const wallType = normalizeToken(wall.wallType ?? "");
+  if (wallType.includes("metal")) {
+    return false;
+  }
+
+  if (
+    material.includes("lumber") ||
+    material.includes("wood") ||
+    material === "dimensional-lumber"
+  ) {
+    return true;
+  }
+
+  return wallType.includes("wood") && wallType.includes("stud");
+}
+
+function resolveParentSegment(
+  opening: Opening,
+  segmentsById: ReadonlyMap<ObjectId, WallSegment>,
+): WallSegment | null {
+  if (opening.parentObjectId === null) {
+    return null;
+  }
+
+  const segment = segmentsById.get(opening.parentObjectId);
+  if (!segment || segment.objectType !== "wall-segment") {
+    return null;
+  }
+
+  return segment;
+}
+
+function kingStudDefaultReviewItemId(opening: Opening): ReviewItemId {
+  return createReviewItemId(
+    OPENINGS_RULE_IDS.kingStudCountDefault,
+    createObjectTarget(opening.id, opening.objectType),
+  );
+}
+
+function roughSillSizeDefaultReviewItemId(opening: Opening): ReviewItemId {
+  return createReviewItemId(
+    OPENINGS_RULE_IDS.roughSillSizeDefault,
+    createObjectTarget(opening.id, opening.objectType),
+  );
+}
+
+function isOpeningEligibleForWallFraming(
+  opening: Opening,
+  wall: BuildingWall,
+  segment: WallSegment,
+): boolean {
+  if (!ELIGIBLE_CATEGORIES.has(opening.category)) {
+    return false;
+  }
+
+  if (opening.category === "garage-door") {
+    return false;
+  }
+
+  if (segment.parentWallId !== wall.id) {
+    return false;
+  }
+
+  if (!isWoodStudWall(wall)) {
+    return false;
+  }
+
+  if (
+    !isQuantityInputResolved(
+      wall.assembly.studSize,
+      wall.resolutionTraces,
+      STUD_SIZE_PROPERTY_PATH,
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    !isQuantityInputResolved(
+      wall.assembly.heightFeet,
+      wall.resolutionTraces,
+      HEIGHT_PROPERTY_PATH,
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function isOpeningEligibleForKingStuds(
+  opening: Opening,
+  wall: BuildingWall,
+  segment: WallSegment,
+): boolean {
+  return isOpeningEligibleForWallFraming(opening, wall, segment);
+}
+
+function resolveKingStudCountPerOccurrence(
+  opening: Opening,
+): { count: number; assumption: Assumption | null } | null {
+  if (
+    isQuantityInputResolved(
+      opening.kingStudCount,
+      opening.resolutionTraces,
+      KING_STUD_COUNT_PROPERTY_PATH,
+    )
+  ) {
+    return { count: opening.kingStudCount, assumption: null };
+  }
+
+  const reviewItemId = kingStudDefaultReviewItemId(opening);
+  return {
+    count: KING_STUD_COUNT_DEFAULT,
+    assumption: createOpeningKingStudCountAssumption(opening.id, reviewItemId),
+  };
+}
+
+function calculateOpeningKingStuds(
+  opening: Opening,
+  wall: BuildingWall,
+  segment: WallSegment,
+  validation: ValidationPayload | undefined,
+): OpeningFramingCalculationResult {
+  const quantityKey = OPENING_QUANTITY_KEYS.kingStuds;
+  const contributingObjects = [opening, wall, segment];
+
+  if (
+    isQuantityBlocked(
+      validation,
+      contributingObjects.map((object) => object.id),
+      quantityKey,
+    ) ||
+    isQuantityBlocked(
+      validation,
+      [opening.id],
+      OPENING_QUANTITY_KEYS.framing,
+    )
+  ) {
+    return { materials: [], assumptions: [] };
+  }
+
+  if (!isOpeningEligibleForKingStuds(opening, wall, segment)) {
+    return { materials: [], assumptions: [] };
+  }
+
+  if (
+    !isQuantityInputResolved(
+      opening.quantity,
+      opening.resolutionTraces,
+      QUANTITY_PROPERTY_PATH,
+    )
+  ) {
+    return { materials: [], assumptions: [] };
+  }
+
+  const kingStudCount = resolveKingStudCountPerOccurrence(opening);
+  if (!kingStudCount) {
+    return { materials: [], assumptions: [] };
+  }
+
+  const quantity = kingStudCount.count * opening.quantity;
+  const usedPropertyPaths = [
+    QUANTITY_PROPERTY_PATH,
+    STUD_SIZE_PROPERTY_PATH,
+    HEIGHT_PROPERTY_PATH,
+  ];
+
+  if (kingStudCount.assumption === null) {
+    usedPropertyPaths.push(KING_STUD_COUNT_PROPERTY_PATH);
+  }
+
+  const provenance = collectLineItemProvenance(contributingObjects, usedPropertyPaths);
+  const assumptionIds = [
+    ...provenance.assumptionIds,
+    ...(kingStudCount.assumption ? [kingStudCount.assumption.id] : []),
+  ];
+  const reviewItemIds = [
+    ...provenance.reviewItemIds,
+    ...(kingStudCount.assumption
+      ? kingStudCount.assumption.reviewItemIds
+      : []),
+  ];
+
+  const lineItem = emitLineItem({
+    id: createMaterialLineItemId(quantityKey, opening.id),
+    category: "lumber",
+    description: `${wall.assembly.studSize} king studs`,
+    canonicalClassification: `king-stud-${wall.assembly.studSize}`,
+    quantity,
+    unit: "each",
+    sourceObjectIds: provenance.sourceObjectIds,
+    assumptionIds,
+    reviewItemIds,
+  });
+
+  if (!lineItem) {
+    return { materials: [], assumptions: [] };
+  }
+
+  return {
+    materials: [lineItem],
+    assumptions: kingStudCount.assumption ? [kingStudCount.assumption] : [],
+  };
+}
+
+function calculateOpeningRoughSill(
+  opening: Opening,
+  wall: BuildingWall,
+  segment: WallSegment,
+  validation: ValidationPayload | undefined,
+): OpeningFramingCalculationResult {
+  const quantityKey = OPENING_QUANTITY_KEYS.roughSill;
+  const contributingObjects = [opening, wall, segment];
+
+  if (
+    isQuantityBlocked(
+      validation,
+      contributingObjects.map((object) => object.id),
+      quantityKey,
+    ) ||
+    isQuantityBlocked(
+      validation,
+      [opening.id],
+      OPENING_QUANTITY_KEYS.framing,
+    )
+  ) {
+    return { materials: [], assumptions: [] };
+  }
+
+  if (opening.category !== "window") {
+    return { materials: [], assumptions: [] };
+  }
+
+  if (!isOpeningEligibleForWallFraming(opening, wall, segment)) {
+    return { materials: [], assumptions: [] };
+  }
+
+  if (
+    !isQuantityInputResolved(
+      opening.quantity,
+      opening.resolutionTraces,
+      QUANTITY_PROPERTY_PATH,
+    )
+  ) {
+    return { materials: [], assumptions: [] };
+  }
+
+  if (
+    !isQuantityInputResolved(
+      opening.dimensions.roughWidthFeet,
+      opening.resolutionTraces,
+      ROUGH_WIDTH_PROPERTY_PATH,
+    )
+  ) {
+    return { materials: [], assumptions: [] };
+  }
+
+  const roughSillLinearFeet =
+    opening.dimensions.roughWidthFeet * opening.quantity;
+  const studSize = wall.assembly.studSize;
+  if (studSize === null) {
+    return { materials: [], assumptions: [] };
+  }
+
+  const reviewItemId = roughSillSizeDefaultReviewItemId(opening);
+  const sillSizeAssumption = createOpeningRoughSillSizeAssumption(
+    opening.id,
+    studSize,
+    reviewItemId,
+  );
+
+  const usedPropertyPaths = [
+    QUANTITY_PROPERTY_PATH,
+    ROUGH_WIDTH_PROPERTY_PATH,
+    STUD_SIZE_PROPERTY_PATH,
+    HEIGHT_PROPERTY_PATH,
+  ];
+
+  const provenance = collectLineItemProvenance(contributingObjects, usedPropertyPaths);
+  const assumptionIds = [
+    ...provenance.assumptionIds,
+    sillSizeAssumption.id,
+  ];
+  const reviewItemIds = [
+    ...provenance.reviewItemIds,
+    ...sillSizeAssumption.reviewItemIds,
+  ];
+
+  const lineItem = emitLineItem({
+    id: createMaterialLineItemId(quantityKey, opening.id),
+    category: "lumber",
+    description: `${studSize} rough sill`,
+    canonicalClassification: `rough-sill-${studSize}`,
+    quantity: roughSillLinearFeet,
+    unit: "linear-foot",
+    sourceObjectIds: provenance.sourceObjectIds,
+    assumptionIds,
+    reviewItemIds,
+  });
+
+  if (!lineItem) {
+    return { materials: [], assumptions: [] };
+  }
+
+  return {
+    materials: [lineItem],
+    assumptions: [sillSizeAssumption],
+  };
+}
+
+/**
+ * Calculates opening-derived wall framing quantities from resolved artifacts.
+ *
+ * King stud and rough sill slices: `knowledge/framing/13-opening-wall-framing-calculations.md`.
+ */
+export function calculateOpeningFraming(
+  openings: OpeningsPayload,
+  wallFraming: WallFramingPayload,
+  validation?: ValidationPayload,
+): OpeningFramingCalculationResult {
+  const wallsById = new Map(wallFraming.walls.map((wall) => [wall.id, wall]));
+  const segmentsById = new Map(
+    wallFraming.segments.map((segment) => [segment.id, segment]),
+  );
+  const sortedOpenings = [...openings.openings].sort((left, right) =>
+    compareIds(left.id, right.id),
+  );
+
+  const materials: FramingMaterialLineItem[] = [];
+  const assumptions: Assumption[] = [];
+
+  for (const opening of sortedOpenings) {
+    const segment = resolveParentSegment(opening, segmentsById);
+    if (!segment) {
+      continue;
+    }
+
+    const wall = wallsById.get(segment.parentWallId);
+    if (!wall) {
+      continue;
+    }
+
+    const kingResult = calculateOpeningKingStuds(opening, wall, segment, validation);
+    const sillResult = calculateOpeningRoughSill(opening, wall, segment, validation);
+    materials.push(...kingResult.materials, ...sillResult.materials);
+    assumptions.push(...kingResult.assumptions, ...sillResult.assumptions);
+  }
+
+  return { materials, assumptions };
+}

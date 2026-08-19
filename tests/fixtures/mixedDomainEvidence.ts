@@ -129,8 +129,10 @@ export function buildMixedDomainWallEvidence(): Evidence[] {
 
 export function buildMixedDomainHeaderEvidence(options?: {
   includeQuantity?: boolean;
+  includeOpeningRelationship?: boolean;
 }): Evidence[] {
   const includeQuantity = options?.includeQuantity ?? true;
+  const includeOpeningRelationship = options?.includeOpeningRelationship ?? false;
   const records: Evidence[] = [
     memberEvidence(
       "E-HDR-001-CATEGORY",
@@ -169,6 +171,18 @@ export function buildMixedDomainHeaderEvidence(options?: {
     ),
   ];
 
+  if (includeOpeningRelationship) {
+    records.push(
+      memberEvidence(
+        "E-HDR-001-OPENING",
+        "note",
+        "Explicit supported opening association.",
+        "supportedOpeningTag",
+        "O-001",
+      ),
+    );
+  }
+
   if (includeQuantity) {
     records.push(
       memberEvidence(
@@ -186,9 +200,12 @@ export function buildMixedDomainHeaderEvidence(options?: {
 
 export function buildCompleteMixedDomainEvidence(options?: {
   includeQuantity?: boolean;
+  includeOpeningRelationship?: boolean;
 }): Evidence[] {
   return [
     ...buildMixedDomainWallEvidence(),
     ...buildMixedDomainHeaderEvidence(options),
   ];
 }
+
+export { memberEvidence };
