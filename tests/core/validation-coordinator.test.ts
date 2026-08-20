@@ -251,6 +251,15 @@ function buildFloorFraming() {
             reviewItemIds: [],
           },
           {
+            propertyPath: "joistLayoutLengthFeet",
+            method: "explicit-project-value" as const,
+            explanation: "Joist layout length is explicit on the plan.",
+            evidenceIds: ["E-FFA-001"],
+            assumptionIds: [],
+            validationIssueIds: [],
+            reviewItemIds: [],
+          },
+          {
             propertyPath: "areaSquareFeet",
             method: "explicit-project-value" as const,
             explanation: "Area square footage is explicit on the plan.",
@@ -264,6 +273,8 @@ function buildFloorFraming() {
         layout: "rectangular bay",
         framingDirection: "north-south",
         spanDirection: "north-south",
+        joistLayoutLengthFeet: 20,
+        joistMemberLengthFeet: 12,
         areaSquareFeet: 480,
         boundingWallIds: ["W-001"],
         openingIds: ["O-014"],
@@ -320,14 +331,22 @@ describe("coordinateFramingValidation", () => {
   it("resolves cross-artifact opening and member references when artifacts are supplied together", () => {
     const payload = coordinateFramingValidation(buildIntegratedInput());
 
-    assert.equal(payload.validationIssues.length, 1);
-    assert.equal(payload.reviewItems.length, 1);
+    assert.equal(payload.validationIssues.length, 2);
+    assert.equal(payload.reviewItems.length, 2);
     assert.ok(
       payload.reviewItems.some((item) => item.title.includes("Confirm rough sill size")),
     );
     assert.ok(
+      payload.reviewItems.some((item) => item.title.includes("Confirm cripple stud layout")),
+    );
+    assert.ok(
       payload.validationIssues.some(
         (issue) => issue.ruleId === OPENINGS_RULE_IDS.roughSillSizeDefault,
+      ),
+    );
+    assert.ok(
+      payload.validationIssues.some(
+        (issue) => issue.ruleId === OPENINGS_RULE_IDS.crippleLayoutDefault,
       ),
     );
     assert.ok(

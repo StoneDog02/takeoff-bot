@@ -62,6 +62,12 @@ export const evidenceSubjectKindSchema = z.enum([
   "wall",
   "structural-member",
   "opening",
+  "sheathing-system",
+  "sheathing-area",
+  "floor-framing-system",
+  "floor-framing-area",
+  "roof-framing-system",
+  "roof-plane",
 ]);
 
 /**

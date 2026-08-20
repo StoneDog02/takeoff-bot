@@ -38,6 +38,14 @@ export const roofPlaneSchema = resolvedObjectBaseSchema.extend({
   layout: z.string().trim().min(1).nullable().default(null),
   framingDirection: z.string().trim().min(1).nullable().default(null),
   spanDirection: z.string().trim().min(1).nullable().default(null),
+  /**
+   * Length of the roof plane along the common-rafter spacing axis
+   * (perpendicular to span), in feet. Authoritative input for baseline
+   * common-rafter count per `knowledge/framing/15-roof-framing-calculations.md`.
+   * Must not be reused as installed member length, horizontal run, slope
+   * length, eave-to-ridge distance, or ridge material LF.
+   */
+  rafterLayoutLengthFeet: z.number().finite().positive().nullable().default(null),
   pitch: z.string().trim().min(1).nullable().default(null),
   areaSquareFeet: z.number().finite().positive().nullable().default(null),
   boundingWallIds: z.array(objectIdSchema).default([]),

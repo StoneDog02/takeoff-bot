@@ -15,6 +15,7 @@ import { createFramingStages } from "../../src/scopes/framing/stages/createFrami
 import {
   OPENINGS_RULE_IDS,
   OPENING_QUANTITY_KEYS,
+  SHEATHING_QUANTITY_KEYS,
   STRUCTURAL_MEMBER_QUANTITY_KEYS,
   WALL_QUANTITY_KEYS,
 } from "../../src/scopes/framing/validators/rule-ids.js";
@@ -28,6 +29,7 @@ import {
   evidenceForSubjectKind,
   hasCandidateForSubject,
   isGroundedInPageText,
+  jackStudMaterialForOpening,
   kingStudMaterialForOpening,
   materialLineItemId,
   memberMaterialForObject,
@@ -151,7 +153,7 @@ async function runLiveMultiObjectPipeline(projectId: string, artifactRoot: strin
 
   assert.equal(result.success, true, result.errors.join("\n"));
   assert.equal(result.errors.length, 0);
-  assert.equal(result.stageResults.length, 12);
+  assert.equal(result.stageResults.length, 15);
 
   return snapshotLiveFramingPipeline(pageText, result);
 }
@@ -406,6 +408,12 @@ function assertMaterials(snapshot: LiveFramingPipelineSnapshot) {
       kingStudMaterialForOpening(snapshot.calculations, openingId)?.quantity,
       quantities.kingStuds,
     );
+    const jacks = jackStudMaterialForOpening(snapshot.calculations, openingId);
+    if (quantities.jackStuds === null) {
+      assert.equal(jacks, undefined);
+    } else {
+      assert.equal(jacks?.quantity, quantities.jackStuds);
+    }
     const sill = roughSillMaterialForOpening(snapshot.calculations, openingId);
     if (quantities.roughSill === null) {
       assert.equal(sill, undefined);
@@ -420,13 +428,6 @@ function assertMaterials(snapshot: LiveFramingPipelineSnapshot) {
       linearFeet,
     );
   }
-
-  assert.equal(
-    snapshot.calculations.materials.some((item) =>
-      item.id.includes("jack") || item.description.toLowerCase().includes("cripple"),
-    ),
-    false,
-  );
 }
 
 async function assertPersistedCanonicalState(snapshot: LiveFramingPipelineSnapshot) {
@@ -526,11 +527,17 @@ describe("live Claude multi-object framing system proof", { skip: !RUN_LIVE }, (
 
         const materialIds = snapshot.calculations.materials.map((item) => item.id).sort();
         assert.deepEqual(materialIds, [
+          materialLineItemId(OPENING_QUANTITY_KEYS.cripplesAbove, "O-001"),
+          materialLineItemId(OPENING_QUANTITY_KEYS.cripplesAbove, "O-002"),
+          materialLineItemId(OPENING_QUANTITY_KEYS.cripplesBelow, "O-001"),
+          materialLineItemId(OPENING_QUANTITY_KEYS.cripplesBelow, "O-002"),
+          materialLineItemId(OPENING_QUANTITY_KEYS.jackStuds, "O-001"),
           materialLineItemId(OPENING_QUANTITY_KEYS.kingStuds, "O-001"),
           materialLineItemId(OPENING_QUANTITY_KEYS.kingStuds, "O-002"),
           materialLineItemId(OPENING_QUANTITY_KEYS.kingStuds, "O-003"),
           materialLineItemId(OPENING_QUANTITY_KEYS.roughSill, "O-001"),
           materialLineItemId(OPENING_QUANTITY_KEYS.roughSill, "O-002"),
+          materialLineItemId(SHEATHING_QUANTITY_KEYS.area, "SHA-001"),
           materialLineItemId(STRUCTURAL_MEMBER_QUANTITY_KEYS.material, "SM-HDR-001"),
           materialLineItemId(STRUCTURAL_MEMBER_QUANTITY_KEYS.material, "SM-HDR-002"),
           materialLineItemId(WALL_QUANTITY_KEYS.plates, "WS-001"),

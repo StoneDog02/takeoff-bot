@@ -158,7 +158,7 @@ describe("live Claude wall+opening+header relationship proof", { skip: !RUN_LIVE
         assert.equal(plates?.quantity, 60);
         assert.equal(header?.quantity, 6);
         assert.equal(kingStudMaterialForOpening(snapshot.calculations, "O-001")?.quantity, 2);
-        assert.equal(snapshot.takeoff.summary.materialLineItemCount, 5);
+        assert.equal(snapshot.takeoff.summary.materialLineItemCount, 7);
       } finally {
         await rm(artifactRoot, { recursive: true, force: true });
       }

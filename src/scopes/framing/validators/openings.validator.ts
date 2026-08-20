@@ -64,6 +64,56 @@ const KING_STUD_ELIGIBLE_CATEGORIES = new Set<Opening["category"]>([
 
 const ROUGH_SILL_ELIGIBLE_CATEGORIES = new Set<Opening["category"]>(["window"]);
 
+function crippleLayoutQuantityImpacts(
+  opening: Opening,
+  canCalculate: boolean,
+): Array<{
+  quantityKey: string;
+  description: string;
+  canCalculate: boolean;
+}> {
+  const impacts = [];
+
+  if (
+    opening.category === "window" ||
+    (opening.category === "cased" &&
+      opening.headerMemberId !== null &&
+      isRoughHeightResolved(opening))
+  ) {
+    impacts.push({
+      quantityKey: OPENING_QUANTITY_KEYS.cripplesAbove,
+      description: canCalculate
+        ? "Cripple stud count above header uses layout continuation from rough opening width."
+        : "Cripple stud count above header requires resolved rough opening width and wall stud spacing.",
+      canCalculate,
+    });
+  }
+
+  if (opening.category === "window") {
+    impacts.push({
+      quantityKey: OPENING_QUANTITY_KEYS.cripplesBelow,
+      description: canCalculate
+        ? "Cripple stud count below sill uses layout continuation from rough opening width."
+        : "Cripple stud count below sill requires resolved rough opening width and wall stud spacing.",
+      canCalculate,
+    });
+  }
+
+  return impacts;
+}
+
+function isCrippleLayoutEligible(opening: Opening): boolean {
+  if (opening.category === "window") {
+    return true;
+  }
+
+  return (
+    opening.category === "cased" &&
+    opening.headerMemberId !== null &&
+    isRoughHeightResolved(opening)
+  );
+}
+
 function roughSillQuantityImpact(widthResolved: boolean) {
   return {
     quantityKey: OPENING_QUANTITY_KEYS.roughSill,
@@ -96,6 +146,21 @@ function isKingStudCountExplicitlyResolved(opening: Opening): boolean {
 
   const trace = opening.resolutionTraces.find(
     (entry) => entry.propertyPath === "kingStudCount",
+  );
+  if (trace?.method === "unresolved") {
+    return false;
+  }
+
+  return true;
+}
+
+function isJackStudCountExplicitlyResolved(opening: Opening): boolean {
+  if (opening.jackStudCount === null) {
+    return false;
+  }
+
+  const trace = opening.resolutionTraces.find(
+    (entry) => entry.propertyPath === "jackStudCount",
   );
   if (trace?.method === "unresolved") {
     return false;
@@ -598,6 +663,18 @@ function validateQuantityResolved(opening: Opening): ValidationBatch {
         "Rough sill takeoff requires a resolved opening occurrence count.",
       canCalculate: false,
     },
+    {
+      quantityKey: OPENING_QUANTITY_KEYS.cripplesAbove,
+      description:
+        "Cripple stud count above header requires a resolved opening occurrence count.",
+      canCalculate: false,
+    },
+    {
+      quantityKey: OPENING_QUANTITY_KEYS.cripplesBelow,
+      description:
+        "Cripple stud count below sill requires a resolved opening occurrence count.",
+      canCalculate: false,
+    },
   ];
 
   const explanation = `Opening ${opening.id} is missing quantity or occurrence count.`;
@@ -629,6 +706,108 @@ function validateQuantityResolved(opening: Opening): ValidationBatch {
       },
       reviewStatus: "review-required",
       blockingStatus: "blocked",
+      affectedObjects: [{ objectId: opening.id, objectType: opening.objectType }],
+      quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
+      evidenceIds,
+    },
+  );
+}
+
+function validateJackStudCountResolved(opening: Opening): ValidationBatch {
+  const target = createObjectTarget(opening.id, opening.objectType);
+  const ruleId = OPENINGS_RULE_IDS.jackStudCountResolved;
+  const evidenceIds = collectEvidenceIds(opening);
+
+  if (!KING_STUD_ELIGIBLE_CATEGORIES.has(opening.category)) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Opening ${opening.id} category does not use jack stud count validation.`,
+      evidenceIds,
+    );
+  }
+
+  if (!isQuantityResolved(opening)) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Jack stud count validation skipped until opening quantity resolves.`,
+      evidenceIds,
+    );
+  }
+
+  if (opening.parentObjectId === null) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Jack stud count validation skipped until opening parent segment resolves.`,
+      evidenceIds,
+    );
+  }
+
+  if (isJackStudCountExplicitlyResolved(opening)) {
+    return buildPassedBatch(
+      ruleId,
+      "object",
+      target,
+      `Opening ${opening.id} has explicit jack stud count evidence.`,
+      evidenceIds,
+    );
+  }
+
+  // Brain: create review when linked header exists but jack count evidence is
+  // missing. Without a header link, jack quantity stays NOT CALCULABLE silently.
+  if (opening.headerMemberId === null) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Jack stud count validation skipped until a linked header makes jacks expected.`,
+      evidenceIds,
+    );
+  }
+
+  const quantityImpacts = [
+    {
+      quantityKey: OPENING_QUANTITY_KEYS.jackStuds,
+      description:
+        "Jack stud count requires explicit project evidence; quantity cannot calculate.",
+      canCalculate: false,
+    },
+  ];
+
+  const explanation = `Opening ${opening.id} has a linked header but no explicit jack/trimmer stud count.`;
+
+  return buildFailedBatch(
+    {
+      ruleId,
+      level: "object",
+      severity: "warning",
+      ruleViolated:
+        "Jack stud count must be explicit project evidence when calculable.",
+      explanation,
+      target,
+      recommendedUserAction:
+        "Confirm jack/trimmer stud count from plans, schedules, or header details.",
+      evidenceIds,
+      quantityImpacts,
+    },
+    {
+      ruleId,
+      target,
+      title: `Resolve jack stud count for opening ${opening.id}`,
+      description: explanation,
+      action: {
+        type: "provide-value",
+        instruction:
+          "Provide the explicit jack/trimmer stud count for this opening occurrence.",
+        targetProperty: "jackStudCount",
+      },
+      reviewStatus: "review-required",
+      blockingStatus: "not-blocked",
       affectedObjects: [{ objectId: opening.id, objectType: opening.objectType }],
       quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
       evidenceIds,
@@ -816,6 +995,98 @@ function validateRoughSillSizeDefault(opening: Opening): ValidationBatch {
   );
 }
 
+function validateCrippleLayoutDefault(opening: Opening): ValidationBatch {
+  const target = createObjectTarget(opening.id, opening.objectType);
+  const ruleId = OPENINGS_RULE_IDS.crippleLayoutDefault;
+  const evidenceIds = collectEvidenceIds(opening);
+
+  if (!isCrippleLayoutEligible(opening)) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Opening ${opening.id} category does not use cripple layout default validation.`,
+      evidenceIds,
+    );
+  }
+
+  if (!isQuantityResolved(opening)) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Cripple layout default validation skipped until opening quantity resolves.`,
+      evidenceIds,
+    );
+  }
+
+  if (opening.parentObjectId === null) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Cripple layout default validation skipped until opening parent segment resolves.`,
+      evidenceIds,
+    );
+  }
+
+  if (!isRoughWidthResolved(opening)) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Cripple layout default validation skipped until rough opening width resolves.`,
+      evidenceIds,
+    );
+  }
+
+  const quantityImpacts = crippleLayoutQuantityImpacts(opening, true);
+  if (quantityImpacts.length === 0) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Opening ${opening.id} has no cripple layout quantity impacts.`,
+      evidenceIds,
+    );
+  }
+
+  const explanation = `Opening ${opening.id} will use layout-continuation cripple stud counts from rough opening width and wall stud spacing.`;
+
+  return buildFailedBatch(
+    {
+      ruleId,
+      level: "object",
+      severity: "warning",
+      ruleViolated:
+        "Cripple stud layout should be confirmed when explicit cripple count evidence is absent.",
+      explanation,
+      target,
+      recommendedUserAction:
+        "Confirm cripple stud layout from plans or accept layout continuation between king studs.",
+      evidenceIds,
+      quantityImpacts,
+    },
+    {
+      ruleId,
+      target,
+      title: `Confirm cripple stud layout for opening ${opening.id}`,
+      description: explanation,
+      action: {
+        type: "confirm",
+        instruction:
+          "Confirm cripple stud layout continuation from rough opening width and wall stud spacing.",
+        targetProperty: "crippleStudLayout",
+      },
+      reviewStatus: "review-recommended",
+      blockingStatus: "not-blocked",
+      affectedObjects: [{ objectId: opening.id, objectType: opening.objectType }],
+      quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
+      evidenceIds,
+    },
+  );
+}
+
 export function validateOpenings(input: OpeningsValidationInput): ValidationBatch {
   const batches: ValidationBatch[] = [];
 
@@ -829,7 +1100,9 @@ export function validateOpenings(input: OpeningsValidationInput): ValidationBatc
       validateHeaderReferenceResolved(opening, input.structuralMembersById),
       validateQuantityResolved(opening),
       validateKingStudCountDefault(opening),
+      validateJackStudCountResolved(opening),
       validateRoughSillSizeDefault(opening),
+      validateCrippleLayoutDefault(opening),
     );
   }
 

@@ -88,6 +88,8 @@ describe("framing domain contracts", () => {
     assert.equal(area.spanDirection, null);
     assert.equal(area.framingDirection, null);
     assert.equal(area.layout, null);
+    assert.equal(area.joistLayoutLengthFeet, null);
+    assert.equal(area.joistMemberLengthFeet, null);
     assert.equal(area.areaSquareFeet, null);
     assert.deepEqual(area.structuralMemberIds, ["SM-008"]);
   });

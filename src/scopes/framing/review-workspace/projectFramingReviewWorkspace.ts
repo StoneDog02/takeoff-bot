@@ -18,8 +18,10 @@ import {
 } from "../../../core/schemas/review-workspace.schema.js";
 import { createMaterialLineItemId } from "../calculators/ids.js";
 import type {
+  FloorFramingPayload,
   FramingCalculationsPayload,
   OpeningsPayload,
+  RoofFramingPayload,
   StructuralMembersPayload,
   ValidationPayload,
   WallFramingPayload,
@@ -37,6 +39,8 @@ export type FramingReviewWorkspaceInput = {
   openings: OpeningsPayload;
   structuralMembers: StructuralMembersPayload;
   wallFraming?: WallFramingPayload;
+  floorFraming?: FloorFramingPayload;
+  roofFraming?: RoofFramingPayload;
   userDecisions?: readonly UserDecision[];
   supplementalReviewItemsById?: ReadonlyMap<ReviewItemId, ReviewItem>;
 };
@@ -64,6 +68,36 @@ function buildResolvedObjectIndex(
     }
     for (const segment of input.wallFraming.segments) {
       index.set(segment.id, { objectDomain: "wall-segment", object: segment });
+    }
+  }
+
+  if (input.floorFraming) {
+    for (const system of input.floorFraming.systems) {
+      index.set(system.id, {
+        objectDomain: "floor-framing-system",
+        object: system,
+      });
+    }
+    for (const area of input.floorFraming.areas) {
+      index.set(area.id, {
+        objectDomain: "floor-framing-area",
+        object: area,
+      });
+    }
+  }
+
+  if (input.roofFraming) {
+    for (const system of input.roofFraming.systems) {
+      index.set(system.id, {
+        objectDomain: "roof-framing-system",
+        object: system,
+      });
+    }
+    for (const plane of input.roofFraming.planes) {
+      index.set(plane.id, {
+        objectDomain: "roof-plane",
+        object: plane,
+      });
     }
   }
 

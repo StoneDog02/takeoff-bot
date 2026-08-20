@@ -1,8 +1,10 @@
 import {
   framingCalculationsPayloadSchema,
   type ConnectorsHardwarePayload,
+  type FloorFramingPayload,
   type FramingCalculationsPayload,
   type OpeningsPayload,
+  type RoofFramingPayload,
   type SheathingPayload,
   type StructuralMembersPayload,
   type ValidationPayload,
@@ -10,7 +12,9 @@ import {
 } from "../schemas/framing-artifacts.schema.js";
 import type { FramingMaterialLineItem } from "../schemas/material.schema.js";
 import { calculateFasteners } from "./calculateFasteners.js";
+import { calculateFloorFraming } from "./calculateFloorFraming.js";
 import { calculateOpeningFraming } from "./calculateOpeningFraming.js";
+import { calculateRoofFraming } from "./calculateRoofFraming.js";
 import { calculateSheathing } from "./calculateSheathing.js";
 import { calculateStructuralMembers } from "./calculateStructuralMembers.js";
 import { calculateWallFraming } from "./calculateWallFraming.js";
@@ -19,6 +23,8 @@ export type FramingCalculationInput = {
   wallFraming?: WallFramingPayload;
   openings?: OpeningsPayload;
   structuralMembers?: StructuralMembersPayload;
+  floorFraming?: FloorFramingPayload;
+  roofFraming?: RoofFramingPayload;
   sheathing?: SheathingPayload;
   connectorsHardware?: ConnectorsHardwarePayload;
   validation?: ValidationPayload;
@@ -28,8 +34,9 @@ export type FramingCalculationInput = {
  * Runs available Framing subsystem calculators and concatenates their
  * material line items. Does not merge, deduplicate, or alter quantities.
  *
- * Order: Wall Framing, Opening Framing, Structural Members, Sheathing, then
- * specified Fasteners. Connector and Hardware objects are not calculated here.
+ * Order: Wall Framing, Opening Framing, Structural Members, Floor Framing,
+ * Roof Framing, Sheathing, then specified Fasteners. Connector and Hardware
+ * objects are not calculated here.
  */
 export function coordinateFramingCalculations(
   input: FramingCalculationInput,
@@ -59,6 +66,18 @@ export function coordinateFramingCalculations(
     );
   }
 
+  if (input.floorFraming) {
+    materials.push(
+      ...calculateFloorFraming(input.floorFraming, input.validation),
+    );
+  }
+
+  if (input.roofFraming) {
+    materials.push(
+      ...calculateRoofFraming(input.roofFraming, input.validation),
+    );
+  }
+
   if (input.sheathing) {
     materials.push(...calculateSheathing(input.sheathing, input.validation));
   }
@@ -71,4 +90,3 @@ export function coordinateFramingCalculations(
 
   return framingCalculationsPayloadSchema.parse({ materials, assumptions });
 }
-

@@ -68,6 +68,7 @@ describe("roof framing artifact contract", () => {
     assert.equal(artifact.payload.systems[0]?.id, "RFS-001");
     assert.deepEqual(artifact.payload.systems[0]?.planeIds, ["RP-001"]);
     assert.equal(artifact.payload.planes[0]?.parentSystemId, "RFS-001");
+    assert.equal(artifact.payload.planes[0]?.rafterLayoutLengthFeet, null);
     assert.equal("roofFramingSystems" in artifact.payload, false);
   });
 

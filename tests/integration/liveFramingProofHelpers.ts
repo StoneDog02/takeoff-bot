@@ -21,7 +21,9 @@ import {
   wallFramingArtifactSchema,
 } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 import {
+  FLOOR_QUANTITY_KEYS,
   OPENING_QUANTITY_KEYS,
+  SHEATHING_QUANTITY_KEYS,
   STRUCTURAL_MEMBER_QUANTITY_KEYS,
   WALL_QUANTITY_KEYS,
 } from "../../src/scopes/framing/validators/rule-ids.js";
@@ -439,6 +441,16 @@ export function kingStudMaterialForOpening(
   );
 }
 
+export function jackStudMaterialForOpening(
+  calculations: FramingCalculationsPayload,
+  openingId: ObjectId = "O-001",
+): FramingCalculationsPayload["materials"][number] | undefined {
+  return calculations.materials.find(
+    (item) =>
+      item.id === materialLineItemId(OPENING_QUANTITY_KEYS.jackStuds, openingId),
+  );
+}
+
 export function roughSillMaterialForOpening(
   calculations: FramingCalculationsPayload,
   openingId: ObjectId = "O-001",
@@ -446,6 +458,46 @@ export function roughSillMaterialForOpening(
   return calculations.materials.find(
     (item) =>
       item.id === materialLineItemId(OPENING_QUANTITY_KEYS.roughSill, openingId),
+  );
+}
+
+export function cripplesAboveMaterialForOpening(
+  calculations: FramingCalculationsPayload,
+  openingId: ObjectId = "O-001",
+): FramingCalculationsPayload["materials"][number] | undefined {
+  return calculations.materials.find(
+    (item) =>
+      item.id === materialLineItemId(OPENING_QUANTITY_KEYS.cripplesAbove, openingId),
+  );
+}
+
+export function sheathingMaterialForArea(
+  calculations: FramingCalculationsPayload,
+  areaId: ObjectId = "SHA-001",
+): FramingCalculationsPayload["materials"][number] | undefined {
+  return calculations.materials.find(
+    (item) =>
+      item.id === materialLineItemId(SHEATHING_QUANTITY_KEYS.area, areaId),
+  );
+}
+
+export function floorJoistMaterialForArea(
+  calculations: FramingCalculationsPayload,
+  areaId: ObjectId = "FFA-001",
+): FramingCalculationsPayload["materials"][number] | undefined {
+  return calculations.materials.find(
+    (item) =>
+      item.id === materialLineItemId(FLOOR_QUANTITY_KEYS.joists, areaId),
+  );
+}
+
+export function cripplesBelowMaterialForOpening(
+  calculations: FramingCalculationsPayload,
+  openingId: ObjectId = "O-001",
+): FramingCalculationsPayload["materials"][number] | undefined {
+  return calculations.materials.find(
+    (item) =>
+      item.id === materialLineItemId(OPENING_QUANTITY_KEYS.cripplesBelow, openingId),
   );
 }
 

@@ -4,6 +4,7 @@ import type {
   RoofPlane,
 } from "../schemas/roof-framing.schema.js";
 import type { RoofFramingPayload } from "../schemas/framing-artifacts.schema.js";
+import { isStickCommonRafterFramingType } from "../resolvers/roofFramingPropertyPaths.js";
 import {
   buildFailedBatch,
   buildPassedBatch,
@@ -26,6 +27,30 @@ export type RoofFramingValidationInput = {
   openingsById?: ReadonlyMap<ObjectId, RelatedObjectRef>;
   structuralMembersById?: ReadonlyMap<ObjectId, RelatedObjectRef>;
 };
+
+function blockCommonRafters(
+  description: string,
+): Array<{ quantityKey: string; description: string; canCalculate: boolean }> {
+  return [
+    {
+      quantityKey: ROOF_QUANTITY_KEYS.commonRafters,
+      description,
+      canCalculate: false,
+    },
+  ];
+}
+
+function allowCommonRafters(
+  description: string,
+): Array<{ quantityKey: string; description: string; canCalculate: boolean }> {
+  return [
+    {
+      quantityKey: ROOF_QUANTITY_KEYS.commonRafters,
+      description,
+      canCalculate: true,
+    },
+  ];
+}
 
 function isFramingTypeResolved(system: RoofFramingSystem): boolean {
   return (
@@ -52,6 +77,13 @@ function isSpanDirectionResolved(plane: RoofPlane): boolean {
   return (
     plane.spanDirection !== null ||
     isPropertyResolved(plane.resolutionTraces, "spanDirection")
+  );
+}
+
+function isRafterLayoutLengthResolved(plane: RoofPlane): boolean {
+  return (
+    plane.rafterLayoutLengthFeet !== null ||
+    isPropertyResolved(plane.resolutionTraces, "rafterLayoutLengthFeet")
   );
 }
 
@@ -87,13 +119,9 @@ function validatePlaneParentSystemResolved(
     );
   }
 
-  const quantityImpacts = [
-    {
-      quantityKey: ROOF_QUANTITY_KEYS.members,
-      description: "Roof member takeoff requires a valid parent system.",
-      canCalculate: false,
-    },
-  ];
+  const quantityImpacts = blockCommonRafters(
+    "Common-rafter takeoff requires a valid parent system.",
+  );
 
   const explanation = `Roof plane ${plane.id} references missing parent system ${plane.parentSystemId}.`;
 
@@ -175,13 +203,9 @@ function validateSystemPlanesConsistent(
     );
   }
 
-  const quantityImpacts = [
-    {
-      quantityKey: ROOF_QUANTITY_KEYS.members,
-      description: "Inconsistent roof planes prevent reliable member takeoff.",
-      canCalculate: false,
-    },
-  ];
+  const quantityImpacts = blockCommonRafters(
+    "Inconsistent roof planes prevent reliable common-rafter takeoff.",
+  );
 
   const explanation = problems.join(" ");
 
@@ -235,13 +259,9 @@ function validateFramingTypeResolved(
     );
   }
 
-  const quantityImpacts = [
-    {
-      quantityKey: ROOF_QUANTITY_KEYS.members,
-      description: "Roof member takeoff requires a resolved framing type.",
-      canCalculate: false,
-    },
-  ];
+  const quantityImpacts = blockCommonRafters(
+    "Common-rafter takeoff requires a resolved framing type.",
+  );
 
   const explanation = `Roof system ${system.id} is missing framing type.`;
 
@@ -277,6 +297,73 @@ function validateFramingTypeResolved(
   );
 }
 
+function validateFramingTypeCommonRafterEligible(
+  system: RoofFramingSystem,
+): ValidationBatch {
+  const target = createObjectTarget(system.id, system.objectType);
+  const ruleId = ROOF_FRAMING_RULE_IDS.framingTypeCommonRafterEligible;
+  const evidenceIds = collectEvidenceIds(system);
+
+  if (!isFramingTypeResolved(system) || system.assembly.framingType === null) {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Common-rafter eligibility skipped until framing type resolves for ${system.id}.`,
+      evidenceIds,
+    );
+  }
+
+  if (isStickCommonRafterFramingType(system.assembly.framingType)) {
+    return buildPassedBatch(
+      ruleId,
+      "object",
+      target,
+      `Roof system ${system.id} framing type is eligible for baseline common-rafter count.`,
+      evidenceIds,
+    );
+  }
+
+  const quantityImpacts = blockCommonRafters(
+    "Baseline common-rafter count is not authorized for this framing type.",
+  );
+
+  const explanation = `Roof system ${system.id} framing type "${system.assembly.framingType}" is not stick common-rafter eligible.`;
+
+  return buildFailedBatch(
+    {
+      ruleId,
+      level: "object",
+      severity: "warning",
+      ruleViolated:
+        "Baseline common-rafter count applies only to stick / rafter framing types.",
+      explanation,
+      target,
+      recommendedUserAction:
+        "Confirm framing type or take truss / unsupported systems through a dedicated authority.",
+      evidenceIds,
+      quantityImpacts,
+    },
+    {
+      ruleId,
+      target,
+      title: `Confirm common-rafter eligibility for roof system ${system.id}`,
+      description: explanation,
+      action: {
+        type: "confirm",
+        instruction:
+          "Confirm whether this roof uses stick-framed common rafters eligible for baseline count.",
+        targetProperty: "assembly.framingType",
+      },
+      reviewStatus: "review-required",
+      blockingStatus: "not-blocked",
+      affectedObjects: [{ objectId: system.id, objectType: system.objectType }],
+      quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
+      evidenceIds,
+    },
+  );
+}
+
 function validateMemberSizeResolved(system: RoofFramingSystem): ValidationBatch {
   const target = createObjectTarget(system.id, system.objectType);
   const ruleId = ROOF_FRAMING_RULE_IDS.memberSizeResolved;
@@ -292,13 +379,9 @@ function validateMemberSizeResolved(system: RoofFramingSystem): ValidationBatch 
     );
   }
 
-  const quantityImpacts = [
-    {
-      quantityKey: ROOF_QUANTITY_KEYS.members,
-      description: "Roof member takeoff requires a resolved rafter or truss size.",
-      canCalculate: false,
-    },
-  ];
+  const quantityImpacts = blockCommonRafters(
+    "Common-rafter takeoff requires a resolved member size.",
+  );
 
   const explanation = `Roof system ${system.id} is missing member size.`;
 
@@ -311,7 +394,7 @@ function validateMemberSizeResolved(system: RoofFramingSystem): ValidationBatch 
       explanation,
       target,
       recommendedUserAction:
-        "Confirm rafter or truss size from roof framing plans or schedules.",
+        "Confirm rafter size from roof framing plans or schedules.",
       evidenceIds,
       quantityImpacts,
     },
@@ -322,7 +405,7 @@ function validateMemberSizeResolved(system: RoofFramingSystem): ValidationBatch 
       description: explanation,
       action: {
         type: "provide-value",
-        instruction: "Provide the rafter or truss size for this roof system.",
+        instruction: "Provide the rafter size for this roof system.",
         targetProperty: "assembly.memberSize",
       },
       reviewStatus: "review-required",
@@ -351,13 +434,9 @@ function validateMemberSpacingResolved(
     );
   }
 
-  const quantityImpacts = [
-    {
-      quantityKey: ROOF_QUANTITY_KEYS.members,
-      description: "Roof member takeoff requires resolved rafter or truss spacing.",
-      canCalculate: false,
-    },
-  ];
+  const quantityImpacts = blockCommonRafters(
+    "Common-rafter takeoff requires resolved member spacing.",
+  );
 
   const explanation = `Roof system ${system.id} is missing member spacing.`;
 
@@ -370,7 +449,7 @@ function validateMemberSpacingResolved(
       explanation,
       target,
       recommendedUserAction:
-        "Confirm rafter or truss spacing from roof framing plans or schedules.",
+        "Confirm rafter spacing from roof framing plans or schedules.",
       evidenceIds,
       quantityImpacts,
     },
@@ -382,7 +461,7 @@ function validateMemberSpacingResolved(
       action: {
         type: "provide-value",
         instruction:
-          "Provide rafter or truss spacing in inches for this roof system.",
+          "Provide rafter spacing in inches for this roof system.",
         targetProperty: "assembly.memberSpacingInches",
       },
       reviewStatus: "review-required",
@@ -409,13 +488,9 @@ function validateSpanDirectionResolved(plane: RoofPlane): ValidationBatch {
     );
   }
 
-  const quantityImpacts = [
-    {
-      quantityKey: ROOF_QUANTITY_KEYS.members,
-      description: "Roof member layout requires a resolved span direction.",
-      canCalculate: false,
-    },
-  ];
+  const quantityImpacts = blockCommonRafters(
+    "Common-rafter layout requires a resolved span direction.",
+  );
 
   const explanation = `Roof plane ${plane.id} is missing span direction.`;
 
@@ -451,6 +526,61 @@ function validateSpanDirectionResolved(plane: RoofPlane): ValidationBatch {
   );
 }
 
+function validateRafterLayoutLengthResolved(plane: RoofPlane): ValidationBatch {
+  const target = createObjectTarget(plane.id, plane.objectType);
+  const ruleId = ROOF_FRAMING_RULE_IDS.rafterLayoutLengthResolved;
+  const evidenceIds = collectEvidenceIds(plane);
+
+  if (isRafterLayoutLengthResolved(plane)) {
+    return buildPassedBatch(
+      ruleId,
+      "object",
+      target,
+      `Roof plane ${plane.id} has resolved rafter layout length.`,
+      evidenceIds,
+    );
+  }
+
+  const quantityImpacts = blockCommonRafters(
+    "Common-rafter count requires resolved rafter layout length along the spacing axis.",
+  );
+
+  const explanation = `Roof plane ${plane.id} is missing rafter layout length.`;
+
+  return buildFailedBatch(
+    {
+      ruleId,
+      level: "object",
+      severity: "critical",
+      ruleViolated:
+        "Roof plane rafter layout length must be resolved for baseline common-rafter count.",
+      explanation,
+      target,
+      recommendedUserAction:
+        "Confirm the roof plane length along the rafter spacing axis (perpendicular to span).",
+      evidenceIds,
+      quantityImpacts,
+    },
+    {
+      ruleId,
+      target,
+      title: `Resolve rafter layout length for roof plane ${plane.id}`,
+      description: explanation,
+      action: {
+        type: "provide-value",
+        instruction:
+          "Provide rafterLayoutLengthFeet as the spacing-axis plane length in feet.",
+        targetProperty: "rafterLayoutLengthFeet",
+      },
+      reviewStatus: "review-required",
+      blockingStatus: "blocked",
+      affectedObjects: [{ objectId: plane.id, objectType: plane.objectType }],
+      quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
+      evidenceIds,
+    },
+  );
+}
+
 function validatePitchResolved(plane: RoofPlane): ValidationBatch {
   const target = createObjectTarget(plane.id, plane.objectType);
   const ruleId = ROOF_FRAMING_RULE_IDS.pitchResolved;
@@ -466,13 +596,12 @@ function validatePitchResolved(plane: RoofPlane): ValidationBatch {
     );
   }
 
-  const quantityImpacts = [
-    {
-      quantityKey: ROOF_QUANTITY_KEYS.members,
-      description: "Roof member length takeoff requires a resolved pitch.",
-      canCalculate: false,
-    },
-  ];
+  // Per knowledge/framing/15-roof-framing-calculations.md, pitch is not an
+  // input to baseline common-rafter count. Missing pitch is reviewable but must
+  // not block roof.common-rafters.
+  const quantityImpacts = allowCommonRafters(
+    "Baseline common-rafter count does not require pitch.",
+  );
 
   const explanation = `Roof plane ${plane.id} is missing pitch.`;
 
@@ -480,12 +609,13 @@ function validatePitchResolved(plane: RoofPlane): ValidationBatch {
     {
       ruleId,
       level: "object",
-      severity: "critical",
-      ruleViolated: "Roof plane pitch must be resolved.",
+      severity: "warning",
+      ruleViolated:
+        "Roof plane pitch is unresolved (optional for common-rafter count).",
       explanation,
       target,
       recommendedUserAction:
-        "Confirm roof pitch from elevations, sections, or roof plans.",
+        "Confirm roof pitch from elevations, sections, or roof plans when length rules need it.",
       evidenceIds,
       quantityImpacts,
     },
@@ -499,8 +629,8 @@ function validatePitchResolved(plane: RoofPlane): ValidationBatch {
         instruction: "Provide the pitch for this roof plane.",
         targetProperty: "pitch",
       },
-      reviewStatus: "review-required",
-      blockingStatus: "blocked",
+      reviewStatus: "review-recommended",
+      blockingStatus: "not-blocked",
       affectedObjects: [{ objectId: plane.id, objectType: plane.objectType }],
       quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
       evidenceIds,
@@ -523,14 +653,12 @@ function validateAreaSquareFeetResolved(plane: RoofPlane): ValidationBatch {
     );
   }
 
-  const quantityImpacts = [
-    {
-      quantityKey: ROOF_QUANTITY_KEYS.members,
-      description:
-        "Roof member quantities require resolved plane square footage.",
-      canCalculate: false,
-    },
-  ];
+  // Per knowledge/framing/15-roof-framing-calculations.md, areaSquareFeet is
+  // not an input to baseline common-rafter count. Missing SF is reviewable but
+  // must not block roof.common-rafters.
+  const quantityImpacts = allowCommonRafters(
+    "Baseline common-rafter count does not require area square footage.",
+  );
 
   const explanation = `Roof plane ${plane.id} is missing area square footage.`;
 
@@ -538,12 +666,13 @@ function validateAreaSquareFeetResolved(plane: RoofPlane): ValidationBatch {
     {
       ruleId,
       level: "object",
-      severity: "critical",
-      ruleViolated: "Roof plane square footage must be resolved.",
+      severity: "warning",
+      ruleViolated:
+        "Roof plane square footage is unresolved (optional for common-rafter count).",
       explanation,
       target,
       recommendedUserAction:
-        "Confirm roof plane square footage from plans or schedules.",
+        "Confirm roof plane square footage from plans when coverage geometry is needed.",
       evidenceIds,
       quantityImpacts,
     },
@@ -557,8 +686,8 @@ function validateAreaSquareFeetResolved(plane: RoofPlane): ValidationBatch {
         instruction: "Provide the roof plane area in square feet.",
         targetProperty: "areaSquareFeet",
       },
-      reviewStatus: "review-required",
-      blockingStatus: "blocked",
+      reviewStatus: "review-recommended",
+      blockingStatus: "not-blocked",
       affectedObjects: [{ objectId: plane.id, objectType: plane.objectType }],
       quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
       evidenceIds,
@@ -672,14 +801,9 @@ function validateBoundingWallsResolved(
       passExplanation: `Roof plane ${plane.id} references existing bounding walls.`,
       relationshipLabel: "bounding walls",
       severity: "warning",
-      quantityImpacts: [
-        {
-          quantityKey: ROOF_QUANTITY_KEYS.members,
-          description:
-            "Roof member takeoff may still proceed from explicit plane geometry.",
-          canCalculate: true,
-        },
-      ],
+      quantityImpacts: allowCommonRafters(
+        "Common-rafter takeoff may still proceed from explicit plane geometry.",
+      ),
       reviewStatus: "review-recommended",
       blockingStatus: "not-blocked",
       targetProperty: "boundingWallIds",
@@ -705,14 +829,9 @@ function validateOpeningReferencesResolved(
       passExplanation: `Roof plane ${plane.id} references existing openings.`,
       relationshipLabel: "openings",
       severity: "warning",
-      quantityImpacts: [
-        {
-          quantityKey: ROOF_QUANTITY_KEYS.members,
-          description:
-            "Roof member takeoff may still proceed without opening association resolution.",
-          canCalculate: true,
-        },
-      ],
+      quantityImpacts: allowCommonRafters(
+        "Common-rafter takeoff may still proceed without opening association resolution.",
+      ),
       reviewStatus: "review-recommended",
       blockingStatus: "not-blocked",
       targetProperty: "openingIds",
@@ -737,14 +856,9 @@ function validateStructuralMemberReferencesResolved(
       passExplanation: `Roof plane ${plane.id} references existing structural members.`,
       relationshipLabel: "structural members",
       severity: "warning",
-      quantityImpacts: [
-        {
-          quantityKey: ROOF_QUANTITY_KEYS.members,
-          description:
-            "Roof member takeoff may still proceed without member association resolution.",
-          canCalculate: true,
-        },
-      ],
+      quantityImpacts: allowCommonRafters(
+        "Common-rafter takeoff may still proceed without member association resolution.",
+      ),
       reviewStatus: "review-recommended",
       blockingStatus: "not-blocked",
       targetProperty: "structuralMemberIds",
@@ -769,6 +883,7 @@ export function validateRoofFraming(
   for (const system of input.payload.systems) {
     batches.push(validateSystemPlanesConsistent(system, planesById));
     batches.push(validateFramingTypeResolved(system));
+    batches.push(validateFramingTypeCommonRafterEligible(system));
     batches.push(validateMemberSizeResolved(system));
     batches.push(validateMemberSpacingResolved(system));
   }
@@ -776,6 +891,7 @@ export function validateRoofFraming(
   for (const plane of input.payload.planes) {
     batches.push(validatePlaneParentSystemResolved(plane, systemsById));
     batches.push(validateSpanDirectionResolved(plane));
+    batches.push(validateRafterLayoutLengthResolved(plane));
     batches.push(validatePitchResolved(plane));
     batches.push(validateAreaSquareFeetResolved(plane));
     batches.push(

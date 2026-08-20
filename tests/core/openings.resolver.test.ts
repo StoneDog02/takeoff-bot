@@ -270,6 +270,36 @@ describe("resolveOpenings", () => {
     assert.equal(trace?.method, "explicit-project-value");
     assert.deepEqual(trace?.evidenceIds, ["E-O001-KING"]);
   });
+
+  it("resolves explicit jackStudCount and leaves missing count null", () => {
+    const withJack = resolveOpenings([
+      ...buildCompleteOpeningEvidence(),
+      openingEvidence(
+        "E-O001-JACK",
+        "note",
+        "Explicit jack stud count.",
+        "jackStudCount",
+        2,
+      ),
+    ]);
+    assert.equal(withJack.openings[0]?.jackStudCount, 2);
+
+    const withoutJack = resolveOpenings(buildCompleteOpeningEvidence());
+    assert.equal(withoutJack.openings[0]?.jackStudCount, null);
+  });
+
+  it("marks conflicting jackStudCount unresolved", () => {
+    const payload = resolveOpenings([
+      ...buildCompleteOpeningEvidence(),
+      openingEvidence("E-O001-JACK-A", "note", "Jack count A.", "jackStudCount", 2),
+      openingEvidence("E-O001-JACK-B", "note", "Jack count B.", "jackStudCount", 4),
+    ]);
+    assert.equal(payload.openings[0]?.jackStudCount, null);
+    const trace = payload.openings[0]?.resolutionTraces.find(
+      (entry) => entry.propertyPath === "jackStudCount",
+    );
+    assert.equal(trace?.method, "unresolved");
+  });
 });
 
 describe("createOpeningObjectId", () => {

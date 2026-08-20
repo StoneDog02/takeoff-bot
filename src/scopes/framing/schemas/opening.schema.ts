@@ -39,6 +39,12 @@ export const openingSchema = resolvedObjectBaseSchema.extend({
    * Null until evidence or an approved assumption path supplies a value.
    */
   kingStudCount: z.number().int().positive().nullable().default(null),
+  /**
+   * Explicit jack/trimmer stud count per opening occurrence when project
+   * evidence resolves it. Null when silent — never defaulted.
+   * See `knowledge/framing/13-opening-wall-framing-calculations.md`.
+   */
+  jackStudCount: z.number().int().positive().nullable().default(null),
 });
 
 export type OpeningCategory = z.infer<typeof openingCategorySchema>;

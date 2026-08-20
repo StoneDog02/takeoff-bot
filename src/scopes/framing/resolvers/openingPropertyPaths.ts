@@ -18,6 +18,7 @@ export const OPENING_OPTIONAL_PROPERTY_PATHS = [
   "detailReference",
   "fireRating",
   "kingStudCount",
+  "jackStudCount",
 ] as const;
 
 export const OPENING_PROPERTY_PATHS = [
@@ -87,6 +88,7 @@ export function normalizeOpeningCandidate(
     case "quantity":
       return isPositiveInteger(candidateValue) ? candidateValue : undefined;
     case "kingStudCount":
+    case "jackStudCount":
       return isPositiveInteger(candidateValue) ? candidateValue : undefined;
   }
 }

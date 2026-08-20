@@ -534,6 +534,7 @@ function resolveOneOpening(
     headerMemberId: null,
     fireRating: resolvedStringValue(decisions.fireRating, null),
     kingStudCount: resolvedNumberValue(decisions.kingStudCount, null),
+    jackStudCount: resolvedNumberValue(decisions.jackStudCount, null),
   };
 }
 

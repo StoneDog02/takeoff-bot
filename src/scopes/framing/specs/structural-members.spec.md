@@ -25,6 +25,10 @@ The Structural Members subsystem owns structural member identity, classification
 
 It does not own connector or hardware objects themselves.
 
+It does not own baseline regularly spaced floor joist **count** or simple-area baseline joist **material LF**; those quantities are owned by Floor Framing per `14-floor-framing-calculations.md`. Do not emit SM net material LF for that same repetitive baseline population.
+
+It does not own baseline regularly spaced common-rafter **count**; that quantity is owned by Roof Framing per `15-roof-framing-calculations.md`. Do not emit SM quantities for that same repetitive baseline common-rafter population.
+
 ---
 
 ## 3. Consumed Artifacts
@@ -145,6 +149,8 @@ This subsystem does not implement:
 
 - Wall framing
 - Floor framing layout systems
+- Baseline regularly spaced floor joist count or simple-area baseline joist material LF (Floor Framing / `14-floor-framing-calculations.md`)
+- Baseline regularly spaced common-rafter count (Roof Framing / `15-roof-framing-calculations.md`)
 - Roof framing layout systems
 - Opening identity or geometry
 - Connector calculations

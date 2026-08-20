@@ -8,6 +8,7 @@ type OpeningEvidenceOptions = {
   roughHeightFeet?: number | null;
   quantity?: number;
   kingStudCount?: number | null;
+  jackStudCount?: number | null;
   parentWallTag?: string;
   headerMemberTag?: string;
   includeRoughWidth?: boolean;
@@ -255,6 +256,19 @@ export function buildOpeningEvidenceForSubject(
     );
   }
 
+  if (options.jackStudCount != null) {
+    records.push(
+      openingEvidence(
+        subjectKey,
+        `${prefix}-JACK`,
+        "dimension",
+        "Explicit jack stud count.",
+        "jackStudCount",
+        options.jackStudCount,
+      ),
+    );
+  }
+
   if (options.parentWallTag) {
     records.push(
       openingEvidence(
@@ -353,6 +367,152 @@ export function buildHeaderEvidenceForSubject(
   return records;
 }
 
+function sheathingSource(subjectKey: string) {
+  return {
+    page: {
+      documentId: null,
+      pageNumber: 1,
+      sheetId: null,
+      sheetTitle: null,
+      pageLabel: null,
+      revision: null,
+    },
+    region: null,
+    elementLabel: subjectKey,
+    detailNumber: null,
+    sectionNumber: null,
+    scheduleName: null,
+    noteReference: null,
+  };
+}
+
+function sheathingSystemEvidence(
+  subjectKey: string,
+  id: string,
+  type: "note" | "dimension" | "schedule",
+  description: string,
+  propertyPath: string,
+  candidateValue: string | number | boolean | null,
+): Evidence {
+  return evidenceSchema.parse({
+    id,
+    type,
+    relationship: "supports",
+    description,
+    source: sheathingSource(subjectKey),
+    originalText: `${subjectKey} fixture line`,
+    references: [],
+    subjectKind: "sheathing-system",
+    subjectKey,
+    propertyPath,
+    candidateValue,
+  });
+}
+
+function sheathingAreaEvidence(
+  subjectKey: string,
+  id: string,
+  type: "note" | "dimension" | "schedule",
+  description: string,
+  propertyPath: string,
+  candidateValue: string | number | boolean | null,
+): Evidence {
+  return evidenceSchema.parse({
+    id,
+    type,
+    relationship: "supports",
+    description,
+    source: sheathingSource(subjectKey),
+    originalText: `${subjectKey} fixture line`,
+    references: [],
+    subjectKind: "sheathing-area",
+    subjectKey,
+    propertyPath,
+    candidateValue,
+  });
+}
+
+export function buildSheathingEvidenceForWall001(
+  systemKey = "SHS-001",
+  areaKey = "SHA-001",
+  prefix = "E-SHS",
+): Evidence[] {
+  return [
+    sheathingSystemEvidence(
+      systemKey,
+      `${prefix}-NAME`,
+      "note",
+      "Explicit sheathing system name.",
+      "name",
+      "Level 1 exterior wall sheathing",
+    ),
+    sheathingSystemEvidence(
+      systemKey,
+      `${prefix}-LEVEL`,
+      "note",
+      "Explicit sheathing level.",
+      "level",
+      "Level 1",
+    ),
+    sheathingSystemEvidence(
+      systemKey,
+      `${prefix}-APP`,
+      "note",
+      "Explicit sheathing application.",
+      "application",
+      "wall",
+    ),
+    sheathingSystemEvidence(
+      systemKey,
+      `${prefix}-PHASE`,
+      "note",
+      "Explicit construction phase.",
+      "constructionPhase",
+      "new",
+    ),
+    sheathingSystemEvidence(
+      systemKey,
+      `${prefix}-TYPE`,
+      "note",
+      "Explicit panel type.",
+      "panelSpecification.panelType",
+      "OSB",
+    ),
+    sheathingSystemEvidence(
+      systemKey,
+      `${prefix}-THICK`,
+      "note",
+      "Explicit panel thickness.",
+      "panelSpecification.thickness",
+      '7/16"',
+    ),
+    sheathingAreaEvidence(
+      areaKey,
+      `${prefix}-AREA-SF`,
+      "dimension",
+      "Explicit sheathing coverage area.",
+      "areaSquareFeet",
+      160,
+    ),
+    sheathingAreaEvidence(
+      areaKey,
+      `${prefix}-PARENT`,
+      "note",
+      "Explicit parent sheathing system.",
+      "parentSystemTag",
+      systemKey,
+    ),
+    sheathingAreaEvidence(
+      areaKey,
+      `${prefix}-WALL`,
+      "note",
+      "Explicit covered wall association.",
+      "coveredWallTag",
+      "W-001",
+    ),
+  ];
+}
+
 /**
  * Deterministic multi-object framing slice:
  *
@@ -372,6 +532,7 @@ export function buildMultiObjectFramingEvidence(): Evidence[] {
       roughWidthFeet: 3.5,
       roughHeightFeet: 4.5,
       kingStudCount: 3,
+      jackStudCount: 2,
       parentWallTag: "W-001",
       headerMemberTag: "HDR-001",
     }),
@@ -404,6 +565,7 @@ export function buildMultiObjectFramingEvidence(): Evidence[] {
       materialType: "dimensional-lumber",
       size: "2x12",
     }),
+    ...buildSheathingEvidenceForWall001(),
   ];
 }
 
@@ -413,22 +575,33 @@ export const MULTI_OBJECT_EXPECTED_QUANTITIES = {
     "WS-002": { studs: 7, plates: 24 },
   },
   openings: {
-    "O-001": { kingStuds: 3, roughSill: 3.5 },
-    "O-002": { kingStuds: 2, roughSill: null },
-    "O-003": { kingStuds: 2, roughSill: null },
+    "O-001": {
+      kingStuds: 3,
+      jackStuds: 2,
+      roughSill: 3.5,
+      cripplesAbove: 2,
+      cripplesBelow: 2,
+    },
+    "O-002": { kingStuds: 2, jackStuds: null, roughSill: null },
+    "O-003": { kingStuds: 2, jackStuds: null, roughSill: null },
   },
   headers: {
     "SM-HDR-001": 6,
     "SM-HDR-002": 8,
+  },
+  sheathing: {
+    "SHA-001": 160,
   },
   summary: {
     wallCount: 2,
     wallSegmentCount: 2,
     openingCount: 3,
     structuralMemberCount: 2,
-    materialLineItemCount: 10,
-    assumptionCount: 3,
-    reviewItemCount: 4,
-    validationIssueCount: 4,
+    sheathingSystemCount: 1,
+    sheathingAreaCount: 1,
+    materialLineItemCount: 14,
+    assumptionCount: 4,
+    reviewItemCount: 6,
+    validationIssueCount: 6,
   },
 } as const;

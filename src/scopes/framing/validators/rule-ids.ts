@@ -35,7 +35,9 @@ export const OPENINGS_RULE_IDS = {
   headerReferenceResolved: "opening.header.reference.resolved",
   quantityResolved: "opening.quantity.resolved",
   kingStudCountDefault: "opening.kingStudCount.default",
+  jackStudCountResolved: "opening.jackStudCount.resolved",
   roughSillSizeDefault: "opening.roughSillSize.default",
+  crippleLayoutDefault: "opening.crippleLayout.default",
 } as const;
 
 export type OpeningsRuleId =
@@ -45,7 +47,10 @@ export const OPENING_QUANTITY_KEYS = {
   framing: "opening.framing",
   header: "opening.header",
   kingStuds: "opening.king-studs",
+  jackStuds: "opening.jack-studs",
   roughSill: "opening.rough-sill",
+  cripplesAbove: "opening.cripples-above",
+  cripplesBelow: "opening.cripples-below",
 } as const;
 
 export const STRUCTURAL_MEMBER_RULE_IDS = {
@@ -76,6 +81,9 @@ export const FLOOR_FRAMING_RULE_IDS = {
   joistSizeResolved: "floor.system.assembly.joistSize.resolved",
   joistSpacingResolved: "floor.system.assembly.joistSpacing.resolved",
   spanDirectionResolved: "floor.area.spanDirection.resolved",
+  joistLayoutLengthResolved: "floor.area.joistLayoutLength.resolved",
+  joistMemberLengthResolved: "floor.area.joistMemberLength.resolved",
+  joistLinearFeetTypeSupported: "floor.area.joistLinearFeet.type.supported",
   areaSquareFeetResolved: "floor.area.areaSquareFeet.resolved",
   boundingWallsResolved: "floor.area.boundingWalls.resolved",
   openingReferencesResolved: "floor.area.openings.resolved",
@@ -87,15 +95,19 @@ export type FloorFramingRuleId =
 
 export const FLOOR_QUANTITY_KEYS = {
   joists: "floor.joists",
+  joistLinearFeet: "floor.joist-linear-feet",
 } as const;
 
 export const ROOF_FRAMING_RULE_IDS = {
   planeParentSystemResolved: "roof.plane.parentSystem.resolved",
   systemPlanesConsistent: "roof.system.planes.consistent",
   framingTypeResolved: "roof.system.assembly.framingType.resolved",
+  framingTypeCommonRafterEligible:
+    "roof.system.assembly.framingType.commonRafterEligible",
   memberSizeResolved: "roof.system.assembly.memberSize.resolved",
   memberSpacingResolved: "roof.system.assembly.memberSpacing.resolved",
   spanDirectionResolved: "roof.plane.spanDirection.resolved",
+  rafterLayoutLengthResolved: "roof.plane.rafterLayoutLength.resolved",
   pitchResolved: "roof.plane.pitch.resolved",
   areaSquareFeetResolved: "roof.plane.areaSquareFeet.resolved",
   boundingWallsResolved: "roof.plane.boundingWalls.resolved",
@@ -107,7 +119,7 @@ export type RoofFramingRuleId =
   (typeof ROOF_FRAMING_RULE_IDS)[keyof typeof ROOF_FRAMING_RULE_IDS];
 
 export const ROOF_QUANTITY_KEYS = {
-  members: "roof.members",
+  commonRafters: "roof.common-rafters",
 } as const;
 
 export const SHEATHING_RULE_IDS = {

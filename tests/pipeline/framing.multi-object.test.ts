@@ -19,11 +19,13 @@ import {
   createFramingStageArtifact,
   createFramingStages,
 } from "../../src/scopes/framing/stages/createFramingStages.js";
+import { createOpeningCrippleLayoutAssumptionId } from "../../src/scopes/framing/calculators/createOpeningCrippleLayoutAssumption.js";
 import { createOpeningKingStudCountAssumptionId } from "../../src/scopes/framing/calculators/createOpeningKingStudCountAssumption.js";
 import { createOpeningRoughSillSizeAssumptionId } from "../../src/scopes/framing/calculators/createOpeningRoughSillSizeAssumption.js";
 import {
   OPENINGS_RULE_IDS,
   OPENING_QUANTITY_KEYS,
+  SHEATHING_QUANTITY_KEYS,
   STRUCTURAL_MEMBER_QUANTITY_KEYS,
   WALL_QUANTITY_KEYS,
 } from "../../src/scopes/framing/validators/rule-ids.js";
@@ -41,6 +43,7 @@ import {
   readCanonicalStructuralMembersFromDisk,
   readCanonicalWallFramingFromDisk,
   roughSillMaterialForOpening,
+  sheathingMaterialForArea,
   STRUCTURAL_MEMBERS_OPENING_LINKS_COMPANION_SUFFIX,
   studMaterialForSegment,
   WALL_FRAMING_OPENING_LINKS_COMPANION_SUFFIX,
@@ -309,6 +312,36 @@ describe("framing multi-object deterministic system proof", () => {
       assert.equal(sillO001?.quantity, 3.5);
       assert.equal(sillO002, undefined);
 
+      const cripplesAboveO001 = calculationsArtifact.payload.materials.find(
+        (item) =>
+          item.id === materialLineItemId(OPENING_QUANTITY_KEYS.cripplesAbove, "O-001"),
+      );
+      const cripplesBelowO001 = calculationsArtifact.payload.materials.find(
+        (item) =>
+          item.id === materialLineItemId(OPENING_QUANTITY_KEYS.cripplesBelow, "O-001"),
+      );
+      assert.equal(cripplesAboveO001?.quantity, 2);
+      assert.equal(cripplesBelowO001?.quantity, 2);
+      assert.ok(
+        cripplesAboveO001?.assumptionIds.includes(
+          createOpeningCrippleLayoutAssumptionId("O-001"),
+        ),
+      );
+      assert.equal(
+        calculationsArtifact.payload.materials.find(
+          (item) =>
+            item.id === materialLineItemId(OPENING_QUANTITY_KEYS.cripplesAbove, "O-002"),
+        ),
+        undefined,
+      );
+      assert.equal(
+        calculationsArtifact.payload.materials.find(
+          (item) =>
+            item.id === materialLineItemId(OPENING_QUANTITY_KEYS.cripplesBelow, "O-003"),
+        ),
+        undefined,
+      );
+
       assert.equal(
         memberMaterialForObject(calculationsArtifact.payload, "SM-HDR-001")?.quantity,
         6,
@@ -316,6 +349,14 @@ describe("framing multi-object deterministic system proof", () => {
       assert.equal(
         memberMaterialForObject(calculationsArtifact.payload, "SM-HDR-002")?.quantity,
         8,
+      );
+      assert.equal(
+        sheathingMaterialForArea(calculationsArtifact.payload, "SHA-001")?.quantity,
+        MULTI_OBJECT_EXPECTED_QUANTITIES.sheathing["SHA-001"],
+      );
+      assert.equal(
+        sheathingMaterialForArea(calculationsArtifact.payload, "SHA-001")?.unit,
+        "square-foot",
       );
 
       assert.equal(kingsO001?.assumptionIds.length, 0);
@@ -345,6 +386,14 @@ describe("framing multi-object deterministic system proof", () => {
       assert.deepEqual(
         reportArtifact.payload.summary.structuralMemberCount,
         expected.structuralMemberCount,
+      );
+      assert.deepEqual(
+        reportArtifact.payload.summary.sheathingSystemCount,
+        expected.sheathingSystemCount,
+      );
+      assert.deepEqual(
+        reportArtifact.payload.summary.sheathingAreaCount,
+        expected.sheathingAreaCount,
       );
       assert.deepEqual(
         reportArtifact.payload.summary.materialLineItemCount,
@@ -396,6 +445,10 @@ describe("framing multi-object deterministic system proof", () => {
         3,
       );
       assert.equal(
+        byId.get(materialLineItemId(OPENING_QUANTITY_KEYS.jackStuds, "O-001"))?.quantity,
+        2,
+      );
+      assert.equal(
         byId.get(materialLineItemId(OPENING_QUANTITY_KEYS.roughSill, "O-001"))?.quantity,
         3.5,
       );
@@ -404,8 +457,16 @@ describe("framing multi-object deterministic system proof", () => {
         2,
       );
       assert.equal(
+        byId.get(materialLineItemId(OPENING_QUANTITY_KEYS.jackStuds, "O-002")),
+        undefined,
+      );
+      assert.equal(
         byId.get(materialLineItemId(OPENING_QUANTITY_KEYS.kingStuds, "O-003"))?.quantity,
         2,
+      );
+      assert.equal(
+        byId.get(materialLineItemId(OPENING_QUANTITY_KEYS.jackStuds, "O-003")),
+        undefined,
       );
       assert.equal(
         byId.get(

@@ -5,6 +5,7 @@ import { calculateOpeningFraming } from "../../src/scopes/framing/calculators/ca
 import { coordinateFramingCalculations } from "../../src/scopes/framing/calculators/calculation-coordinator.js";
 import { createMaterialLineItemId } from "../../src/scopes/framing/calculators/ids.js";
 import { createOpeningKingStudCountAssumptionId } from "../../src/scopes/framing/calculators/createOpeningKingStudCountAssumption.js";
+import { createOpeningCrippleLayoutAssumptionId } from "../../src/scopes/framing/calculators/createOpeningCrippleLayoutAssumption.js";
 import { createOpeningRoughSillSizeAssumptionId } from "../../src/scopes/framing/calculators/createOpeningRoughSillSizeAssumption.js";
 import type {
   OpeningsPayload,
@@ -139,6 +140,7 @@ function buildOpening(overrides: Partial<Opening> = {}): Opening {
     headerMemberId: "SM-HDR-001",
     fireRating: null,
     kingStudCount: null,
+    jackStudCount: null,
     ...overrides,
   };
 }
@@ -177,6 +179,28 @@ function roughSillLine(
   );
 }
 
+function cripplesAboveLine(
+  result: ReturnType<typeof calculateOpeningFraming>,
+  openingId = "O-001",
+) {
+  return result.materials.find(
+    (item) =>
+      item.id ===
+      createMaterialLineItemId(OPENING_QUANTITY_KEYS.cripplesAbove, openingId),
+  );
+}
+
+function cripplesBelowLine(
+  result: ReturnType<typeof calculateOpeningFraming>,
+  openingId = "O-001",
+) {
+  return result.materials.find(
+    (item) =>
+      item.id ===
+      createMaterialLineItemId(OPENING_QUANTITY_KEYS.cripplesBelow, openingId),
+  );
+}
+
 describe("calculateOpeningFraming king stud slice", () => {
   it("calculates king studs for an eligible window opening", () => {
     const result = calculateOpeningFraming(
@@ -188,7 +212,7 @@ describe("calculateOpeningFraming king stud slice", () => {
     assert.equal(kings?.quantity, 2);
     assert.equal(kings?.unit, "each");
     assert.deepEqual(kings?.sourceObjectIds, ["O-001", "W-001", "WS-001"]);
-    assert.equal(result.assumptions.length, 2);
+    assert.equal(result.assumptions.length, 3);
     assert.equal(
       result.assumptions[0]?.id,
       createOpeningKingStudCountAssumptionId("O-001"),
@@ -196,6 +220,8 @@ describe("calculateOpeningFraming king stud slice", () => {
     assert.ok(kings?.assumptionIds.includes(result.assumptions[0]!.id));
     assert.equal(roughSillLine(result)?.quantity, 3.5);
     assert.equal(roughSillLine(result)?.unit, "linear-foot");
+    assert.equal(cripplesAboveLine(result)?.quantity, 2);
+    assert.equal(cripplesBelowLine(result)?.quantity, 2);
   });
 
   it("calculates king studs for an eligible door opening", () => {
@@ -226,6 +252,8 @@ describe("calculateOpeningFraming king stud slice", () => {
 
     assert.equal(kingStudLine(result)?.quantity, 4);
     assert.equal(roughSillLine(result)?.quantity, 7);
+    assert.equal(cripplesAboveLine(result)?.quantity, 4);
+    assert.equal(cripplesBelowLine(result)?.quantity, 4);
   });
 
   it("does not emit king studs when opening.quantity is null", () => {
@@ -324,13 +352,104 @@ describe("calculateOpeningFraming king stud slice", () => {
     const kings = kingStudLine(result);
 
     assert.equal(kings?.quantity, 3);
-    assert.equal(result.assumptions.length, 1);
-    assert.equal(
-      result.assumptions[0]?.id,
-      createOpeningRoughSillSizeAssumptionId("O-001"),
+    assert.equal(result.assumptions.length, 2);
+    assert.ok(
+      result.assumptions.some(
+        (assumption) => assumption.id === createOpeningRoughSillSizeAssumptionId("O-001"),
+      ),
+    );
+    assert.ok(
+      result.assumptions.some(
+        (assumption) => assumption.id === createOpeningCrippleLayoutAssumptionId("O-001"),
+      ),
     );
     assert.equal(kings?.assumptionIds.length, 0);
     assert.equal(roughSillLine(result)?.quantity, 3.5);
+  });
+
+  it("emits jack studs from explicit jackStudCount × quantity with no assumption", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([
+        buildOpening({
+          jackStudCount: 2,
+          quantity: 3,
+          resolutionTraces: [
+            resolvedTrace("quantity"),
+            resolvedTrace("jackStudCount"),
+            resolvedTrace("dimensions.roughWidthFeet"),
+            resolvedTrace("dimensions.roughHeightFeet"),
+          ],
+        }),
+      ]),
+      buildWallFraming(),
+    );
+
+    const jackLine = result.materials.find(
+      (item) =>
+        item.id === createMaterialLineItemId(OPENING_QUANTITY_KEYS.jackStuds, "O-001"),
+    );
+    assert.ok(jackLine);
+    assert.equal(jackLine.quantity, 6);
+    assert.equal(jackLine.unit, "each");
+    assert.match(jackLine.description, /2x4 jack studs/);
+    assert.equal(jackLine.assumptionIds.length, 0);
+  });
+
+  it("does not invent jack studs when jackStudCount is missing", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([buildOpening()]),
+      buildWallFraming(),
+    );
+
+    assert.equal(
+      result.materials.find(
+        (item) =>
+          item.id === createMaterialLineItemId(OPENING_QUANTITY_KEYS.jackStuds, "O-001"),
+      ),
+      undefined,
+    );
+    assert.ok(kingStudLine(result));
+  });
+
+  it("does not emit jack studs when jack quantity is validation-blocked", () => {
+    const opening = buildOpening({
+      jackStudCount: 2,
+      resolutionTraces: [
+        resolvedTrace("quantity"),
+        resolvedTrace("jackStudCount"),
+      ],
+    });
+    const validation = emptyValidation([
+      createValidationIssue({
+        ruleId: OPENINGS_RULE_IDS.jackStudCountResolved,
+        level: "object",
+        severity: "warning",
+        ruleViolated: "blocked",
+        explanation: "blocked",
+        target: createObjectTarget(opening.id, opening.objectType),
+        quantityImpacts: [
+          {
+            quantityKey: OPENING_QUANTITY_KEYS.jackStuds,
+            description: "blocked",
+            canCalculate: false,
+          },
+        ],
+      }),
+    ]);
+
+    const result = calculateOpeningFraming(
+      buildOpenings([opening]),
+      buildWallFraming(),
+      validation,
+    );
+    assert.equal(
+      result.materials.find(
+        (item) =>
+          item.id === createMaterialLineItemId(OPENING_QUANTITY_KEYS.jackStuds, "O-001"),
+      ),
+      undefined,
+    );
+    assert.ok(kingStudLine(result));
   });
 
   it("does not apply default and explicit king counts simultaneously", () => {
@@ -348,7 +467,7 @@ describe("calculateOpeningFraming king stud slice", () => {
     );
 
     assert.equal(kingStudLine(result)?.quantity, 4);
-    assert.equal(result.assumptions.length, 1);
+    assert.equal(result.assumptions.length, 2);
     assert.equal(roughSillLine(result)?.quantity, 3.5);
   });
 
@@ -370,7 +489,11 @@ describe("calculateOpeningFraming king stud slice", () => {
     assert.equal(kingStudLine(result, "O-002")?.quantity, 4);
     assert.equal(roughSillLine(result, "O-001")?.quantity, 3.5);
     assert.equal(roughSillLine(result, "O-002")?.quantity, 7);
-    assert.equal(result.materials.length, 4);
+    assert.equal(cripplesAboveLine(result, "O-001")?.quantity, 2);
+    assert.equal(cripplesBelowLine(result, "O-001")?.quantity, 2);
+    assert.equal(cripplesAboveLine(result, "O-002")?.quantity, 4);
+    assert.equal(cripplesBelowLine(result, "O-002")?.quantity, 4);
+    assert.equal(result.materials.length, 8);
   });
 
   it("is deterministic regardless of input order", () => {
@@ -390,18 +513,148 @@ describe("calculateOpeningFraming king stud slice", () => {
     assert.deepEqual(first.assumptions, second.assumptions);
   });
 
-  it("does not emit jack studs, cripples, or header material", () => {
+  it("does not emit jack studs or header material", () => {
     const result = calculateOpeningFraming(
       buildOpenings(),
       buildWallFraming(),
     );
 
-    assert.equal(result.materials.length, 2);
+    assert.equal(result.materials.length, 4);
     assert.ok(result.materials.some((item) => /king studs/i.test(item.description)));
     assert.ok(result.materials.some((item) => /rough sill/i.test(item.description)));
+    assert.ok(result.materials.some((item) => /cripple studs above header/i.test(item.description)));
+    assert.ok(result.materials.some((item) => /cripple studs below sill/i.test(item.description)));
     assert.ok(result.materials.every((item) => !/jack stud/i.test(item.description)));
-    assert.ok(result.materials.every((item) => !/cripple/i.test(item.description)));
-    assert.ok(result.materials.every((item) => !/header/i.test(item.description)));
+    assert.ok(
+      result.materials.every(
+        (item) => !/^\d+x\d+ header/i.test(item.description.trim()),
+      ),
+    );
+  });
+});
+
+describe("calculateOpeningFraming cripple stud slice", () => {
+  it("calculates above-header and below-sill cripple counts for a window", () => {
+    const result = calculateOpeningFraming(buildOpenings(), buildWallFraming());
+
+    assert.equal(cripplesAboveLine(result)?.quantity, 2);
+    assert.equal(cripplesBelowLine(result)?.quantity, 2);
+    assert.equal(cripplesAboveLine(result)?.unit, "each");
+    assert.match(cripplesAboveLine(result)?.description ?? "", /2x4 cripple studs above header/i);
+    assert.match(cripplesBelowLine(result)?.description ?? "", /2x4 cripple studs below sill/i);
+    assert.ok(
+      cripplesAboveLine(result)?.assumptionIds.includes(
+        createOpeningCrippleLayoutAssumptionId("O-001"),
+      ),
+    );
+    assert.deepEqual(
+      cripplesAboveLine(result)?.assumptionIds,
+      cripplesBelowLine(result)?.assumptionIds,
+    );
+  });
+
+  it("doubles cripple counts when opening.quantity is 2", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([buildOpening({ quantity: 2 })]),
+      buildWallFraming(),
+    );
+
+    assert.equal(cripplesAboveLine(result)?.quantity, 4);
+    assert.equal(cripplesBelowLine(result)?.quantity, 4);
+  });
+
+  it("does not emit below-sill cripples for a door opening", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([buildOpening({ category: "door" })]),
+      buildWallFraming(),
+    );
+
+    assert.equal(cripplesAboveLine(result), undefined);
+    assert.equal(cripplesBelowLine(result), undefined);
+    assert.equal(kingStudLine(result)?.quantity, 2);
+  });
+
+  it("emits above-header cripples only for a cased opening with linked header and rough height", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([
+        buildOpening({
+          category: "cased",
+          headerMemberId: "SM-HDR-001",
+          resolutionTraces: [
+            resolvedTrace("quantity"),
+            resolvedTrace("dimensions.nominalWidthFeet"),
+            resolvedTrace("dimensions.nominalHeightFeet"),
+            resolvedTrace("dimensions.roughWidthFeet"),
+            resolvedTrace("dimensions.roughHeightFeet"),
+          ],
+        }),
+      ]),
+      buildWallFraming(),
+    );
+
+    assert.equal(cripplesAboveLine(result)?.quantity, 2);
+    assert.equal(cripplesBelowLine(result), undefined);
+  });
+
+  it("blocks cripple counts when roughWidthFeet is unresolved without blocking king studs", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([
+        buildOpening({
+          dimensions: {
+            nominalWidthFeet: 3,
+            nominalHeightFeet: 4,
+            roughWidthFeet: null,
+            roughHeightFeet: 4.5,
+          },
+        }),
+      ]),
+      buildWallFraming(),
+    );
+
+    assert.equal(cripplesAboveLine(result), undefined);
+    assert.equal(cripplesBelowLine(result), undefined);
+    assert.equal(roughSillLine(result), undefined);
+    assert.equal(kingStudLine(result)?.quantity, 2);
+  });
+
+  it("blocks cripple counts when opening.quantity is null", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([buildOpening({ quantity: null, resolutionTraces: [] })]),
+      buildWallFraming(),
+    );
+
+    assert.equal(result.materials.length, 0);
+  });
+
+  it("blocks only the cripple quantity targeted by validation", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings(),
+      buildWallFraming(),
+      emptyValidation([
+        createValidationIssue({
+          ruleId: OPENINGS_RULE_IDS.quantityResolved,
+          level: "object",
+          severity: "critical",
+          ruleViolated: "Blocked below cripples only.",
+          explanation: "Below cripples blocked.",
+          target: createObjectTarget("O-001", "opening"),
+          recommendedUserAction: "Review.",
+          evidenceIds: [],
+          quantityImpacts: [
+            {
+              quantityKey: OPENING_QUANTITY_KEYS.cripplesBelow,
+              description: "Blocked.",
+              canCalculate: false,
+            },
+          ],
+        }),
+      ]),
+    );
+
+    assert.equal(cripplesAboveLine(result)?.quantity, 2);
+    assert.equal(cripplesBelowLine(result), undefined);
+    assert.equal(kingStudLine(result)?.quantity, 2);
+    assert.equal(roughSillLine(result)?.quantity, 3.5);
   });
 });
 
@@ -653,8 +906,12 @@ describe("calculateOpeningFraming rough sill slice", () => {
       [
         createMaterialLineItemId(OPENING_QUANTITY_KEYS.kingStuds, "O-001"),
         createMaterialLineItemId(OPENING_QUANTITY_KEYS.roughSill, "O-001"),
+        createMaterialLineItemId(OPENING_QUANTITY_KEYS.cripplesAbove, "O-001"),
+        createMaterialLineItemId(OPENING_QUANTITY_KEYS.cripplesBelow, "O-001"),
         createMaterialLineItemId(OPENING_QUANTITY_KEYS.kingStuds, "O-002"),
         createMaterialLineItemId(OPENING_QUANTITY_KEYS.roughSill, "O-002"),
+        createMaterialLineItemId(OPENING_QUANTITY_KEYS.cripplesAbove, "O-002"),
+        createMaterialLineItemId(OPENING_QUANTITY_KEYS.cripplesBelow, "O-002"),
       ],
     );
   });
@@ -734,7 +991,7 @@ describe("coordinateFramingCalculations opening quantities", () => {
     assert.equal(header?.quantity, 6);
     assert.equal(kings?.quantity, 2);
     assert.equal(sill?.quantity, 3.5);
-    assert.equal(payload.assumptions.length, 2);
+    assert.equal(payload.assumptions.length, 3);
   });
 });
 

@@ -85,6 +85,7 @@ function buildCompleteOpening(
     headerMemberId: "SM-008",
     fireRating: null,
     kingStudCount: null,
+    jackStudCount: null,
     ...overrides,
   };
 }
@@ -130,13 +131,19 @@ describe("validateOpenings", () => {
       ...maps,
     });
 
-    assert.equal(batch.validationIssues.length, 2);
-    assert.equal(batch.reviewItems.length, 2);
+    assert.equal(batch.validationIssues.length, 4);
+    assert.equal(batch.reviewItems.length, 4);
     assert.ok(
       batch.reviewItems.some((item) => item.title.includes("Confirm king stud count")),
     );
     assert.ok(
+      batch.reviewItems.some((item) => item.title.includes("Resolve jack stud count")),
+    );
+    assert.ok(
       batch.reviewItems.some((item) => item.title.includes("Confirm rough sill size")),
+    );
+    assert.ok(
+      batch.reviewItems.some((item) => item.title.includes("Confirm cripple stud layout")),
     );
     assert.ok(
       batch.validationIssues.some(
@@ -145,7 +152,17 @@ describe("validateOpenings", () => {
     );
     assert.ok(
       batch.validationIssues.some(
+        (issue) => issue.ruleId === OPENINGS_RULE_IDS.jackStudCountResolved,
+      ),
+    );
+    assert.ok(
+      batch.validationIssues.some(
         (issue) => issue.ruleId === OPENINGS_RULE_IDS.roughSillSizeDefault,
+      ),
+    );
+    assert.ok(
+      batch.validationIssues.some(
+        (issue) => issue.ruleId === OPENINGS_RULE_IDS.crippleLayoutDefault,
       ),
     );
     assert.ok(batch.validationResults.length > 0);
@@ -154,8 +171,75 @@ describe("validateOpenings", () => {
         (result) =>
           result.outcome === "passed" ||
           result.ruleId === OPENINGS_RULE_IDS.kingStudCountDefault ||
-          result.ruleId === OPENINGS_RULE_IDS.roughSillSizeDefault,
+          result.ruleId === OPENINGS_RULE_IDS.jackStudCountResolved ||
+          result.ruleId === OPENINGS_RULE_IDS.roughSillSizeDefault ||
+          result.ruleId === OPENINGS_RULE_IDS.crippleLayoutDefault,
       ),
+    );
+  });
+
+  it("blocks only jack-studs when header is linked and jack count is missing", () => {
+    const batch = validateOpenings({
+      payload: {
+        openings: [
+          buildCompleteOpening({
+            kingStudCount: 2,
+            resolutionTraces: [
+              ...buildCompleteOpening().resolutionTraces,
+              {
+                propertyPath: "kingStudCount",
+                method: "explicit-project-value",
+                explanation: "Explicit king count.",
+                evidenceIds: ["E-014"],
+                assumptionIds: [],
+                validationIssueIds: [],
+                reviewItemIds: [],
+              },
+            ],
+          }),
+        ],
+      },
+      ...buildParentMaps(),
+    });
+
+    const jackIssue = batch.validationIssues.find(
+      (issue) => issue.ruleId === OPENINGS_RULE_IDS.jackStudCountResolved,
+    );
+    assert.ok(jackIssue);
+    assert.equal(jackIssue.severity, "warning");
+    assert.deepEqual(
+      jackIssue.quantityImpacts.map((impact) => [
+        impact.quantityKey,
+        impact.canCalculate,
+      ]),
+      [[OPENING_QUANTITY_KEYS.jackStuds, false]],
+    );
+    assert.equal(
+      batch.validationIssues.some(
+        (issue) =>
+          issue.quantityImpacts.some(
+            (impact) =>
+              impact.quantityKey === OPENING_QUANTITY_KEYS.kingStuds &&
+              impact.canCalculate === false,
+          ),
+      ),
+      false,
+    );
+  });
+
+  it("skips jack count review when no header is linked", () => {
+    const batch = validateOpenings({
+      payload: {
+        openings: [buildCompleteOpening({ headerMemberId: null })],
+      },
+      ...buildParentMaps(),
+    });
+
+    assert.equal(
+      batch.validationIssues.some(
+        (issue) => issue.ruleId === OPENINGS_RULE_IDS.jackStudCountResolved,
+      ),
+      false,
     );
   });
 

@@ -22,6 +22,9 @@ import {
 } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import {
+  createOpeningCrippleLayoutAssumption,
+} from "./createOpeningCrippleLayoutAssumption.js";
+import {
   createOpeningKingStudCountAssumption,
   KING_STUD_COUNT_DEFAULT,
 } from "./createOpeningKingStudCountAssumption.js";
@@ -38,8 +41,11 @@ const ELIGIBLE_CATEGORIES = new Set<OpeningCategory>([
 
 const QUANTITY_PROPERTY_PATH = "quantity";
 const KING_STUD_COUNT_PROPERTY_PATH = "kingStudCount";
+const JACK_STUD_COUNT_PROPERTY_PATH = "jackStudCount";
 const ROUGH_WIDTH_PROPERTY_PATH = "dimensions.roughWidthFeet";
+const ROUGH_HEIGHT_PROPERTY_PATH = "dimensions.roughHeightFeet";
 const STUD_SIZE_PROPERTY_PATH = "assembly.studSize";
+const STUD_SPACING_PROPERTY_PATH = "assembly.studSpacingInches";
 const HEIGHT_PROPERTY_PATH = "assembly.heightFeet";
 
 export type OpeningFramingCalculationResult = {
@@ -117,6 +123,282 @@ function roughSillSizeDefaultReviewItemId(opening: Opening): ReviewItemId {
   );
 }
 
+function crippleLayoutDefaultReviewItemId(opening: Opening): ReviewItemId {
+  return createReviewItemId(
+    OPENINGS_RULE_IDS.crippleLayoutDefault,
+    createObjectTarget(opening.id, opening.objectType),
+  );
+}
+
+/**
+ * Layout continuation between king studs per ch.13.
+ */
+function crippleCountPerOccurrence(
+  roughWidthFeet: number,
+  studSpacingInches: number,
+): number {
+  return Math.max(0, Math.ceil((roughWidthFeet * 12) / studSpacingInches) - 1);
+}
+
+function isRoughHeightResolved(opening: Opening): boolean {
+  return isQuantityInputResolved(
+    opening.dimensions.roughHeightFeet,
+    opening.resolutionTraces,
+    ROUGH_HEIGHT_PROPERTY_PATH,
+  );
+}
+
+function isCrippleSpacingResolved(wall: BuildingWall): boolean {
+  return isQuantityInputResolved(
+    wall.assembly.studSpacingInches,
+    wall.resolutionTraces,
+    STUD_SPACING_PROPERTY_PATH,
+  );
+}
+
+function isEligibleForCripplesAbove(opening: Opening): boolean {
+  if (opening.category === "window") {
+    return true;
+  }
+
+  if (
+    opening.category === "cased" &&
+    opening.headerMemberId !== null &&
+    isRoughHeightResolved(opening)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function sharedCripplePreconditions(
+  opening: Opening,
+  wall: BuildingWall,
+  segment: WallSegment,
+  validation: ValidationPayload | undefined,
+  quantityKey: string,
+): {
+  roughWidthFeet: number;
+  studSpacingInches: number;
+  studSize: string;
+  occurrenceMultiplier: number;
+} | null {
+  const contributingObjects = [opening, wall, segment];
+
+  if (
+    isQuantityBlocked(
+      validation,
+      contributingObjects.map((object) => object.id),
+      quantityKey,
+    ) ||
+    isQuantityBlocked(
+      validation,
+      [opening.id],
+      OPENING_QUANTITY_KEYS.framing,
+    )
+  ) {
+    return null;
+  }
+
+  if (!isOpeningEligibleForWallFraming(opening, wall, segment)) {
+    return null;
+  }
+
+  if (!isCrippleSpacingResolved(wall)) {
+    return null;
+  }
+
+  if (
+    !isQuantityInputResolved(
+      opening.quantity,
+      opening.resolutionTraces,
+      QUANTITY_PROPERTY_PATH,
+    )
+  ) {
+    return null;
+  }
+
+  if (
+    !isQuantityInputResolved(
+      opening.dimensions.roughWidthFeet,
+      opening.resolutionTraces,
+      ROUGH_WIDTH_PROPERTY_PATH,
+    )
+  ) {
+    return null;
+  }
+
+  const studSize = wall.assembly.studSize;
+  const studSpacingInches = wall.assembly.studSpacingInches;
+  if (studSize === null || studSpacingInches === null) {
+    return null;
+  }
+
+  return {
+    roughWidthFeet: opening.dimensions.roughWidthFeet,
+    studSpacingInches,
+    studSize,
+    occurrenceMultiplier: opening.quantity,
+  };
+}
+
+function buildCrippleLineItem(input: {
+  opening: Opening;
+  wall: BuildingWall;
+  segment: WallSegment;
+  quantityKey: string;
+  quantity: number;
+  description: string;
+  canonicalClassification: string;
+  usedPropertyPaths: string[];
+  assumption: Assumption | null;
+}): FramingMaterialLineItem | null {
+  const provenance = collectLineItemProvenance(
+    [input.opening, input.wall, input.segment],
+    input.usedPropertyPaths,
+  );
+  const assumptionIds = [
+    ...provenance.assumptionIds,
+    ...(input.assumption ? [input.assumption.id] : []),
+  ];
+  const reviewItemIds = [
+    ...provenance.reviewItemIds,
+    ...(input.assumption ? input.assumption.reviewItemIds : []),
+  ];
+
+  return emitLineItem({
+    id: createMaterialLineItemId(input.quantityKey, input.opening.id),
+    category: "lumber",
+    description: input.description,
+    canonicalClassification: input.canonicalClassification,
+    quantity: input.quantity,
+    unit: "each",
+    sourceObjectIds: provenance.sourceObjectIds,
+    assumptionIds,
+    reviewItemIds,
+  });
+}
+
+function calculateOpeningCripples(
+  opening: Opening,
+  wall: BuildingWall,
+  segment: WallSegment,
+  validation: ValidationPayload | undefined,
+): OpeningFramingCalculationResult {
+  const aboveEligible = isEligibleForCripplesAbove(opening);
+  const belowEligible = opening.category === "window";
+
+  if (!aboveEligible && !belowEligible) {
+    return { materials: [], assumptions: [] };
+  }
+
+  const abovePreconditions = aboveEligible
+    ? sharedCripplePreconditions(
+        opening,
+        wall,
+        segment,
+        validation,
+        OPENING_QUANTITY_KEYS.cripplesAbove,
+      )
+    : null;
+  const belowPreconditions = belowEligible
+    ? sharedCripplePreconditions(
+        opening,
+        wall,
+        segment,
+        validation,
+        OPENING_QUANTITY_KEYS.cripplesBelow,
+      )
+    : null;
+
+  if (!abovePreconditions && !belowPreconditions) {
+    return { materials: [], assumptions: [] };
+  }
+
+  const preconditions = abovePreconditions ?? belowPreconditions;
+  if (!preconditions) {
+    return { materials: [], assumptions: [] };
+  }
+
+  const perOccurrenceCount = crippleCountPerOccurrence(
+    preconditions.roughWidthFeet,
+    preconditions.studSpacingInches,
+  );
+  const totalCount = perOccurrenceCount * preconditions.occurrenceMultiplier;
+
+  const affectedQuantityKeys: string[] = [];
+  const materials: FramingMaterialLineItem[] = [];
+
+  if (abovePreconditions) {
+    affectedQuantityKeys.push(OPENING_QUANTITY_KEYS.cripplesAbove);
+    const lineItem = buildCrippleLineItem({
+      opening,
+      wall,
+      segment,
+      quantityKey: OPENING_QUANTITY_KEYS.cripplesAbove,
+      quantity: totalCount,
+      description: `${preconditions.studSize} cripple studs above header`,
+      canonicalClassification: `cripple-above-${preconditions.studSize}`,
+      usedPropertyPaths: [
+        QUANTITY_PROPERTY_PATH,
+        ROUGH_WIDTH_PROPERTY_PATH,
+        STUD_SIZE_PROPERTY_PATH,
+        STUD_SPACING_PROPERTY_PATH,
+        HEIGHT_PROPERTY_PATH,
+        ...(opening.category === "cased" ? [ROUGH_HEIGHT_PROPERTY_PATH] : []),
+      ],
+      assumption: null,
+    });
+    if (lineItem) {
+      materials.push(lineItem);
+    }
+  }
+
+  if (belowPreconditions) {
+    affectedQuantityKeys.push(OPENING_QUANTITY_KEYS.cripplesBelow);
+    const lineItem = buildCrippleLineItem({
+      opening,
+      wall,
+      segment,
+      quantityKey: OPENING_QUANTITY_KEYS.cripplesBelow,
+      quantity: totalCount,
+      description: `${preconditions.studSize} cripple studs below sill`,
+      canonicalClassification: `cripple-below-${preconditions.studSize}`,
+      usedPropertyPaths: [
+        QUANTITY_PROPERTY_PATH,
+        ROUGH_WIDTH_PROPERTY_PATH,
+        STUD_SIZE_PROPERTY_PATH,
+        STUD_SPACING_PROPERTY_PATH,
+        HEIGHT_PROPERTY_PATH,
+      ],
+      assumption: null,
+    });
+    if (lineItem) {
+      materials.push(lineItem);
+    }
+  }
+
+  if (materials.length === 0) {
+    return { materials: [], assumptions: [] };
+  }
+
+  const assumption = createOpeningCrippleLayoutAssumption(
+    opening.id,
+    crippleLayoutDefaultReviewItemId(opening),
+    affectedQuantityKeys,
+  );
+
+  return {
+    materials: materials.map((material) => ({
+      ...material,
+      assumptionIds: [assumption.id],
+      reviewItemIds: [...assumption.reviewItemIds],
+    })),
+    assumptions: [assumption],
+  };
+}
+
 function isOpeningEligibleForWallFraming(
   opening: Opening,
   wall: BuildingWall,
@@ -169,6 +451,14 @@ function isOpeningEligibleForKingStuds(
   return isOpeningEligibleForWallFraming(opening, wall, segment);
 }
 
+function isOpeningEligibleForJackStuds(
+  opening: Opening,
+  wall: BuildingWall,
+  segment: WallSegment,
+): boolean {
+  return isOpeningEligibleForWallFraming(opening, wall, segment);
+}
+
 function resolveKingStudCountPerOccurrence(
   opening: Opening,
 ): { count: number; assumption: Assumption | null } | null {
@@ -187,6 +477,81 @@ function resolveKingStudCountPerOccurrence(
     count: KING_STUD_COUNT_DEFAULT,
     assumption: createOpeningKingStudCountAssumption(opening.id, reviewItemId),
   };
+}
+
+function calculateOpeningJackStuds(
+  opening: Opening,
+  wall: BuildingWall,
+  segment: WallSegment,
+  validation: ValidationPayload | undefined,
+): OpeningFramingCalculationResult {
+  const quantityKey = OPENING_QUANTITY_KEYS.jackStuds;
+  const contributingObjects = [opening, wall, segment];
+
+  if (
+    isQuantityBlocked(
+      validation,
+      contributingObjects.map((object) => object.id),
+      quantityKey,
+    ) ||
+    isQuantityBlocked(
+      validation,
+      [opening.id],
+      OPENING_QUANTITY_KEYS.framing,
+    )
+  ) {
+    return { materials: [], assumptions: [] };
+  }
+
+  if (!isOpeningEligibleForJackStuds(opening, wall, segment)) {
+    return { materials: [], assumptions: [] };
+  }
+
+  if (
+    !isQuantityInputResolved(
+      opening.quantity,
+      opening.resolutionTraces,
+      QUANTITY_PROPERTY_PATH,
+    )
+  ) {
+    return { materials: [], assumptions: [] };
+  }
+
+  if (
+    !isQuantityInputResolved(
+      opening.jackStudCount,
+      opening.resolutionTraces,
+      JACK_STUD_COUNT_PROPERTY_PATH,
+    )
+  ) {
+    return { materials: [], assumptions: [] };
+  }
+
+  const quantity = opening.jackStudCount * opening.quantity;
+  const provenance = collectLineItemProvenance(contributingObjects, [
+    QUANTITY_PROPERTY_PATH,
+    JACK_STUD_COUNT_PROPERTY_PATH,
+    STUD_SIZE_PROPERTY_PATH,
+    HEIGHT_PROPERTY_PATH,
+  ]);
+
+  const lineItem = emitLineItem({
+    id: createMaterialLineItemId(quantityKey, opening.id),
+    category: "lumber",
+    description: `${wall.assembly.studSize} jack studs`,
+    canonicalClassification: `jack-stud-${wall.assembly.studSize}`,
+    quantity,
+    unit: "each",
+    sourceObjectIds: provenance.sourceObjectIds,
+    assumptionIds: provenance.assumptionIds,
+    reviewItemIds: provenance.reviewItemIds,
+  });
+
+  if (!lineItem) {
+    return { materials: [], assumptions: [] };
+  }
+
+  return { materials: [lineItem], assumptions: [] };
 }
 
 function calculateOpeningKingStuds(
@@ -385,7 +750,8 @@ function calculateOpeningRoughSill(
 /**
  * Calculates opening-derived wall framing quantities from resolved artifacts.
  *
- * King stud and rough sill slices: `knowledge/framing/13-opening-wall-framing-calculations.md`.
+ * King stud, jack stud, rough sill, and cripple stud slices:
+ * `knowledge/framing/13-opening-wall-framing-calculations.md`.
  */
 export function calculateOpeningFraming(
   openings: OpeningsPayload,
@@ -415,9 +781,21 @@ export function calculateOpeningFraming(
     }
 
     const kingResult = calculateOpeningKingStuds(opening, wall, segment, validation);
+    const jackResult = calculateOpeningJackStuds(opening, wall, segment, validation);
     const sillResult = calculateOpeningRoughSill(opening, wall, segment, validation);
-    materials.push(...kingResult.materials, ...sillResult.materials);
-    assumptions.push(...kingResult.assumptions, ...sillResult.assumptions);
+    const crippleResult = calculateOpeningCripples(opening, wall, segment, validation);
+    materials.push(
+      ...kingResult.materials,
+      ...jackResult.materials,
+      ...sillResult.materials,
+      ...crippleResult.materials,
+    );
+    assumptions.push(
+      ...kingResult.assumptions,
+      ...jackResult.assumptions,
+      ...sillResult.assumptions,
+      ...crippleResult.assumptions,
+    );
   }
 
   return { materials, assumptions };

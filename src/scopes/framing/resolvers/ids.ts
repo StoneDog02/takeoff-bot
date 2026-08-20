@@ -100,3 +100,105 @@ export function createOpeningObjectId(subjectKey: string): ObjectId {
   const candidate = sanitized.startsWith("O-") ? sanitized : `O-${sanitized}`;
   return objectIdSchema.parse(candidate);
 }
+
+/**
+ * Deterministic Sheathing System identity for the Sheathing resolver.
+ *
+ * Example: subjectKey `SHS-001` → ObjectId `SHS-001`.
+ */
+export function createSheathingSystemObjectId(subjectKey: string): ObjectId {
+  const sanitized = sanitizeSubjectKey(subjectKey);
+  if (sanitized.length === 0) {
+    throw new Error(
+      `Cannot derive a Sheathing System ObjectId from subjectKey "${subjectKey}".`,
+    );
+  }
+
+  const candidate = sanitized.startsWith("SHS-") ? sanitized : `SHS-${sanitized}`;
+  return objectIdSchema.parse(candidate);
+}
+
+/**
+ * Deterministic Sheathing Area identity for the Sheathing resolver.
+ *
+ * Example: subjectKey `SHA-001` → ObjectId `SHA-001`.
+ */
+export function createSheathingAreaObjectId(subjectKey: string): ObjectId {
+  const sanitized = sanitizeSubjectKey(subjectKey);
+  if (sanitized.length === 0) {
+    throw new Error(
+      `Cannot derive a Sheathing Area ObjectId from subjectKey "${subjectKey}".`,
+    );
+  }
+
+  const candidate = sanitized.startsWith("SHA-") ? sanitized : `SHA-${sanitized}`;
+  return objectIdSchema.parse(candidate);
+}
+
+/**
+ * Deterministic Floor Framing System identity.
+ *
+ * Example: subjectKey `FFS-001` → ObjectId `FFS-001`.
+ */
+export function createFloorFramingSystemObjectId(subjectKey: string): ObjectId {
+  const sanitized = sanitizeSubjectKey(subjectKey);
+  if (sanitized.length === 0) {
+    throw new Error(
+      `Cannot derive a Floor Framing System ObjectId from subjectKey "${subjectKey}".`,
+    );
+  }
+
+  const candidate = sanitized.startsWith("FFS-") ? sanitized : `FFS-${sanitized}`;
+  return objectIdSchema.parse(candidate);
+}
+
+/**
+ * Deterministic Floor Framing Area identity.
+ *
+ * Example: subjectKey `FFA-001` → ObjectId `FFA-001`.
+ */
+export function createFloorFramingAreaObjectId(subjectKey: string): ObjectId {
+  const sanitized = sanitizeSubjectKey(subjectKey);
+  if (sanitized.length === 0) {
+    throw new Error(
+      `Cannot derive a Floor Framing Area ObjectId from subjectKey "${subjectKey}".`,
+    );
+  }
+
+  const candidate = sanitized.startsWith("FFA-") ? sanitized : `FFA-${sanitized}`;
+  return objectIdSchema.parse(candidate);
+}
+
+/**
+ * Deterministic Roof Framing System identity.
+ *
+ * Example: subjectKey `RFS-001` → ObjectId `RFS-001`.
+ */
+export function createRoofFramingSystemObjectId(subjectKey: string): ObjectId {
+  const sanitized = sanitizeSubjectKey(subjectKey);
+  if (sanitized.length === 0) {
+    throw new Error(
+      `Cannot derive a Roof Framing System ObjectId from subjectKey "${subjectKey}".`,
+    );
+  }
+
+  const candidate = sanitized.startsWith("RFS-") ? sanitized : `RFS-${sanitized}`;
+  return objectIdSchema.parse(candidate);
+}
+
+/**
+ * Deterministic Roof Plane identity.
+ *
+ * Example: subjectKey `RFP-001` → ObjectId `RFP-001`.
+ */
+export function createRoofPlaneObjectId(subjectKey: string): ObjectId {
+  const sanitized = sanitizeSubjectKey(subjectKey);
+  if (sanitized.length === 0) {
+    throw new Error(
+      `Cannot derive a Roof Plane ObjectId from subjectKey "${subjectKey}".`,
+    );
+  }
+
+  const candidate = sanitized.startsWith("RFP-") ? sanitized : `RFP-${sanitized}`;
+  return objectIdSchema.parse(candidate);
+}

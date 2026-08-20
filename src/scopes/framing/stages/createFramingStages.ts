@@ -19,6 +19,9 @@ import {
   openingsArtifactSchema,
   pageClassificationArtifactSchema,
   planReadingOrderArtifactSchema,
+  floorFramingArtifactSchema,
+  roofFramingArtifactSchema,
+  sheathingArtifactSchema,
   structuralMembersArtifactSchema,
   validationArtifactSchema,
   verifiedPlanSetArtifactSchema,
@@ -26,10 +29,13 @@ import {
   type BuildingAssembliesPayload,
   type ConfidencePayload,
   type ExtractedFramingEvidencePayload,
+  type FloorFramingPayload,
   type FramingCalculationsPayload,
   type OpeningsPayload,
   type PageClassificationPayload,
   type PlanReadingOrderPayload,
+  type RoofFramingPayload,
+  type SheathingPayload,
   type StructuralMembersPayload,
   type ValidationPayload,
   type WallFramingPayload,
@@ -38,7 +44,10 @@ import { coordinateFramingCalculations } from "../calculators/calculation-coordi
 import { coordinateFramingConfidence } from "../confidence/confidence-coordinator.js";
 import { resolveWallFraming } from "../resolvers/resolveWallFraming.js";
 import { coordinateFramingValidation } from "../validators/validation-coordinator.js";
+import { resolveFloorFraming } from "../resolvers/resolveFloorFraming.js";
 import { resolveOpenings } from "../resolvers/resolveOpenings.js";
+import { resolveRoofFraming } from "../resolvers/resolveRoofFraming.js";
+import { resolveSheathing } from "../resolvers/resolveSheathing.js";
 import { isOpeningPropertyPath } from "../resolvers/openingPropertyPaths.js";
 import { isWallFramingPropertyPath } from "../resolvers/wallFramingPropertyPaths.js";
 import { applyWallOpeningBacklinks } from "../resolvers/applyWallOpeningBacklinks.js";
@@ -663,6 +672,66 @@ const stages: PipelineStage[] = [
   },
   {
     order: 9,
+    name: "sheathing",
+    async run(context) {
+      const extracted = getPayload<ExtractedFramingEvidencePayload>(
+        context,
+        "extractedEvidence",
+      );
+      const payload = resolveSheathing(extracted.evidence);
+
+      return createFramingStageArtifact(
+        context,
+        9,
+        sheathingArtifactSchema,
+        "sheathing",
+        payload,
+        { type: "system", identifier: "framing-pipeline" },
+      );
+    },
+  },
+  {
+    order: 10,
+    name: "floorFraming",
+    async run(context) {
+      const extracted = getPayload<ExtractedFramingEvidencePayload>(
+        context,
+        "extractedEvidence",
+      );
+      const payload = resolveFloorFraming(extracted.evidence);
+
+      return createFramingStageArtifact(
+        context,
+        10,
+        floorFramingArtifactSchema,
+        "floor-framing",
+        payload,
+        { type: "system", identifier: "framing-pipeline" },
+      );
+    },
+  },
+  {
+    order: 11,
+    name: "roofFraming",
+    async run(context) {
+      const extracted = getPayload<ExtractedFramingEvidencePayload>(
+        context,
+        "extractedEvidence",
+      );
+      const payload = resolveRoofFraming(extracted.evidence);
+
+      return createFramingStageArtifact(
+        context,
+        11,
+        roofFramingArtifactSchema,
+        "roof-framing",
+        payload,
+        { type: "system", identifier: "framing-pipeline" },
+      );
+    },
+  },
+  {
+    order: 12,
     name: "validation",
     async run(context) {
       const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
@@ -671,15 +740,24 @@ const stages: PipelineStage[] = [
         context,
         "structuralMembers",
       );
+      const sheathing = getPayload<SheathingPayload>(context, "sheathing");
+      const floorFraming = getPayload<FloorFramingPayload>(
+        context,
+        "floorFraming",
+      );
+      const roofFraming = getPayload<RoofFramingPayload>(context, "roofFraming");
       const validationPayload = coordinateFramingValidation({
         wallFraming: wallPayload,
         openings,
         structuralMembers,
+        floorFraming,
+        roofFraming,
+        sheathing,
       });
 
       return createFramingStageArtifact(
         context,
-        9,
+        12,
         validationArtifactSchema,
         "validation",
         validationPayload,
@@ -687,7 +765,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 10,
+    order: 13,
     name: "calculations",
     async run(context) {
       const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
@@ -696,17 +774,26 @@ const stages: PipelineStage[] = [
         context,
         "structuralMembers",
       );
+      const sheathing = getPayload<SheathingPayload>(context, "sheathing");
+      const floorFraming = getPayload<FloorFramingPayload>(
+        context,
+        "floorFraming",
+      );
+      const roofFraming = getPayload<RoofFramingPayload>(context, "roofFraming");
       const validation = getPayload<ValidationPayload>(context, "validation");
       const payload = coordinateFramingCalculations({
         wallFraming: wallPayload,
         openings,
         structuralMembers,
+        floorFraming,
+        roofFraming,
+        sheathing,
         validation,
       });
 
       return createFramingStageArtifact(
         context,
-        10,
+        13,
         framingCalculationsArtifactSchema,
         "framing-calculations",
         payload,
@@ -714,7 +801,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 11,
+    order: 14,
     name: "confidence",
     async run(context) {
       const extracted = getPayload<ExtractedFramingEvidencePayload>(
@@ -741,7 +828,7 @@ const stages: PipelineStage[] = [
 
       return createFramingStageArtifact(
         context,
-        11,
+        14,
         confidenceArtifactSchema,
         "confidence",
         payload,
@@ -749,7 +836,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 12,
+    order: 15,
     name: "report",
     async run(context) {
       const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
@@ -758,6 +845,12 @@ const stages: PipelineStage[] = [
         context,
         "structuralMembers",
       );
+      const sheathing = getPayload<SheathingPayload>(context, "sheathing");
+      const floorFraming = getPayload<FloorFramingPayload>(
+        context,
+        "floorFraming",
+      );
+      const roofFraming = getPayload<RoofFramingPayload>(context, "roofFraming");
       const calculations = getPayload<FramingCalculationsPayload>(context, "calculations");
       const validation = getPayload<ValidationPayload>(context, "validation");
       const confidencePayload = getPayload<ConfidencePayload>(context, "confidence");
@@ -770,7 +863,7 @@ const stages: PipelineStage[] = [
 
       return createFramingStageArtifact(
         context,
-        12,
+        15,
         finalFramingTakeoffArtifactSchema,
         "final-framing-takeoff",
         {
@@ -784,6 +877,12 @@ const stages: PipelineStage[] = [
           structuralMemberIds: structuralMembers.structuralMembers.map(
             (member) => member.id,
           ),
+          floorFramingSystemIds: floorFraming.systems.map((system) => system.id),
+          floorFramingAreaIds: floorFraming.areas.map((area) => area.id),
+          roofFramingSystemIds: roofFraming.systems.map((system) => system.id),
+          roofPlaneIds: roofFraming.planes.map((plane) => plane.id),
+          sheathingSystemIds: sheathing.systems.map((system) => system.id),
+          sheathingAreaIds: sheathing.areas.map((area) => area.id),
           materials: calculations.materials,
           reviewItemIds: validation.reviewItems.map((item) => item.id),
           validationIssueIds: validation.validationIssues.map((issue) => issue.id),
@@ -793,6 +892,12 @@ const stages: PipelineStage[] = [
             wallSegmentCount: wallPayload.segments.length,
             openingCount: openings.openings.length,
             structuralMemberCount: structuralMembers.structuralMembers.length,
+            floorFramingSystemCount: floorFraming.systems.length,
+            floorFramingAreaCount: floorFraming.areas.length,
+            roofFramingSystemCount: roofFraming.systems.length,
+            roofPlaneCount: roofFraming.planes.length,
+            sheathingSystemCount: sheathing.systems.length,
+            sheathingAreaCount: sheathing.areas.length,
             materialLineItemCount: calculations.materials.length,
             reviewItemCount: validation.reviewItems.length,
             validationIssueCount: validation.validationIssues.length,

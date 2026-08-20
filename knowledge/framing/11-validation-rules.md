@@ -385,6 +385,24 @@ Create review items when:
 - Rounding rule is missing
 - Formula uses unresolved property
 
+## Floor framing quantity blast radius
+
+Floor joist calculation validation follows `14-floor-framing-calculations.md`.
+
+- Missing or unresolved `joistMemberLengthFeet` (or simple-area LF ineligibility) must block baseline joist **LF** only when count inputs otherwise resolve.
+- Missing `joistLayoutLengthFeet` / spacing / size / type must block count (and therefore LF).
+- Floor vs Structural Member duplicate representation of the same baseline joist population must block overlapping quantities rather than emit both.
+
+## Roof framing quantity blast radius
+
+Roof common-rafter calculation validation follows `15-roof-framing-calculations.md`.
+
+- Missing or unresolved `rafterLayoutLengthFeet` / spacing / size / stick framing type / span-direction confirmation must block baseline common-rafter **count**.
+- Missing `pitch` or `areaSquareFeet` must **not** by itself block common-rafter count.
+- Truss-framed systems and hip/valley-ineligible planes must not silently use the stick common-rafter count formula.
+- Roof vs Structural Member duplicate representation of the same baseline common-rafter population must block overlapping quantities rather than emit both.
+- One unresolved Roof Plane must not prevent sibling eligible planes or unrelated domains from calculating.
+
 ---
 
 # 13. Output Validation

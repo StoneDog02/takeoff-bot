@@ -93,13 +93,21 @@ subjectKind:
 - For explicitly identified structural members in this stage, use
   "structural-member".
 - For explicitly identified openings in this stage, use "opening".
+- For explicitly identified sheathing systems, use "sheathing-system".
+- For explicitly identified sheathing areas, use "sheathing-area".
+- For explicitly identified floor framing systems, use "floor-framing-system".
+- For explicitly identified floor framing areas, use "floor-framing-area".
+- For explicitly identified roof framing systems, use "roof-framing-system".
+- For explicitly identified roof planes, use "roof-plane".
 - First controlled structural-member scope: single-piece headers only.
 - First controlled opening scope: scalar opening facts only.
 - subjectKind + subjectKey identify the extraction cluster; propertyPath identifies
   the candidate within that cluster.
 - Do not mint ObjectIds or resolved object types here.
 - The same Stage 5 Evidence artifact may contain "wall", "structural-member",
-  and "opening" records simultaneously.
+  "opening", "sheathing-system", "sheathing-area", "floor-framing-system",
+  "floor-framing-area", "roof-framing-system", and "roof-plane" records
+  simultaneously.
 
 subjectKey:
 - Use the most stable plan-derived identifier for the future object/cluster.
@@ -110,6 +118,18 @@ subjectKey:
   exact string as subjectKey for every property belonging to that member.
 - When a bare opening tag line is present (example: O-001), use that exact
   string as subjectKey for every property belonging to that opening.
+- When a bare sheathing system tag line is present (example: SHS-001), use that
+  exact string as subjectKey for every property belonging to that system.
+- When a bare sheathing area tag line is present (example: SHA-001), use that
+  exact string as subjectKey for every property belonging to that area.
+- When a bare floor framing system tag line is present (example: FFS-001), use
+  that exact string as subjectKey for every property belonging to that system.
+- When a bare floor framing area tag line is present (example: FFA-001), use that
+  exact string as subjectKey for every property belonging to that area.
+- When a bare roof framing system tag line is present (example: RFS-001), use
+  that exact string as subjectKey for every property belonging to that system.
+- When a bare roof plane tag line is present (example: RFP-001), use that exact
+  string as subjectKey for every property belonging to that plane.
 - When multiple labeled wall tags appear, emit separate Evidence clusters for
   each tag. Reuse the same subjectKey for every property belonging to that wall.
 - Never merge facts from one labeled wall into another wall's subjectKey.
@@ -136,11 +156,40 @@ propertyPath:
 - Examples for openings (scalar facts in this stage): category,
   dimensions.nominalWidthFeet, dimensions.nominalHeightFeet,
   dimensions.roughWidthFeet, dimensions.roughHeightFeet, quantity,
-  kingStudCount, scheduleReference, detailReference, fireRating.
+  kingStudCount, jackStudCount, scheduleReference, detailReference, fireRating.
 - Examples for openings (explicit wall association in this stage):
   parentWallTag with the exact plan wall tag such as W-001.
 - Examples for openings (explicit header association in this stage):
   headerMemberTag with the exact plan header tag such as HDR-001.
+- Examples for sheathing systems: name, level, application, constructionPhase,
+  panelSpecification.panelType, panelSpecification.thickness,
+  panelSpecification.grade, panelSpecification.spanRating,
+  panelSpecification.exposureRating, panelSpecification.edgeTreatment,
+  panelSpecification.specificationReference.
+- Examples for sheathing areas: areaSquareFeet, layout.
+- Examples for sheathing areas (relationships in this stage):
+  parentSystemTag with the exact plan sheathing system tag such as SHS-001;
+  coveredWallTag with the exact plan wall tag such as W-001;
+  openingTag with the exact plan opening tag such as O-001.
+- Examples for floor framing systems: name, level, constructionPhase,
+  assembly.joistType, assembly.joistSize, assembly.joistSpacingInches,
+  assembly.rimBoard.
+- Examples for floor framing areas: layout, framingDirection, spanDirection,
+  joistLayoutLengthFeet, joistMemberLengthFeet, areaSquareFeet.
+- Examples for floor framing areas (relationships in this stage):
+  parentSystemTag with the exact plan floor system tag such as FFS-001;
+  boundingWallTag with the exact plan wall tag such as W-001;
+  openingTag with the exact plan opening tag such as O-001;
+  structuralMemberTag with the exact plan member tag such as HDR-001.
+- Examples for roof framing systems: name, level, constructionPhase,
+  assembly.framingType, assembly.memberSize, assembly.memberSpacingInches.
+- Examples for roof planes: layout, framingDirection, spanDirection,
+  rafterLayoutLengthFeet, pitch, areaSquareFeet.
+- Examples for roof planes (relationships in this stage):
+  parentSystemTag with the exact plan roof system tag such as RFS-001;
+  boundingWallTag with the exact plan wall tag such as W-001;
+  openingTag with the exact plan opening tag such as O-001;
+  structuralMemberTag with the exact plan member tag such as HDR-001.
 - These are examples, not an exhaustive enum. Do not invent resolved
   nested objects.
 
@@ -175,6 +224,18 @@ opening kingStudCount extraction rules (this stage):
 - If the source does not explicitly state a king-stud count, omit kingStudCount
   Evidence entirely. Do not default to 2 or any other value in extraction.
 
+opening jackStudCount extraction rules (this stage):
+- Emit jackStudCount only when the page text explicitly states the jack or
+  trimmer stud count for that opening (examples: "Jack studs: 2",
+  "2 jack studs", "Trimmers: 2", "2 trimmer studs").
+- Use propertyPath jackStudCount with a positive integer candidateValue for the
+  total jack/trimmer count per opening occurrence.
+- Do not infer jackStudCount from opening category, opening width, wall type,
+  header size/span, king-stud count, IRC tables, or conventional framing
+  practice.
+- If the source does not explicitly state a jack/trimmer count, omit
+  jackStudCount Evidence entirely. Do not default to 2 or any other value.
+
 opening wall-association extraction rules (this stage):
 - Emit parentWallTag only when the page text explicitly states which wall
   tag owns the opening (example: "O-001 in Wall W-001").
@@ -191,6 +252,58 @@ opening header-association extraction rules (this stage):
 - Do not emit ObjectIds, SM-* IDs, or headerMemberId values.
 - Do not infer header associations from opening width, category, or proximity.
 - Do not infer headerMemberTag when the association is missing or ambiguous.
+
+sheathing extraction rules (this stage):
+- Emit one Evidence record per atomic property candidate.
+- Do not infer panel type or thickness from wall assembly.sheathing strings.
+- Do not calculate sheathing square footage from wall length and height.
+- Do not convert square footage to sheets or apply waste.
+- Do not infer covered walls from proximity; use coveredWallTag only when
+  explicitly stated.
+- Emit areaSquareFeet only when the page text explicitly states the sheathing
+  coverage area in square feet for that area tag.
+- Do not create review items or resolve competing candidates.
+
+floor-framing extraction rules (this stage):
+- Emit one Evidence record per atomic property candidate.
+- Do not calculate joist count or joist linear footage.
+- Do not derive joistLayoutLengthFeet from areaSquareFeet, room polygons, or
+  diagrams.
+- Do not infer joist spacing, joist size, joist type, or span direction.
+- Emit joistLayoutLengthFeet only when the page text explicitly states the
+  floor bay length along the joist spacing axis (perpendicular to span), in
+  feet, for that floor area tag.
+- If the source does not explicitly establish joistLayoutLengthFeet, omit it.
+- Emit joistMemberLengthFeet only when the page text explicitly states the
+  installed / common joist member (piece) length for that floor area tag
+  (examples: "Joist member length: 12 feet", "Joists: 12 ft long").
+- Do not derive joistMemberLengthFeet from areaSquareFeet,
+  joistLayoutLengthFeet, walls, clear span alone, dimensions not identified as
+  joist member length, IRC/span tables, or generic construction practice.
+- Do not treat clear span as joistMemberLengthFeet unless the source explicitly
+  identifies that value as the installed/member length.
+- If the source does not explicitly establish joistMemberLengthFeet, omit it.
+  Do not default or assume a member length.
+- Do not create review items or resolve competing candidates.
+
+roof-framing extraction rules (this stage):
+- Emit one Evidence record per atomic property candidate.
+- Do not calculate common-rafter count or rafter linear footage.
+- Do not derive rafterLayoutLengthFeet from areaSquareFeet, pitch, diagrams,
+  or geometric guesses.
+- Do not infer framing type, member size, member spacing, or span direction.
+- Emit rafterLayoutLengthFeet only when the page text explicitly states the
+  roof plane length along the common-rafter spacing axis (perpendicular to
+  span), in feet, for that roof plane tag (examples: "Rafter layout length:
+  20 feet", "Joist/rafter spacing-axis length: 20 ft").
+- If the source does not explicitly establish rafterLayoutLengthFeet, omit it.
+- Do not derive rafter length from pitch, horizontal run, span tables, or
+  IRC tables.
+- Do not invent hip, valley, or jack rafter quantities.
+- Do not convert truss systems into stick common-rafter counts.
+- Pitch and areaSquareFeet may be emitted when explicitly stated, but they are
+  not inputs to common-rafter count.
+- Do not create review items or resolve competing candidates.
 
 structural-member opening-association extraction rules (this stage):
 - Emit supportedOpeningTag only when the page text explicitly states which

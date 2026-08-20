@@ -22,9 +22,11 @@ The Roof Framing subsystem is responsible for:
 - Producing review, validation, and confidence outputs for roof framing
 - Providing roof framing artifacts for downstream framing subsystems
 
-The Roof Framing subsystem owns roof framing systems, roof planes, framing layout, framing direction, span direction, roof pitch relationships, and roof assembly relationships.
+The Roof Framing subsystem owns roof framing systems, roof planes, framing layout, framing direction, span direction, roof pitch relationships, roof assembly relationships, and **Roof Framing calculator quantities explicitly authorized by the Construction Brain** (see `15-roof-framing-calculations.md` for baseline regularly spaced common-rafter **count**).
 
 It does not own individual structural members, sheathing, blocking, connectors, or hardware.
+
+It must not emit ridge/hip/valley/special-member linear footage owned by Structural Members, and must not emit sheathing coverage owned by Sheathing. It must not emit Structural Member quantities for the same baseline regularly spaced common-rafter population already owned by Roof Framing.
 
 ---
 
@@ -60,6 +62,7 @@ The Roof Framing Artifact contains Roof Framing System schema instances, Roof Pl
 This subsystem primarily implements:
 
 - `04-building-assemblies.md`
+- `15-roof-framing-calculations.md`
 
 ---
 
@@ -113,6 +116,10 @@ Construction behavior is defined by these knowledge files and must not be duplic
 
 ### Calculators
 
+- Roof Framing Calculator (Brain-authorized quantities only; baseline common-rafter count when eligible per `15-roof-framing-calculations.md`)
+
+### Resolvers
+
 - Roof Framing Resolver
 
 ### Claude Prompts
@@ -129,6 +136,7 @@ Implementation is complete when the subsystem can:
 - Produce valid Roof Framing System schema instances
 - Produce valid Roof Plane schema instances
 - Produce the Roof Framing Artifact
+- Produce deterministic baseline regularly spaced common-rafter count quantities when Construction Brain inputs resolve
 - Integrate correctly with upstream and downstream subsystem dependencies
 - Preserve deterministic execution through artifacts
 - Surface review items rather than unresolved guesses
@@ -141,11 +149,15 @@ This subsystem does not implement:
 
 - Wall framing
 - Floor framing
-- Structural member calculations
-- Opening calculations
+- Structural member calculations for individually identified members (ridge, hip, valley, jack, beams, etc.)
+- Opening wall-framing calculations
 - Sheathing calculations
 - Blocking calculations
 - Connector calculations
+- Common-rafter LF (until Brain authorizes a dedicated LF rule)
+- Hip / valley / jack geometry takeoff under the simple-plane count rule
+- Roof truss package takeoff or truss stick decomposition
+- Stock / purchasing length optimization
 - Assumption rule definitions
 - Validation rule definitions
 - Confidence rule definitions

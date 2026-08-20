@@ -416,7 +416,7 @@ describe("framing pipeline Run-2 opening user decision replay", () => {
       const run2Report = finalFramingTakeoffArtifactSchema.parse(
         JSON.parse(await readFile(run2.result.reportPath!, "utf8")),
       );
-      assert.equal(run2Report.payload.materials.length, 11);
+      assert.equal(run2Report.payload.materials.length, 17);
 
       const run2ConfidenceArtifact = confidenceArtifactSchema.parse(
         await readArtifact(stageByName(run2.result, "confidence").artifactPath),

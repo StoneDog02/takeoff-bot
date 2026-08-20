@@ -100,6 +100,24 @@ function buildCompleteArea(
         reviewItemIds: [],
       },
       {
+        propertyPath: "joistLayoutLengthFeet",
+        method: "explicit-project-value",
+        explanation: "Joist layout length is explicit on the plan.",
+        evidenceIds: ["E-FFA-001"],
+        assumptionIds: [],
+        validationIssueIds: [],
+        reviewItemIds: [],
+      },
+      {
+        propertyPath: "joistMemberLengthFeet",
+        method: "explicit-project-value",
+        explanation: "Joist member length is explicit on the plan.",
+        evidenceIds: ["E-FFA-001"],
+        assumptionIds: [],
+        validationIssueIds: [],
+        reviewItemIds: [],
+      },
+      {
         propertyPath: "areaSquareFeet",
         method: "explicit-project-value",
         explanation: "Area square footage is explicit on the plan.",
@@ -113,6 +131,8 @@ function buildCompleteArea(
     layout: "rectangular bay",
     framingDirection: "north-south",
     spanDirection: "north-south",
+    joistLayoutLengthFeet: 20,
+    joistMemberLengthFeet: 12,
     areaSquareFeet: 480,
     boundingWallIds: ["W-001"],
     openingIds: ["O-014"],
@@ -226,13 +246,14 @@ describe("validateFloorFraming", () => {
     );
   });
 
-  it("fails unresolved required area geometry properties", () => {
+  it("fails unresolved span direction and layout length as critical joist blockers", () => {
     const batch = validateFloorFraming({
       payload: {
         systems: [buildCompleteSystem()],
         areas: [
           buildCompleteArea({
             spanDirection: null,
+            joistLayoutLengthFeet: null,
             areaSquareFeet: null,
             resolutionTraces: [],
           }),
@@ -243,14 +264,135 @@ describe("validateFloorFraming", () => {
     const spanIssue = batch.validationIssues.find(
       (entry) => entry.ruleId === FLOOR_FRAMING_RULE_IDS.spanDirectionResolved,
     );
+    const layoutIssue = batch.validationIssues.find(
+      (entry) =>
+        entry.ruleId === FLOOR_FRAMING_RULE_IDS.joistLayoutLengthResolved,
+    );
     const areaIssue = batch.validationIssues.find(
       (entry) => entry.ruleId === FLOOR_FRAMING_RULE_IDS.areaSquareFeetResolved,
     );
 
     assert.ok(spanIssue);
+    assert.ok(layoutIssue);
     assert.ok(areaIssue);
     assert.equal(spanIssue.severity, "critical");
-    assert.equal(areaIssue.severity, "critical");
+    assert.equal(layoutIssue.severity, "critical");
+    assert.equal(areaIssue.severity, "warning");
+    assert.ok(
+      spanIssue.quantityImpacts.every((impact) => impact.canCalculate === false),
+    );
+    assert.ok(
+      layoutIssue.quantityImpacts.every(
+        (impact) => impact.canCalculate === false,
+      ),
+    );
+    assert.ok(
+      areaIssue.quantityImpacts.every((impact) => impact.canCalculate === true),
+    );
+  });
+
+  it("does not block floor.joists when only areaSquareFeet is missing", () => {
+    const batch = validateFloorFraming({
+      payload: {
+        systems: [buildCompleteSystem()],
+        areas: [
+          buildCompleteArea({
+            areaSquareFeet: null,
+            resolutionTraces: buildCompleteArea().resolutionTraces.filter(
+              (trace) => trace.propertyPath !== "areaSquareFeet",
+            ),
+          }),
+        ],
+      },
+    });
+
+    const areaIssue = batch.validationIssues.find(
+      (entry) => entry.ruleId === FLOOR_FRAMING_RULE_IDS.areaSquareFeetResolved,
+    );
+    assert.ok(areaIssue);
+    assert.equal(areaIssue.severity, "warning");
+    assert.ok(
+      areaIssue.quantityImpacts.every((impact) => impact.canCalculate === true),
+    );
+    assert.equal(
+      batch.validationIssues.some(
+        (issue) =>
+          issue.severity === "critical" &&
+          issue.quantityImpacts.some(
+            (impact) =>
+              impact.quantityKey === FLOOR_QUANTITY_KEYS.joists &&
+              impact.canCalculate === false,
+          ),
+      ),
+      false,
+    );
+  });
+
+  it("blocks only floor.joist-linear-feet when member length is missing", () => {
+    const batch = validateFloorFraming({
+      payload: {
+        systems: [buildCompleteSystem()],
+        areas: [
+          buildCompleteArea({
+            joistMemberLengthFeet: null,
+            resolutionTraces: buildCompleteArea().resolutionTraces.filter(
+              (trace) => trace.propertyPath !== "joistMemberLengthFeet",
+            ),
+          }),
+        ],
+      },
+    });
+
+    const memberIssue = batch.validationIssues.find(
+      (entry) =>
+        entry.ruleId === FLOOR_FRAMING_RULE_IDS.joistMemberLengthResolved,
+    );
+    assert.ok(memberIssue);
+    assert.equal(memberIssue.severity, "warning");
+    const countImpact = memberIssue.quantityImpacts.find(
+      (impact) => impact.quantityKey === FLOOR_QUANTITY_KEYS.joists,
+    );
+    const lfImpact = memberIssue.quantityImpacts.find(
+      (impact) => impact.quantityKey === FLOOR_QUANTITY_KEYS.joistLinearFeet,
+    );
+    assert.equal(countImpact?.canCalculate, true);
+    assert.equal(lfImpact?.canCalculate, false);
+  });
+
+  it("blocks only LF for unsupported joist type classifications", () => {
+    const batch = validateFloorFraming({
+      payload: {
+        systems: [
+          buildCompleteSystem({
+            assembly: {
+              joistType: "floor-truss",
+              joistSize: "18",
+              joistSpacingInches: 24,
+              rimBoard: null,
+            },
+          }),
+        ],
+        areas: [buildCompleteArea()],
+      },
+    });
+
+    const typeIssue = batch.validationIssues.find(
+      (entry) =>
+        entry.ruleId === FLOOR_FRAMING_RULE_IDS.joistLinearFeetTypeSupported,
+    );
+    assert.ok(typeIssue);
+    assert.equal(
+      typeIssue.quantityImpacts.find(
+        (impact) => impact.quantityKey === FLOOR_QUANTITY_KEYS.joists,
+      )?.canCalculate,
+      true,
+    );
+    assert.equal(
+      typeIssue.quantityImpacts.find(
+        (impact) => impact.quantityKey === FLOOR_QUANTITY_KEYS.joistLinearFeet,
+      )?.canCalculate,
+      false,
+    );
   });
 
   it("skips bounding wall validation when related artifacts are not provided", () => {

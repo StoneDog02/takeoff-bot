@@ -167,6 +167,10 @@ Extract:
 
 Do not decompose trusses unless project rules require it.
 
+Floor Truss packages are **not** calculated under the Floor Framing baseline joist count / simple-area joist LF contract in `14-floor-framing-calculations.md`. Taxonomy classifies the product; calculation ownership for dimensional lumber and I-joist baseline bays remains in that document.
+
+Roof Truss packages are **not** calculated under the Roof Framing baseline common-rafter count contract in `15-roof-framing-calculations.md`. Do not convert truss systems into stick common-rafter counts.
+
 ---
 
 # Structural Steel

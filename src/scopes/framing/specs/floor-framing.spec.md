@@ -22,9 +22,11 @@ The Floor Framing subsystem is responsible for:
 - Producing review, validation, and confidence outputs for floor framing
 - Providing floor framing artifacts for downstream framing subsystems
 
-The Floor Framing subsystem owns floor framing systems, framing layout, framing direction, span direction, and floor assembly relationships.
+The Floor Framing subsystem owns floor framing systems, framing layout, framing direction, span direction, floor assembly relationships, and **Floor Framing calculator quantities explicitly authorized by the Construction Brain** (see `14-floor-framing-calculations.md` for baseline regularly spaced joist **count** and simple-area baseline joist **material LF**).
 
-It does not own individual structural members, sheathing, blocking, connectors, or hardware.
+It does not own individually identified Structural Member objects, sheathing areas/systems, blocking objects, connectors, or hardware.
+
+It must not emit header/beam/girder linear footage owned by Structural Members, and must not emit sheathing coverage owned by Sheathing. It must not emit Structural Member LF for the same baseline regularly spaced joist population already owned by Floor Framing.
 
 ---
 
@@ -60,6 +62,7 @@ The Floor Framing Artifact contains Floor Framing System schema instances, Floor
 This subsystem primarily implements:
 
 - `04-building-assemblies.md`
+- `14-floor-framing-calculations.md`
 
 ---
 
@@ -113,6 +116,10 @@ Construction behavior is defined by these knowledge files and must not be duplic
 
 ### Calculators
 
+- Floor Framing Calculator (Brain-authorized quantities only; baseline joist count and, when eligible, simple-area baseline joist material LF per `14-floor-framing-calculations.md`)
+
+### Resolvers
+
 - Floor Framing Resolver
 
 ### Claude Prompts
@@ -129,6 +136,8 @@ Implementation is complete when the subsystem can:
 - Produce valid Floor Framing System schema instances
 - Produce valid Floor Framing Area schema instances
 - Produce the Floor Framing Artifact
+- Produce deterministic baseline regularly spaced floor joist count quantities when Construction Brain inputs resolve
+- Produce deterministic simple-area baseline joist material LF quantities when Construction Brain LF eligibility and `joistMemberLengthFeet` resolve (without blocking count when only member length is missing)
 - Integrate correctly with upstream and downstream subsystem dependencies
 - Preserve deterministic execution through artifacts
 - Surface review items rather than unresolved guesses
@@ -141,11 +150,15 @@ This subsystem does not implement:
 
 - Wall framing
 - Roof framing
-- Structural member calculations
-- Opening calculations
+- Structural member calculations for individually identified members (beams, girders, special members)
+- Opening wall-framing calculations
 - Sheathing calculations
 - Blocking calculations
 - Connector calculations
+- Rim / band LF (until Brain authorizes a dedicated rim rule)
+- Continuous / multi-span / lap / splice joist piece schedules outside the simple-area LF class
+- Floor truss package takeoff
+- Stock / purchasing length optimization
 - Assumption rule definitions
 - Validation rule definitions
 - Confidence rule definitions

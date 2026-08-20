@@ -243,7 +243,7 @@ describe("framing pipeline", () => {
     try {
       assert.equal(result.success, true);
       assert.equal(result.errors.length, 0);
-      assert.equal(result.stageResults.length, 12);
+      assert.equal(result.stageResults.length, 15);
       assert.deepEqual(
         result.stageResults.map((stage) => [stage.order, stage.name]),
         [
@@ -255,10 +255,13 @@ describe("framing pipeline", () => {
           [6, "wallFraming"],
           [7, "openings"],
           [8, "structuralMembers"],
-          [9, "validation"],
-          [10, "calculations"],
-          [11, "confidence"],
-          [12, "report"],
+          [9, "sheathing"],
+          [10, "floorFraming"],
+          [11, "roofFraming"],
+          [12, "validation"],
+          [13, "calculations"],
+          [14, "confidence"],
+          [15, "report"],
         ],
       );
 
@@ -302,8 +305,8 @@ describe("framing pipeline", () => {
 
       const validationStage = stageByName(result, "validation");
       const calculationsStage = stageByName(result, "calculations");
-      assert.equal(validationStage.order, 9);
-      assert.equal(calculationsStage.order, 10);
+      assert.equal(validationStage.order, 12);
+      assert.equal(calculationsStage.order, 13);
       assert.ok(validationStage.order < calculationsStage.order);
 
       const validationArtifact = await readArtifact(validationStage.artifactPath);

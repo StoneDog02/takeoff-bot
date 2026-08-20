@@ -59,6 +59,7 @@ describe("roof framing domain contracts", () => {
     assert.equal(plane.spanDirection, null);
     assert.equal(plane.framingDirection, null);
     assert.equal(plane.layout, null);
+    assert.equal(plane.rafterLayoutLengthFeet, null);
     assert.equal(plane.areaSquareFeet, null);
     assert.deepEqual(plane.structuralMemberIds, ["SM-014"]);
   });

@@ -38,6 +38,20 @@ export const floorFramingAreaSchema = resolvedObjectBaseSchema.extend({
   layout: z.string().trim().min(1).nullable().default(null),
   framingDirection: z.string().trim().min(1).nullable().default(null),
   spanDirection: z.string().trim().min(1).nullable().default(null),
+  /**
+   * Length of the floor area along the joist spacing axis (perpendicular to
+   * span), in feet. Authoritative input for baseline joist count per
+   * `knowledge/framing/14-floor-framing-calculations.md`.
+   * Must not be reused as installed member length.
+   */
+  joistLayoutLengthFeet: z.number().finite().positive().nullable().default(null),
+  /**
+   * Installed material length of one baseline regularly spaced joist member
+   * in this area, in feet. Authoritative input for simple-area baseline joist
+   * LF per `knowledge/framing/14-floor-framing-calculations.md`.
+   * Not clear span, bearing-to-bearing alone, layout length, or stock length.
+   */
+  joistMemberLengthFeet: z.number().finite().positive().nullable().default(null),
   areaSquareFeet: z.number().finite().positive().nullable().default(null),
   boundingWallIds: z.array(objectIdSchema).default([]),
   openingIds: z.array(objectIdSchema).default([]),

@@ -222,7 +222,7 @@ describe("framing opening header relationship pipeline", () => {
         await readArtifact(reportStage.artifactPath),
       );
       assert.equal(reportArtifact.payload.summary.openingCount, 1);
-      assert.equal(reportArtifact.payload.summary.materialLineItemCount, 5);
+      assert.equal(reportArtifact.payload.summary.materialLineItemCount, 7);
     } finally {
       await rm(artifactRoot, { recursive: true, force: true });
     }

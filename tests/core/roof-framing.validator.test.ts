@@ -99,6 +99,15 @@ function buildCompletePlane(
         reviewItemIds: [],
       },
       {
+        propertyPath: "rafterLayoutLengthFeet",
+        method: "explicit-project-value",
+        explanation: "Rafter layout length is explicit on the plan.",
+        evidenceIds: ["E-RP-001"],
+        assumptionIds: [],
+        validationIssueIds: [],
+        reviewItemIds: [],
+      },
+      {
         propertyPath: "pitch",
         method: "explicit-project-value",
         explanation: "Pitch is explicit on the elevation.",
@@ -121,6 +130,7 @@ function buildCompletePlane(
     layout: "gable",
     framingDirection: "east-west",
     spanDirection: "east-west",
+    rafterLayoutLengthFeet: 40,
     pitch: "6:12",
     areaSquareFeet: 720,
     boundingWallIds: ["W-001"],
@@ -183,7 +193,7 @@ describe("validateRoofFraming", () => {
     assert.equal(issue.severity, "critical");
     assert.equal(
       issue.quantityImpacts[0]?.quantityKey,
-      ROOF_QUANTITY_KEYS.members,
+      ROOF_QUANTITY_KEYS.commonRafters,
     );
   });
 
@@ -231,6 +241,10 @@ describe("validateRoofFraming", () => {
     const memberSpacingIssue = batch.validationIssues.find(
       (entry) => entry.ruleId === ROOF_FRAMING_RULE_IDS.memberSpacingResolved,
     );
+    const eligibilityResult = batch.validationResults.find(
+      (entry) =>
+        entry.ruleId === ROOF_FRAMING_RULE_IDS.framingTypeCommonRafterEligible,
+    );
 
     assert.ok(framingTypeIssue);
     assert.ok(memberSpacingIssue);
@@ -240,15 +254,48 @@ describe("validateRoofFraming", () => {
         (impact) => impact.canCalculate === false,
       ),
     );
+    assert.equal(eligibilityResult?.outcome, "skipped");
   });
 
-  it("fails unresolved required plane geometry properties", () => {
+  it("warns and blocks common rafters when framing type is not stick-eligible", () => {
+    const batch = validateRoofFraming({
+      payload: {
+        systems: [
+          buildCompleteSystem({
+            assembly: {
+              framingType: "roof truss",
+              memberSize: "2x8",
+              memberSpacingInches: 24,
+            },
+          }),
+        ],
+        planes: [buildCompletePlane()],
+      },
+      ...buildRelatedMaps(),
+    });
+
+    const eligibilityIssue = batch.validationIssues.find(
+      (entry) =>
+        entry.ruleId === ROOF_FRAMING_RULE_IDS.framingTypeCommonRafterEligible,
+    );
+
+    assert.ok(eligibilityIssue);
+    assert.equal(eligibilityIssue.severity, "warning");
+    assert.equal(
+      eligibilityIssue.quantityImpacts[0]?.quantityKey,
+      ROOF_QUANTITY_KEYS.commonRafters,
+    );
+    assert.equal(eligibilityIssue.quantityImpacts[0]?.canCalculate, false);
+  });
+
+  it("fails unresolved span direction and layout length as critical count blockers", () => {
     const batch = validateRoofFraming({
       payload: {
         systems: [buildCompleteSystem()],
         planes: [
           buildCompletePlane({
             spanDirection: null,
+            rafterLayoutLengthFeet: null,
             pitch: null,
             areaSquareFeet: null,
             resolutionTraces: [],
@@ -260,6 +307,10 @@ describe("validateRoofFraming", () => {
     const spanIssue = batch.validationIssues.find(
       (entry) => entry.ruleId === ROOF_FRAMING_RULE_IDS.spanDirectionResolved,
     );
+    const layoutIssue = batch.validationIssues.find(
+      (entry) =>
+        entry.ruleId === ROOF_FRAMING_RULE_IDS.rafterLayoutLengthResolved,
+    );
     const pitchIssue = batch.validationIssues.find(
       (entry) => entry.ruleId === ROOF_FRAMING_RULE_IDS.pitchResolved,
     );
@@ -268,11 +319,77 @@ describe("validateRoofFraming", () => {
     );
 
     assert.ok(spanIssue);
+    assert.ok(layoutIssue);
     assert.ok(pitchIssue);
     assert.ok(areaIssue);
     assert.equal(spanIssue.severity, "critical");
-    assert.equal(pitchIssue.severity, "critical");
-    assert.equal(areaIssue.severity, "critical");
+    assert.equal(layoutIssue.severity, "critical");
+    assert.equal(pitchIssue.severity, "warning");
+    assert.equal(areaIssue.severity, "warning");
+    assert.ok(
+      spanIssue.quantityImpacts.every((impact) => impact.canCalculate === false),
+    );
+    assert.ok(
+      layoutIssue.quantityImpacts.every(
+        (impact) => impact.canCalculate === false,
+      ),
+    );
+    assert.ok(
+      pitchIssue.quantityImpacts.every((impact) => impact.canCalculate === true),
+    );
+    assert.ok(
+      areaIssue.quantityImpacts.every((impact) => impact.canCalculate === true),
+    );
+  });
+
+  it("does not block roof.common-rafters when only pitch or areaSquareFeet is missing", () => {
+    const batch = validateRoofFraming({
+      payload: {
+        systems: [buildCompleteSystem()],
+        planes: [
+          buildCompletePlane({
+            pitch: null,
+            areaSquareFeet: null,
+            resolutionTraces: buildCompletePlane().resolutionTraces.filter(
+              (trace) =>
+                trace.propertyPath !== "pitch" &&
+                trace.propertyPath !== "areaSquareFeet",
+            ),
+          }),
+        ],
+      },
+      ...buildRelatedMaps(),
+    });
+
+    const pitchIssue = batch.validationIssues.find(
+      (entry) => entry.ruleId === ROOF_FRAMING_RULE_IDS.pitchResolved,
+    );
+    const areaIssue = batch.validationIssues.find(
+      (entry) => entry.ruleId === ROOF_FRAMING_RULE_IDS.areaSquareFeetResolved,
+    );
+
+    assert.ok(pitchIssue);
+    assert.ok(areaIssue);
+    assert.equal(pitchIssue.severity, "warning");
+    assert.equal(areaIssue.severity, "warning");
+    assert.ok(
+      pitchIssue.quantityImpacts.every((impact) => impact.canCalculate === true),
+    );
+    assert.ok(
+      areaIssue.quantityImpacts.every((impact) => impact.canCalculate === true),
+    );
+    assert.equal(
+      batch.validationIssues.some(
+        (issue) =>
+          issue.severity === "critical" &&
+          issue.quantityImpacts.some(
+            (impact) =>
+              impact.quantityKey === ROOF_QUANTITY_KEYS.commonRafters &&
+              impact.canCalculate === false,
+          ),
+      ),
+      false,
+    );
   });
 
   it("skips bounding wall validation when related artifacts are not provided", () => {
@@ -331,6 +448,10 @@ describe("validateRoofFraming", () => {
     assert.ok(issue);
     assert.equal(issue.severity, "warning");
     assert.equal(issue.quantityImpacts[0]?.canCalculate, true);
+    assert.equal(
+      issue.quantityImpacts[0]?.quantityKey,
+      ROOF_QUANTITY_KEYS.commonRafters,
+    );
   });
 
   it("produces deterministic IDs and output across identical reruns", () => {
@@ -382,6 +503,7 @@ describe("validateRoofFraming", () => {
           buildCompletePlane({
             parentSystemId: "RFS-MISSING",
             spanDirection: null,
+            rafterLayoutLengthFeet: null,
             pitch: null,
             areaSquareFeet: null,
             boundingWallIds: ["W-MISSING"],

@@ -192,6 +192,12 @@ Create review items when:
 - Hanger requirement is missing
 - Floor sheathing spec is missing
 
+Baseline regularly spaced floor joist **count** and simple-area baseline joist **material LF** calculation rules are defined in `14-floor-framing-calculations.md`.
+
+Floor / subfloor sheathing coverage remains owned by Sheathing calculation in this file (Net Sheathing Coverage Quantity) and must not be inferred solely from Floor Framing Area square footage.
+
+Individually identified beams, girders, and special members remain owned by Structural Member calculation in `08-structural-members.md`.
+
 ---
 
 ## Roof Framing Assembly
@@ -227,6 +233,12 @@ Create review items when:
 - Ridge beam is unresolved
 - Roof pitch conflicts
 - Roof sheathing spec is missing
+
+Baseline regularly spaced **common-rafter count** calculation rules are defined in `15-roof-framing-calculations.md`.
+
+Roof sheathing coverage remains owned by Sheathing calculation in this file (Net Sheathing Coverage Quantity) and must not be inferred solely from Roof Plane square footage.
+
+Individually identified ridge, hip, valley, jack, and other special members remain owned by Structural Member calculation in `08-structural-members.md` when resolved as Structural Member objects.
 
 ---
 
@@ -288,6 +300,8 @@ Create review items when:
 - Framing direction is unclear
 - Header/trimmer size is missing
 - Hanger requirement is missing
+
+Floor opening special members are **not** included in baseline joist count or baseline joist LF. Baseline count and LF opening interaction is defined in `14-floor-framing-calculations.md` (count unchanged; one-length LF ineligible when openings change member lengths unless Areas are decomposed).
 
 ---
 

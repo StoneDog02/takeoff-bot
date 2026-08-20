@@ -329,6 +329,16 @@ Review items:
 - Blocking requirement missing
 - Web stiffener requirement unresolved
 
+## Floor baseline joist ownership (count + LF)
+
+Baseline regularly spaced **floor joist count** (`each`) and, when eligible, baseline regularly spaced **floor joist material LF** (`linear-foot`) for a Floor Framing Area are calculated by Floor Framing authority in `14-floor-framing-calculations.md`.
+
+Do not emit Structural Member net material linear footage for that same repetitive baseline joist population when Floor Framing already owns the count and/or LF.
+
+Structural Member calculation still applies to individually identified joist-category members that are special callouts (for example doubled joists, trimmers modeled as members) with resolved `lengthFeet` and `quantity`, subject to the double-counting rule in `14-floor-framing-calculations.md`.
+
+If the same physical baseline population is represented in both Floor Framing and Structural Members, block overlapping quantities and create a review item rather than emitting both.
+
 ---
 
 # Rim Board and Rim Joists
@@ -392,6 +402,16 @@ Review items:
 - Roof pitch conflict
 - Bearing point unresolved
 - Ridge/hip/valley member unresolved
+
+## Roof baseline common-rafter count ownership
+
+Baseline regularly spaced **common-rafter count** (`each`) for an eligible Roof Plane is calculated by Roof Framing authority in `15-roof-framing-calculations.md`.
+
+Do not emit Structural Member quantities for that same repetitive baseline common-rafter population when Roof Framing already owns the count.
+
+Structural Member calculation still applies to ridge boards/beams, hips, valleys, jacks, and other individually identified specials with resolved `lengthFeet` and `quantity`, subject to the double-counting rule in `15-roof-framing-calculations.md`.
+
+If the same physical baseline population is represented in both Roof Framing and Structural Members, block overlapping quantities and create a review item rather than emitting both.
 
 ---
 

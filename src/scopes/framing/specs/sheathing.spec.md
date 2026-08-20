@@ -26,6 +26,8 @@ The Sheathing subsystem owns structural sheathing systems, sheathing areas, pane
 
 It does not own wall geometry, floor framing systems, roof framing systems, structural members, blocking, connectors, or material taxonomy.
 
+It must not treat Floor Framing Area or Roof Plane `areaSquareFeet` as sheathing coverage by itself. Roof sheathing SF requires an explicit Sheathing Area with resolved `areaSquareFeet` and `application` per `04-building-assemblies.md` (Net Sheathing Coverage Quantity) and `15-roof-framing-calculations.md` ownership boundaries.
+
 ---
 
 ## 3. Consumed Artifacts

@@ -62,7 +62,7 @@ async function runLivePipeline(
 
   assert.equal(result.success, true, result.errors.join("\n"));
   assert.equal(result.errors.length, 0);
-  assert.equal(result.stageResults.length, 12);
+  assert.equal(result.stageResults.length, 15);
 
   return snapshotLiveFramingProof(pageText, result);
 }

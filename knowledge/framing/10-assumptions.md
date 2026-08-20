@@ -354,6 +354,59 @@ When forbidden facts are missing, block the affected quantity and create review 
 
 ---
 
+## Floor Framing
+
+Floor framing calculation assumptions are governed by `14-floor-framing-calculations.md`.
+
+### Allowed (deterministically derivable — not an industry spacing default)
+
+- Baseline joist **count** from resolved `joistLayoutLengthFeet` and `joistSpacingInches` with both layout-axis endpoints counted
+- Baseline joist **material LF** as `joistCount × joistMemberLengthFeet` when simple-area LF eligibility in `14-floor-framing-calculations.md` resolves
+
+### Forbidden
+
+- Floor joist spacing when not shown
+- Joist size / type / engineered series when not shown
+- `joistLayoutLengthFeet` from `areaSquareFeet`, bounding-wall topology, or geometric guesses
+- Joist count from IRC / manufacturer span tables
+- `joistMemberLengthFeet` when not shown (never default)
+- `joistMemberLengthFeet` from clear span + assumed bearing seats
+- `joistMemberLengthFeet` from `areaSquareFeet`, `joistLayoutLengthFeet`, wall topology, IRC, or span tables
+- Joist span / length when not shown (clear span is not a silent substitute for member length)
+- Rim / band LF from assumed perimeter formulas in the absence of a dedicated Brain rim rule
+- Floor sheathing SF from Floor Framing Area square footage alone
+- Opening joist **count** deductions without resolved opening position along the layout axis or explicit deducted count
+- Opening joist **LF** shortening deductions without Area decomposition (or SM specials)
+
+When forbidden facts are missing, block the **affected** quantity and create review items. Missing `joistMemberLengthFeet` blocks joist LF only; it must not by itself block joist count.
+
+---
+
+## Roof Framing
+
+Roof framing calculation assumptions are governed by `15-roof-framing-calculations.md`.
+
+### Allowed (deterministically derivable — not an industry spacing default)
+
+- Baseline common-rafter **count** from resolved `rafterLayoutLengthFeet` and `memberSpacingInches` with both spacing-axis endpoints counted, when simple-plane eligibility in `15-roof-framing-calculations.md` resolves
+
+### Forbidden
+
+- Roof rafter / truss spacing when not shown
+- Member size / framing type when not shown
+- `rafterLayoutLengthFeet` from `areaSquareFeet`, pitch, bounding-wall topology, or geometric guesses
+- Common-rafter count from IRC / manufacturer span tables
+- Common-rafter count from pitch or horizontal run alone
+- Common-rafter count on truss-framed systems via stick formulas
+- Hip / valley / jack inference as baseline commons
+- Opening common-rafter deductions without resolved opening position along the spacing axis or explicit deducted count
+- Roof sheathing SF from Roof Plane square footage alone
+- Common-rafter member length from pitch, area SF, or layout length (LF deferred; never default)
+
+When forbidden facts are missing, block the **affected** quantity and create review items. Missing `pitch` or `areaSquareFeet` must not by itself block baseline common-rafter count.
+
+---
+
 # Forbidden Framing Assumptions
 
 Never assume:
@@ -365,6 +418,11 @@ Never assume:
 - Post or column size
 - Truss layout
 - Truss spacing when not shown
+- Floor joist spacing when not shown
+- Floor joist layout length from area square footage
+- Floor joist member length from clear span, area square footage, or layout length
+- Roof common-rafter layout length from area square footage or pitch
+- Roof common-rafter count from pitch or horizontal run alone
 - Shear wall location
 - Shear wall length
 - Holdown type

@@ -184,7 +184,7 @@ describe("opening wall relationship resolution", () => {
       )?.outcome,
       "passed",
     );
-    assert.equal(validation.validationIssues.length, 2);
+    assert.equal(validation.validationIssues.length, 3);
     assert.ok(
       validation.validationIssues.some(
         (issue) => issue.ruleId === OPENINGS_RULE_IDS.kingStudCountDefault,
@@ -193,6 +193,11 @@ describe("opening wall relationship resolution", () => {
     assert.ok(
       validation.validationIssues.some(
         (issue) => issue.ruleId === OPENINGS_RULE_IDS.roughSillSizeDefault,
+      ),
+    );
+    assert.ok(
+      validation.validationIssues.some(
+        (issue) => issue.ruleId === OPENINGS_RULE_IDS.crippleLayoutDefault,
       ),
     );
   });
