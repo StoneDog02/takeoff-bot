@@ -186,9 +186,20 @@ function calculateAreaCoverage(
 }
 
 /**
- * Calculates net sheathing coverage square footage.
+ * Emits sheathing **material lines** (SF) for areas that have both:
+ * - Coverage quantity: resolved `areaSquareFeet` (`coverageSquareFeet = areaSquareFeet`)
+ * - Material identity: resolved application + panel type + thickness
  *
- * Quantity semantics: `knowledge/framing/04-building-assemblies.md`.
+ * Per `knowledge/framing/04-building-assemblies.md` (Net Sheathing Coverage):
+ * - Application classifies material; it does not change SF arithmetic.
+ * - Coverage is not blocked solely by unresolved application.
+ * - Material lines must not emit when required identity is unresolved.
+ *
+ * This function only emits material lines. Resolved `SheathingArea.areaSquareFeet`
+ * remains on the object when identity is incomplete (partial objects survive).
+ * Blocking either `sheathing.area` or `sheathing.material` suppresses emission
+ * because a material line requires both coverage and identity.
+ *
  * Does not deduct openings, convert to sheets, apply waste, or merge areas.
  */
 export function calculateSheathing(

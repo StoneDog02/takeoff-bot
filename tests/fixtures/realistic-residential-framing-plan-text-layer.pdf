@@ -1,0 +1,169 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R 7 0 R 9 0 R] /Count 4 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /ProcSet [/PDF /Text] /Font << /F1 11 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 603 >>
+stream
+BT
+/F1 12 Tf
+16 TL
+72 720 Td
+(SHEET A2.01  FLOOR FRAMING PLAN  LEVEL 2) Tj
+T*
+(SCALE: 1/4" = 1'-0") Tj
+T*
+() Tj
+T*
+(WALL SCHEDULE NOTES) Tj
+T*
+(W1  EXT BEARING WALL  WOOD STUD) Tj
+T*
+(W1  2x6 SPF STUDS @ 16" O.C.  HT 9'-0"  DBL TOP PLATE + SILL  3 PLATES) Tj
+T*
+(W1  LENGTH 24'-0") Tj
+T*
+() Tj
+T*
+(OPENING CALLOUTS) Tj
+T*
+(WINDOW W3 IN WALL W1  HEADER H2) Tj
+T*
+(DOOR D04 IN WALL W1  HEADER H3) Tj
+T*
+() Tj
+T*
+(FLOOR FRAMING) Tj
+T*
+(FLOOR SYS A  LEVEL 2  NEW) Tj
+T*
+(11-7/8" I-JOISTS @ 16" O.C.) Tj
+T*
+(SPAN N-S) Tj
+T*
+(BAY A  REF FLOOR SYS A) Tj
+T*
+(BAY A = 20'-0" E-W) Tj
+T*
+(JOISTS 12'-0" LONG) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 6 0 R /Resources << /ProcSet [/PDF /Text] /Font << /F1 11 0 R >> >> >>
+endobj
+6 0 obj
+<< /Length 335 >>
+stream
+BT
+/F1 12 Tf
+16 TL
+72 720 Td
+(SHEET A3.01  WINDOW / DOOR SCHEDULE) Tj
+T*
+() Tj
+T*
+(MARK  TYPE    NOMINAL           ROUGH OPENING     QTY  WALL  HEADER  NOTES) Tj
+T*
+(W3    WINDOW  3'-6" x 5'-0"     4'-0" x 5'-0"      1    W1    H2      2 JACK STUDS) Tj
+T*
+(D04   DOOR    2'-8" x 6'-8"     3'-0" x 7'-0"      1    W1    H3      -) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 8 0 R /Resources << /ProcSet [/PDF /Text] /Font << /F1 11 0 R >> >> >>
+endobj
+8 0 obj
+<< /Length 589 >>
+stream
+BT
+/F1 12 Tf
+16 TL
+72 720 Td
+(SHEET S1.01  FRAMING NOTES / MEMBER SCHEDULES) Tj
+T*
+() Tj
+T*
+(HEADER SCHEDULE) Tj
+T*
+(MARK  SIZE / MATERIAL           LENGTH  QTY  LOCATION) Tj
+T*
+(H2    1-3/4 x 11-7/8 LVL         6'-0"   1    WINDOW W3) Tj
+T*
+(H3    \(2\) 2x6 DF                 4'-0"   1    DOOR D04) Tj
+T*
+() Tj
+T*
+(BEAM SCHEDULE) Tj
+T*
+(MARK  SIZE   LENGTH   QTY  NOTES) Tj
+T*
+(B1    W8x18  16'-0"   1    LEVEL 2 BEARING BEAM) Tj
+T*
+() Tj
+T*
+(WALL SHEATHING) Tj
+T*
+(7/16" OSB WALL SHEATHING) Tj
+T*
+(WALL SH SYS  EXTERIOR WALLS  LEVEL 2) Tj
+T*
+(WALL SH A  REF WALL SH SYS  COVER W1) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 10 0 R /Resources << /ProcSet [/PDF /Text] /Font << /F1 11 0 R >> >> >>
+endobj
+10 0 obj
+<< /Length 233 >>
+stream
+BT
+/F1 12 Tf
+16 TL
+72 720 Td
+(SHEET A2.02  ROOF FRAMING PLAN) Tj
+T*
+() Tj
+T*
+(ROOF SYS A  STICK FRAMED  NEW) Tj
+T*
+(2x8 DF RAFTERS @ 16" O.C.) Tj
+T*
+(RAFTERS SPAN N-S) Tj
+T*
+(GABLE A  REF ROOF SYS A) Tj
+T*
+(GABLE LENGTH 20'-0") Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000133 00000 n 
+0000000282 00000 n 
+0000000936 00000 n 
+0000001085 00000 n 
+0000001471 00000 n 
+0000001620 00000 n 
+0000002260 00000 n 
+0000002410 00000 n 
+0000002695 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R >>
+startxref
+2766
+%%EOF

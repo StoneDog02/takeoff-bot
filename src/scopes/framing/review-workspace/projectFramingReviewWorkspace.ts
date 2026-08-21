@@ -22,6 +22,7 @@ import type {
   FramingCalculationsPayload,
   OpeningsPayload,
   RoofFramingPayload,
+  SheathingPayload,
   StructuralMembersPayload,
   ValidationPayload,
   WallFramingPayload,
@@ -41,6 +42,7 @@ export type FramingReviewWorkspaceInput = {
   wallFraming?: WallFramingPayload;
   floorFraming?: FloorFramingPayload;
   roofFraming?: RoofFramingPayload;
+  sheathing?: SheathingPayload;
   userDecisions?: readonly UserDecision[];
   supplementalReviewItemsById?: ReadonlyMap<ReviewItemId, ReviewItem>;
 };
@@ -97,6 +99,21 @@ function buildResolvedObjectIndex(
       index.set(plane.id, {
         objectDomain: "roof-plane",
         object: plane,
+      });
+    }
+  }
+
+  if (input.sheathing) {
+    for (const system of input.sheathing.systems) {
+      index.set(system.id, {
+        objectDomain: "sheathing-system",
+        object: system,
+      });
+    }
+    for (const area of input.sheathing.areas) {
+      index.set(area.id, {
+        objectDomain: "sheathing-area",
+        object: area,
       });
     }
   }

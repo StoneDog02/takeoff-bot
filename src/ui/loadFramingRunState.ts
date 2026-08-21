@@ -8,8 +8,11 @@ import type { ReviewWorkspacePayload } from "../core/schemas/review-workspace.sc
 import { projectFramingReviewWorkspace } from "../scopes/framing/review-workspace/projectFramingReviewWorkspace.js";
 import {
   finalFramingTakeoffArtifactSchema,
+  floorFramingArtifactSchema,
   framingCalculationsArtifactSchema,
   openingsArtifactSchema,
+  roofFramingArtifactSchema,
+  sheathingArtifactSchema,
   structuralMembersArtifactSchema,
   validationArtifactSchema,
   wallFramingArtifactSchema,
@@ -68,6 +71,15 @@ export async function loadFramingRunState(
   const wallFramingArtifact = wallFramingArtifactSchema.parse(
     JSON.parse(await readFile(stageByName(result, "wallFraming").artifactPath, "utf8")),
   );
+  const floorFramingArtifact = floorFramingArtifactSchema.parse(
+    JSON.parse(await readFile(stageByName(result, "floorFraming").artifactPath, "utf8")),
+  );
+  const roofFramingArtifact = roofFramingArtifactSchema.parse(
+    JSON.parse(await readFile(stageByName(result, "roofFraming").artifactPath, "utf8")),
+  );
+  const sheathingArtifact = sheathingArtifactSchema.parse(
+    JSON.parse(await readFile(stageByName(result, "sheathing").artifactPath, "utf8")),
+  );
 
   const reviewWorkspace = projectFramingReviewWorkspace({
     validation: validationArtifact.payload,
@@ -75,6 +87,9 @@ export async function loadFramingRunState(
     openings: openingsArtifact.payload,
     structuralMembers: structuralMembersArtifact.payload,
     wallFraming: wallFramingArtifact.payload,
+    floorFraming: floorFramingArtifact.payload,
+    roofFraming: roofFramingArtifact.payload,
+    sheathing: sheathingArtifact.payload,
     userDecisions: options.userDecisions,
     supplementalReviewItemsById: options.supplementalReviewItemsById,
   });

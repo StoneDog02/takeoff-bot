@@ -1,6 +1,5 @@
 import type { Evidence } from "../../../core/schemas/evidence.schema.js";
 import {
-  sheathingApplicationSchema,
   sheathingConstructionPhaseSchema,
   type SheathingApplication,
   type SheathingConstructionPhase,
@@ -48,6 +47,58 @@ function normalizeToken(value: string): string {
   return value.trim().toLowerCase().replaceAll(/\s+/g, "-");
 }
 
+/**
+ * Deterministic sheathing application aliases from explicit plan terminology.
+ *
+ * Evidence may retain verbatim source phrasing; this maps only construction-
+ * safe, Brain-compatible forms onto `wall` | `floor` | `roof`. Ambiguous or
+ * substring-only matches (e.g. "sidewall") remain unresolved.
+ */
+const SHEATHING_APPLICATION_ALIASES: Readonly<
+  Record<string, Exclude<SheathingApplication, "unknown">>
+> = {
+  wall: "wall",
+  walls: "wall",
+  "wall-sheathing": "wall",
+  "exterior-wall": "wall",
+  "exterior-walls": "wall",
+  "exterior-wall-sheathing": "wall",
+  "interior-wall": "wall",
+  "interior-walls": "wall",
+  "interior-wall-sheathing": "wall",
+  // Explicit EXT/INT + WALL(S) plan abbreviations (application only).
+  "ext-wall": "wall",
+  "ext-walls": "wall",
+  "int-wall": "wall",
+  "int-walls": "wall",
+  floor: "floor",
+  floors: "floor",
+  "floor-sheathing": "floor",
+  subfloor: "floor",
+  "sub-floor": "floor",
+  "subfloor-sheathing": "floor",
+  roof: "roof",
+  roofs: "roof",
+  "roof-sheathing": "roof",
+  "roof-deck": "roof",
+  "roof-decking": "roof",
+};
+
+export function canonicalizeSheathingApplication(
+  candidateValue: string,
+): SheathingApplication | undefined {
+  const token = normalizeToken(candidateValue);
+  if (token.length === 0) {
+    return undefined;
+  }
+
+  if (token === "unknown") {
+    return "unknown";
+  }
+
+  return SHEATHING_APPLICATION_ALIASES[token];
+}
+
 export function isSheathingSystemPropertyPath(
   propertyPath: string,
 ): propertyPath is SheathingSystemPropertyPath {
@@ -80,6 +131,16 @@ export function isSheathingPropertyPath(propertyPath: string): boolean {
   );
 }
 
+/** Scalar Sheathing properties eligible for User Decision resolution (not relationship tags). */
+export function isSheathingUserDecisionPropertyPath(
+  propertyPath: string,
+): boolean {
+  return (
+    isSheathingSystemPropertyPath(propertyPath) ||
+    isSheathingAreaPropertyPath(propertyPath)
+  );
+}
+
 export function normalizeSheathingSystemCandidate(
   propertyPath: SheathingSystemPropertyPath,
   candidateValue: Evidence["candidateValue"],
@@ -94,10 +155,7 @@ export function normalizeSheathingSystemCandidate(
         return undefined;
       }
 
-      const parsed = sheathingApplicationSchema.safeParse(
-        normalizeToken(candidateValue),
-      );
-      return parsed.success ? parsed.data : undefined;
+      return canonicalizeSheathingApplication(candidateValue);
     }
     case "constructionPhase": {
       if (typeof candidateValue !== "string") {

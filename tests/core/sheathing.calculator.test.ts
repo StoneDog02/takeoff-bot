@@ -310,6 +310,13 @@ describe("calculateSheathing", () => {
     );
   });
 
+  it("does not emit a generic SF line when application is unknown even if areaSquareFeet is resolved", () => {
+    // Brain: coverage arithmetic is valid; material-line emission requires identity.
+    const payload = buildPayload([buildSystem({ application: "unknown" })]);
+    assert.equal(payload.areas[0]?.areaSquareFeet, 320);
+    assert.equal(calculateSheathing(payload).length, 0);
+  });
+
   it("does not suppress output for unrelated Validation", () => {
     const area = buildArea({ openingIds: ["O-014"] });
     const validation = emptyValidation([

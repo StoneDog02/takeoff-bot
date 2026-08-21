@@ -1,4 +1,7 @@
-import type { Evidence } from "../../../core/schemas/evidence.schema.js";
+import type {
+  Evidence,
+  EvidenceSubjectKind,
+} from "../../../core/schemas/evidence.schema.js";
 import type {
   EvidenceId,
   ObjectId,
@@ -11,19 +14,60 @@ import type { UserDecision } from "../../../core/schemas/user-decision.schema.js
 import { userDecisionSchema } from "../../../core/schemas/user-decision.schema.js";
 import type { UserDecisionValue } from "../../../core/schemas/user-decision.schema.js";
 import {
+  isFloorAreaPropertyPath,
+  isFloorSystemPropertyPath,
+  normalizeFloorAreaCandidate,
+  normalizeFloorSystemCandidate,
+  type FloorAreaPropertyPath,
+  type FloorSystemPropertyPath,
+} from "./floorFramingPropertyPaths.js";
+import {
   isOpeningPropertyPath,
   normalizeOpeningCandidate,
   type OpeningPropertyPath,
 } from "./openingPropertyPaths.js";
 import {
+  isRoofPlanePropertyPath,
+  isRoofSystemPropertyPath,
+  normalizeRoofPlaneCandidate,
+  normalizeRoofSystemCandidate,
+  type RoofPlanePropertyPath,
+  type RoofSystemPropertyPath,
+} from "./roofFramingPropertyPaths.js";
+import {
+  isSheathingAreaPropertyPath,
+  isSheathingSystemPropertyPath,
+  normalizeSheathingAreaCandidate,
+  normalizeSheathingSystemCandidate,
+  type SheathingAreaPropertyPath,
+  type SheathingSystemPropertyPath,
+} from "./sheathingPropertyPaths.js";
+import {
+  isStructuralMemberPropertyPath,
+  normalizeStructuralMemberCandidate,
+  type StructuralMemberPropertyPath,
+} from "./structuralMemberPropertyPaths.js";
+import {
+  isWallFramingPropertyPath,
   normalizeWallFramingCandidate,
   type WallFramingPropertyPath,
-  isWallFramingPropertyPath,
 } from "./wallFramingPropertyPaths.js";
 
 export type UserDecisionPropertyPath =
   | WallFramingPropertyPath
-  | OpeningPropertyPath;
+  | OpeningPropertyPath
+  | FloorSystemPropertyPath
+  | FloorAreaPropertyPath
+  | RoofSystemPropertyPath
+  | RoofPlanePropertyPath
+  | SheathingSystemPropertyPath
+  | SheathingAreaPropertyPath
+  | StructuralMemberPropertyPath;
+
+export type SubjectBinding = {
+  subjectKey: string;
+  subjectKind: EvidenceSubjectKind;
+};
 
 export type UserDecisionResolutionContext = {
   userDecisions: readonly UserDecision[];
@@ -57,9 +101,74 @@ function decisionTargetKey(objectId: ObjectId, propertyPath: string): string {
   return `${objectId}\0${propertyPath}`;
 }
 
+function candidateKey(value: string | number | boolean): string {
+  return `${typeof value}:${String(value)}`;
+}
+
+export function isUserDecisionPropertyPath(
+  propertyPath: string,
+): propertyPath is UserDecisionPropertyPath {
+  return (
+    isWallFramingPropertyPath(propertyPath) ||
+    isOpeningPropertyPath(propertyPath) ||
+    isFloorSystemPropertyPath(propertyPath) ||
+    isFloorAreaPropertyPath(propertyPath) ||
+    isRoofSystemPropertyPath(propertyPath) ||
+    isRoofPlanePropertyPath(propertyPath) ||
+    isSheathingSystemPropertyPath(propertyPath) ||
+    isSheathingAreaPropertyPath(propertyPath) ||
+    isStructuralMemberPropertyPath(propertyPath)
+  );
+}
+
+export function normalizeUserDecisionCandidate(
+  propertyPath: UserDecisionPropertyPath,
+  candidateValue: Evidence["candidateValue"] | UserDecisionValue,
+): string | number | boolean | undefined {
+  if (isWallFramingPropertyPath(propertyPath)) {
+    return normalizeWallFramingCandidate(propertyPath, candidateValue as Evidence["candidateValue"]);
+  }
+  if (isOpeningPropertyPath(propertyPath)) {
+    return normalizeOpeningCandidate(propertyPath, candidateValue as Evidence["candidateValue"]);
+  }
+  if (isFloorSystemPropertyPath(propertyPath)) {
+    return normalizeFloorSystemCandidate(propertyPath, candidateValue as Evidence["candidateValue"]);
+  }
+  if (isFloorAreaPropertyPath(propertyPath)) {
+    return normalizeFloorAreaCandidate(propertyPath, candidateValue as Evidence["candidateValue"]);
+  }
+  if (isRoofSystemPropertyPath(propertyPath)) {
+    return normalizeRoofSystemCandidate(propertyPath, candidateValue as Evidence["candidateValue"]);
+  }
+  if (isRoofPlanePropertyPath(propertyPath)) {
+    return normalizeRoofPlaneCandidate(propertyPath, candidateValue as Evidence["candidateValue"]);
+  }
+  if (isSheathingSystemPropertyPath(propertyPath)) {
+    return normalizeSheathingSystemCandidate(
+      propertyPath,
+      candidateValue as Evidence["candidateValue"],
+    );
+  }
+  if (isSheathingAreaPropertyPath(propertyPath)) {
+    return normalizeSheathingAreaCandidate(
+      propertyPath,
+      candidateValue as Evidence["candidateValue"],
+    );
+  }
+  if (isStructuralMemberPropertyPath(propertyPath)) {
+    return normalizeStructuralMemberCandidate(
+      propertyPath,
+      candidateValue as Evidence["candidateValue"],
+    );
+  }
+
+  return undefined;
+}
+
 export function filterUserDecisionsForPropertyPaths(
   context: UserDecisionResolutionContext,
   isSupportedPropertyPath: (propertyPath: string) => boolean,
+  knownObjectIds?: ReadonlySet<ObjectId>,
 ): UserDecisionResolutionContext {
   if (context.userDecisions.length === 0) {
     return context;
@@ -67,18 +176,27 @@ export function filterUserDecisionsForPropertyPaths(
 
   const filteredDecisions = context.userDecisions.filter((decision) => {
     const reviewItem = context.reviewItemsById.get(decision.reviewItemId);
-    const propertyPath = reviewItem?.action.targetProperty;
-    return propertyPath != null && isSupportedPropertyPath(propertyPath);
+    if (!reviewItem) {
+      return false;
+    }
+
+    const propertyPath = reviewItem.action.targetProperty;
+    if (propertyPath == null || !isSupportedPropertyPath(propertyPath)) {
+      return false;
+    }
+
+    if (!knownObjectIds) {
+      return true;
+    }
+
+    const objectId = reviewItem.affectedObjects[0]?.objectId;
+    return objectId != null && knownObjectIds.has(objectId);
   });
 
   return {
     ...context,
     userDecisions: filteredDecisions,
   };
-}
-
-function candidateKey(value: string | number | boolean): string {
-  return `${typeof value}:${String(value)}`;
 }
 
 function assertScalarDecisionValue(
@@ -92,16 +210,6 @@ function assertScalarDecisionValue(
   }
 
   return value;
-}
-
-function assertConflictResolvedDecision(decision: UserDecision): asserts decision is UserDecision & {
-  result: Extract<UserDecision["result"], { type: "conflict-resolved" }>;
-} {
-  if (decision.result.type !== "conflict-resolved") {
-    throw new Error(
-      `User Decision ${decision.id} uses unsupported result type "${decision.result.type}" in this slice.`,
-    );
-  }
 }
 
 function validateReviewItemTarget(
@@ -132,20 +240,20 @@ function validateReviewItemTarget(
 
 function validateEvidenceRecord(
   record: Evidence,
-  subjectKey: string,
-  propertyPath: WallFramingPropertyPath,
+  binding: SubjectBinding,
+  propertyPath: UserDecisionPropertyPath,
   evidenceId: EvidenceId,
   role: "accepted" | "rejected",
 ): string | number | boolean {
-  if (record.subjectKind !== "wall") {
+  if (record.subjectKind !== binding.subjectKind) {
     throw new Error(
-      `${role} Evidence ${evidenceId} belongs to subjectKind ${record.subjectKind}, not wall.`,
+      `${role} Evidence ${evidenceId} belongs to subjectKind ${record.subjectKind}, not ${binding.subjectKind}.`,
     );
   }
 
-  if (record.subjectKey !== subjectKey) {
+  if (record.subjectKey !== binding.subjectKey) {
     throw new Error(
-      `${role} Evidence ${evidenceId} belongs to subject ${record.subjectKey}, not ${subjectKey}.`,
+      `${role} Evidence ${evidenceId} belongs to subject ${record.subjectKey}, not ${binding.subjectKey}.`,
     );
   }
 
@@ -155,7 +263,7 @@ function validateEvidenceRecord(
     );
   }
 
-  const normalized = normalizeWallFramingCandidate(propertyPath, record.candidateValue);
+  const normalized = normalizeUserDecisionCandidate(propertyPath, record.candidateValue);
   if (normalized === undefined) {
     throw new Error(
       `${role} Evidence ${evidenceId} does not provide a usable candidate for ${propertyPath}.`,
@@ -169,12 +277,16 @@ function validateConflictResolvedDecision(
   decision: UserDecision,
   reviewItem: ReviewItem,
   objectId: ObjectId,
-  propertyPath: WallFramingPropertyPath,
-  subjectKey: string,
+  propertyPath: UserDecisionPropertyPath,
+  binding: SubjectBinding,
   evidenceById: ReadonlyMap<EvidenceId, Evidence>,
 ): AppliedUserDecision {
   userDecisionSchema.parse(decision);
-  assertConflictResolvedDecision(decision);
+  if (decision.result.type !== "conflict-resolved") {
+    throw new Error(
+      `User Decision ${decision.id} uses unsupported result type "${decision.result.type}" for conflict resolution.`,
+    );
+  }
   validateReviewItemTarget(reviewItem, objectId, propertyPath);
 
   const result = decision.result;
@@ -187,9 +299,7 @@ function validateConflictResolvedDecision(
     );
   }
 
-  if (
-    result.acceptedEvidenceIds.some((evidenceId) => rejectedSet.has(evidenceId))
-  ) {
+  if (result.acceptedEvidenceIds.some((evidenceId) => rejectedSet.has(evidenceId))) {
     throw new Error(
       `User Decision ${decision.id} cannot accept and reject the same Evidence ID.`,
     );
@@ -206,7 +316,7 @@ function validateConflictResolvedDecision(
 
     const normalized = validateEvidenceRecord(
       record,
-      subjectKey,
+      binding,
       propertyPath,
       evidenceId,
       "accepted",
@@ -222,14 +332,13 @@ function validateConflictResolvedDecision(
 
   const selectedValue = [...acceptedValues][0]!;
   const scalarDecisionValue = assertScalarDecisionValue(result.value, decision.id);
-  const decisionValueKey = candidateKey(scalarDecisionValue);
-  if (selectedValue !== decisionValueKey) {
+  if (selectedValue !== candidateKey(scalarDecisionValue)) {
     throw new Error(
       `User Decision ${decision.id} value does not match accepted Evidence candidate value.`,
     );
   }
 
-  const normalizedDecisionValue = normalizeWallFramingCandidate(
+  const normalizedDecisionValue = normalizeUserDecisionCandidate(
     propertyPath,
     scalarDecisionValue,
   );
@@ -247,13 +356,7 @@ function validateConflictResolvedDecision(
       );
     }
 
-    validateEvidenceRecord(
-      record,
-      subjectKey,
-      propertyPath,
-      evidenceId,
-      "rejected",
-    );
+    validateEvidenceRecord(record, binding, propertyPath, evidenceId, "rejected");
   }
 
   return {
@@ -261,7 +364,7 @@ function validateConflictResolvedDecision(
     reviewItem,
     objectId,
     propertyPath,
-    subjectKey,
+    subjectKey: binding.subjectKey,
     value: normalizedDecisionValue,
     resolutionKind: "conflict-resolved",
     acceptedEvidenceIds: uniqueSortedIds(result.acceptedEvidenceIds),
@@ -273,8 +376,8 @@ function validateValueProvidedDecision(
   decision: UserDecision,
   reviewItem: ReviewItem,
   objectId: ObjectId,
-  propertyPath: OpeningPropertyPath,
-  subjectKey: string,
+  propertyPath: UserDecisionPropertyPath,
+  binding: SubjectBinding,
 ): AppliedUserDecision {
   userDecisionSchema.parse(decision);
   validateReviewItemTarget(reviewItem, objectId, propertyPath);
@@ -282,18 +385,18 @@ function validateValueProvidedDecision(
   const result = decision.result;
   if (result.type !== "value-provided") {
     throw new Error(
-      `User Decision ${decision.id} must use result.type "value-provided" for opening property ${propertyPath}.`,
+      `User Decision ${decision.id} must use result.type "value-provided" for property ${propertyPath}.`,
     );
   }
 
   if (reviewItem.action.type !== "provide-value") {
     throw new Error(
-      `Review Item ${reviewItem.id} must use action.type "provide-value" for opening value-provided decisions.`,
+      `Review Item ${reviewItem.id} must use action.type "provide-value" for value-provided decisions.`,
     );
   }
 
   const scalarDecisionValue = assertScalarDecisionValue(result.value, decision.id);
-  const normalizedDecisionValue = normalizeOpeningCandidate(
+  const normalizedDecisionValue = normalizeUserDecisionCandidate(
     propertyPath,
     scalarDecisionValue,
   );
@@ -308,7 +411,7 @@ function validateValueProvidedDecision(
     reviewItem,
     objectId,
     propertyPath,
-    subjectKey,
+    subjectKey: binding.subjectKey,
     value: normalizedDecisionValue,
     resolutionKind: "value-provided",
     acceptedEvidenceIds: [],
@@ -322,10 +425,14 @@ function validateValueProvidedDecision(
  * Supersession: a decision referenced by another decision's
  * `supersedesUserDecisionId` is inactive. Multiple active decisions for the
  * same target throw deterministically.
+ *
+ * Precedence: when an active User Decision targets a property, resolvers apply
+ * it before Evidence candidate selection. Repeated Claude extraction cannot
+ * overwrite an accepted User Decision on Run 2.
  */
 export function buildUserDecisionIndex(
   context: UserDecisionResolutionContext,
-  subjectKeyByObjectId: ReadonlyMap<ObjectId, string>,
+  subjectBindingByObjectId: ReadonlyMap<ObjectId, SubjectBinding>,
 ): UserDecisionIndex {
   if (context.userDecisions.length === 0) {
     return new Map();
@@ -367,34 +474,40 @@ export function buildUserDecisionIndex(
       );
     }
 
-    const subjectKey = subjectKeyByObjectId.get(objectId);
-    if (!subjectKey) {
+    if (!isUserDecisionPropertyPath(propertyPath)) {
+      throw new Error(
+        `Review Item ${reviewItem.id} targets unsupported property ${propertyPath}.`,
+      );
+    }
+
+    const binding = subjectBindingByObjectId.get(objectId);
+    if (!binding) {
       throw new Error(
         `User Decision ${decision.id} targets unknown object ${objectId}.`,
       );
     }
 
     let applied: AppliedUserDecision;
-    if (isWallFramingPropertyPath(propertyPath)) {
+    if (decision.result.type === "conflict-resolved") {
       applied = validateConflictResolvedDecision(
         decision,
         reviewItem,
         objectId,
         propertyPath,
-        subjectKey,
+        binding,
         context.evidenceById,
       );
-    } else if (isOpeningPropertyPath(propertyPath)) {
+    } else if (decision.result.type === "value-provided") {
       applied = validateValueProvidedDecision(
         decision,
         reviewItem,
         objectId,
         propertyPath,
-        subjectKey,
+        binding,
       );
     } else {
       throw new Error(
-        `Review Item ${reviewItem.id} targets unsupported property ${propertyPath}.`,
+        `User Decision ${decision.id} uses unsupported result type "${decision.result.type}" in this slice.`,
       );
     }
 
@@ -449,3 +562,10 @@ export function createUserOverrideTrace(
 
 export type { OpeningPropertyPath } from "./openingPropertyPaths.js";
 export type { WallFramingPropertyPath } from "./wallFramingPropertyPaths.js";
+export type { FloorAreaPropertyPath, FloorSystemPropertyPath } from "./floorFramingPropertyPaths.js";
+export type { RoofPlanePropertyPath, RoofSystemPropertyPath } from "./roofFramingPropertyPaths.js";
+export type {
+  SheathingAreaPropertyPath,
+  SheathingSystemPropertyPath,
+} from "./sheathingPropertyPaths.js";
+export type { StructuralMemberPropertyPath } from "./structuralMemberPropertyPaths.js";

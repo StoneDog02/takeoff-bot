@@ -8,6 +8,10 @@ import type {
   RoofFramingSystem,
   RoofPlane,
 } from "../schemas/roof-framing.schema.js";
+import type {
+  SheathingArea,
+  SheathingSystem,
+} from "../schemas/sheathing.schema.js";
 import type { StructuralMember } from "../schemas/structural-member.schema.js";
 import type { BuildingWall, WallSegment } from "../schemas/wall.schema.js";
 
@@ -19,7 +23,9 @@ export type FramingResolvedObject =
   | { objectDomain: "floor-framing-system"; object: FloorFramingSystem }
   | { objectDomain: "floor-framing-area"; object: FloorFramingArea }
   | { objectDomain: "roof-framing-system"; object: RoofFramingSystem }
-  | { objectDomain: "roof-plane"; object: RoofPlane };
+  | { objectDomain: "roof-plane"; object: RoofPlane }
+  | { objectDomain: "sheathing-system"; object: SheathingSystem }
+  | { objectDomain: "sheathing-area"; object: SheathingArea };
 
 function readNestedValue(
   record: Record<string, unknown>,
@@ -132,6 +138,26 @@ export function readFramingPropertyValue(
       const plane = resolved.object;
       if (propertyPath in plane) {
         return plane[propertyPath as keyof RoofPlane] ?? null;
+      }
+      return null;
+    }
+    case "sheathing-system": {
+      const system = resolved.object;
+      if (propertyPath.startsWith("panelSpecification.")) {
+        return readNestedValue(
+          system.panelSpecification as unknown as Record<string, unknown>,
+          propertyPath.slice("panelSpecification.".length).split("."),
+        );
+      }
+      if (propertyPath in system) {
+        return system[propertyPath as keyof SheathingSystem] ?? null;
+      }
+      return null;
+    }
+    case "sheathing-area": {
+      const area = resolved.object;
+      if (propertyPath in area) {
+        return area[propertyPath as keyof SheathingArea] ?? null;
       }
       return null;
     }

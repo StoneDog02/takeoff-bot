@@ -168,8 +168,11 @@ describe("extractFramingEvidence prompts", () => {
     assert.match(prompt, /Do not assign final ObjectIds, create ResolutionTraces/);
     assert.match(prompt, /Do not copy sheet IDs, titles, originalText, or candidate values/);
     assert.match(prompt, /Prior-stage assembly names are context only/);
-    assert.match(prompt, /multiple labeled wall tags appear/);
-    assert.match(prompt, /Never merge facts from one labeled wall into another/);
+    assert.match(prompt, /multiple labeled marks appear/);
+    assert.match(prompt, /Never merge facts from one labeled object into another/);
+    assert.match(prompt, /Preserve realistic plan marks as-is/);
+    assert.match(prompt, /schedule and compact-notation reading rules/);
+    assert.match(prompt, /floor \/ roof spacing-axis dimension rules/);
     assert.match(prompt, /"subjectKey": "W-002"/);
     assert.match(prompt, /construction-brain-context/);
   });

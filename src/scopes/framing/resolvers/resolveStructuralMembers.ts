@@ -1,21 +1,41 @@
 import type { Evidence } from "../../../core/schemas/evidence.schema.js";
-import type { EvidenceId, ObjectId } from "../../../core/schemas/identity.schema.js";
+import type {
+  EvidenceId,
+  ObjectId,
+  ReviewItemId,
+} from "../../../core/schemas/identity.schema.js";
 import type {
   PropertyResolutionTrace,
   ResolutionMethod,
 } from "../../../core/schemas/resolved-object.schema.js";
+import type { ReviewItem } from "../../../core/schemas/review-item.schema.js";
 import type { Completion } from "../../../core/schemas/status.schema.js";
+import type { UserDecision } from "../../../core/schemas/user-decision.schema.js";
 import {
   structuralMembersPayloadSchema,
   type StructuralMembersPayload,
 } from "../schemas/framing-artifacts.schema.js";
 import type { StructuralMember } from "../schemas/structural-member.schema.js";
+import {
+  buildUserDecisionIndex,
+  createUserOverrideTrace,
+  filterUserDecisionsForPropertyPaths,
+  findAppliedUserDecision,
+  type SubjectBinding,
+  type UserDecisionIndex,
+} from "./applyUserDecisions.js";
 import { createStructuralMemberObjectId } from "./ids.js";
 import {
+  isStructuralMemberPropertyPath,
   normalizeStructuralMemberCandidate,
   STRUCTURAL_MEMBER_PROPERTY_PATHS,
   type StructuralMemberPropertyPath,
 } from "./structuralMemberPropertyPaths.js";
+
+export type ResolveStructuralMembersOptions = {
+  userDecisions?: readonly UserDecision[];
+  reviewItemsById?: ReadonlyMap<ReviewItemId, ReviewItem>;
+};
 
 type CandidateDecision =
   | { kind: "missing" }
@@ -150,6 +170,35 @@ function tracesForDecision(
   return [];
 }
 
+function resolvePropertyAuthority(
+  propertyPath: StructuralMemberPropertyPath,
+  records: readonly Evidence[],
+  objectId: ObjectId,
+  userDecisionIndex: UserDecisionIndex,
+): { decision: CandidateDecision; traces: PropertyResolutionTrace[] } {
+  const applied = findAppliedUserDecision(
+    userDecisionIndex,
+    objectId,
+    propertyPath,
+  );
+  if (applied) {
+    return {
+      decision: {
+        kind: "resolved",
+        value: applied.value as string | number,
+        evidenceIds: applied.acceptedEvidenceIds,
+      },
+      traces: [createUserOverrideTrace(applied)],
+    };
+  }
+
+  const decision = selectCandidate(records, propertyPath);
+  return {
+    decision,
+    traces: tracesForDecision(propertyPath, decision, records),
+  };
+}
+
 function createCompletion(resolvedCount: number, totalCount: number): Completion {
   const percentage = totalCount === 0 ? 0 : (resolvedCount / totalCount) * 100;
   const status =
@@ -218,18 +267,18 @@ function groupBySubjectKey(evidence: readonly Evidence[]): Map<string, Evidence[
 function resolveOneMember(
   subjectKey: string,
   records: readonly Evidence[],
+  userDecisionIndex: UserDecisionIndex,
 ): StructuralMember {
   const memberId = createStructuralMemberObjectId(subjectKey);
   const propertyResults = Object.fromEntries(
     STRUCTURAL_MEMBER_PROPERTY_PATHS.map((propertyPath) => {
-      const decision = selectCandidate(records, propertyPath);
-      return [
+      const result = resolvePropertyAuthority(
         propertyPath,
-        {
-          decision,
-          traces: tracesForDecision(propertyPath, decision, records),
-        },
-      ];
+        records,
+        memberId,
+        userDecisionIndex,
+      );
+      return [propertyPath, result];
     }),
   ) as Record<
     StructuralMemberPropertyPath,
@@ -260,10 +309,13 @@ function resolveOneMember(
     lengthFeet: resolvedNumberValue(decisions.lengthFeet, null),
     quantity: resolvedNumberValue(decisions.quantity, null),
     location: resolvedStringValue(decisions.location, null),
-    plyCount: null,
+    plyCount: resolvedNumberValue(decisions.plyCount, null),
   };
 
-  const resolvedCount = STRUCTURAL_MEMBER_PROPERTY_PATHS.filter((propertyPath) => {
+  const completionPaths = STRUCTURAL_MEMBER_PROPERTY_PATHS.filter(
+    (propertyPath) => propertyPath !== "plyCount",
+  );
+  const resolvedCount = completionPaths.filter((propertyPath) => {
     const value = values[propertyPath];
     return isResolvedPropertyValue(propertyPath, value);
   }).length;
@@ -271,10 +323,7 @@ function resolveOneMember(
   return {
     id: memberId,
     objectType: "structural-member",
-    completion: createCompletion(
-      resolvedCount,
-      STRUCTURAL_MEMBER_PROPERTY_PATHS.length,
-    ),
+    completion: createCompletion(resolvedCount, completionPaths.length),
     reviewStatus: "no-review-required",
     blockingStatus: "not-blocked",
     evidenceIds: uniqueSortedIds(records.map((record) => record.id)),
@@ -326,12 +375,15 @@ function assertNoObjectIdCollisions(identities: readonly ResolvedSubjectIdentity
  * independently into one Structural Member, and fails deterministically when
  * distinct subjectKeys sanitize to the same ObjectId.
  *
- * Missing or conflicted properties are represented as null with traces only
- * when evidenced conflicts exist. Validation owns downstream calculation
- * blocking; partially unresolved members are always preserved.
+ * Optional User Decisions may resolve missing or conflicted scalar properties
+ * before Evidence candidate selection. Missing or conflicted properties are
+ * represented as null with traces only when evidenced conflicts exist.
+ * Validation owns downstream calculation blocking; partially unresolved
+ * members are always preserved.
  */
 export function resolveStructuralMembers(
   evidence: readonly Evidence[],
+  options?: ResolveStructuralMembersOptions,
 ): StructuralMembersPayload {
   const groups = groupBySubjectKey(evidence);
   const subjectKeys = [...groups.keys()].sort(compareIds);
@@ -346,9 +398,70 @@ export function resolveStructuralMembers(
   }));
   assertNoObjectIdCollisions(identities);
 
+  const userDecisionIndex = buildStructuralMemberUserDecisionContext(
+    evidence,
+    identities,
+    options,
+  );
+
   const structuralMembers = subjectKeys.map((subjectKey) =>
-    resolveOneMember(subjectKey, groups.get(subjectKey) ?? []),
+    resolveOneMember(
+      subjectKey,
+      groups.get(subjectKey) ?? [],
+      userDecisionIndex,
+    ),
   );
 
   return structuralMembersPayloadSchema.parse({ structuralMembers });
+}
+
+function buildEvidenceById(
+  evidence: readonly Evidence[],
+): ReadonlyMap<EvidenceId, Evidence> {
+  return new Map(evidence.map((record) => [record.id, record]));
+}
+
+function buildStructuralMemberSubjectBindingByObjectId(
+  identities: readonly ResolvedSubjectIdentity[],
+): Map<ObjectId, SubjectBinding> {
+  const bindings = new Map<ObjectId, SubjectBinding>();
+
+  for (const identity of identities) {
+    bindings.set(identity.memberId, {
+      subjectKey: identity.subjectKey,
+      subjectKind: "structural-member",
+    });
+  }
+
+  return bindings;
+}
+
+function buildStructuralMemberUserDecisionContext(
+  evidence: readonly Evidence[],
+  identities: readonly ResolvedSubjectIdentity[],
+  options?: ResolveStructuralMembersOptions,
+): UserDecisionIndex {
+  const userDecisions = options?.userDecisions ?? [];
+  if (userDecisions.length === 0) {
+    return new Map();
+  }
+
+  if (!options?.reviewItemsById) {
+    throw new Error(
+      "resolveStructuralMembers requires reviewItemsById when userDecisions are supplied.",
+    );
+  }
+
+  return buildUserDecisionIndex(
+    filterUserDecisionsForPropertyPaths(
+      {
+        userDecisions,
+        reviewItemsById: options.reviewItemsById,
+        evidenceById: buildEvidenceById(evidence),
+      },
+      isStructuralMemberPropertyPath,
+      new Set(buildStructuralMemberSubjectBindingByObjectId(identities).keys()),
+    ),
+    buildStructuralMemberSubjectBindingByObjectId(identities),
+  );
 }

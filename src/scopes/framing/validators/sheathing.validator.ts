@@ -231,17 +231,19 @@ function validateApplicationResolved(system: SheathingSystem): ValidationBatch {
     );
   }
 
+  // Brain: application classifies material and does not change SF arithmetic.
+  // Area quantity remains calculable; material-line emission stays blocked.
   const quantityImpacts = [
     {
       quantityKey: SHEATHING_QUANTITY_KEYS.material,
       description:
-        "Sheathing material takeoff requires a resolved wall, floor, or roof application.",
+        "Sheathing material-line emission requires a resolved wall, floor, or roof application.",
       canCalculate: false,
     },
     {
       quantityKey: SHEATHING_QUANTITY_KEYS.area,
       description:
-        "Sheathing area may still be calculated without an application classification.",
+        "Coverage square footage arithmetic may proceed from resolved areaSquareFeet without application; material identity remains incomplete.",
       canCalculate: true,
     },
   ];

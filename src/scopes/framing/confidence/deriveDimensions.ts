@@ -195,9 +195,15 @@ export function quantityImpactWeightForObjectType(
   switch (objectType) {
     case "building-wall":
     case "structural-member":
+    case "floor-framing-area":
+    case "roof-plane":
+    case "sheathing-area":
       return "high";
     case "wall-segment":
     case "opening":
+    case "floor-framing-system":
+    case "roof-framing-system":
+    case "sheathing-system":
       return "medium";
     default:
       return "low";

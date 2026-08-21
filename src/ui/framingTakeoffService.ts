@@ -17,7 +17,11 @@ import {
 } from "../core/utils/ids.js";
 import { indexPlan } from "../plans/indexPlan.js";
 import type { FramingTakeoff } from "../scopes/framing/schemas/framing-takeoff.schema.js";
-import { validationArtifactSchema } from "../scopes/framing/schemas/framing-artifacts.schema.js";
+import {
+  extractedFramingEvidenceArtifactSchema,
+  validationArtifactSchema,
+} from "../scopes/framing/schemas/framing-artifacts.schema.js";
+import { buildEvidenceReplayInput } from "../scopes/framing/stages/buildEvidenceReplayInput.js";
 import {
   createUserDecisionArtifact,
 } from "./createUserDecisionArtifact.js";
@@ -224,6 +228,11 @@ export class FramingTakeoffService {
     await mkdir(run2ArtifactRoot, { recursive: true });
 
     const planIndex = await indexPlan(session.pdfPath);
+    const run1EvidenceArtifact = extractedFramingEvidenceArtifactSchema.parse(
+      await run1Store.read(
+        stageByName(session.run1.result, "extractedEvidence").artifactPath,
+      ),
+    );
     const runner = new PipelineRunner(new ArtifactStore(run2ArtifactRoot));
     const run2Result = await runner.run({
       projectId: session.projectId,
@@ -236,6 +245,10 @@ export class FramingTakeoffService {
         userDecisions: [loadedDecisionArtifact.payload as UserDecision],
         reviewItemsById,
         inputArtifactIds: [loadedDecisionArtifact.artifactId],
+        evidenceReplay: buildEvidenceReplayInput({
+          extractedEvidenceArtifact: run1EvidenceArtifact,
+          planIndex,
+        }),
       },
     });
 

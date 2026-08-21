@@ -8,6 +8,7 @@ import type {
 import type { ArtifactId } from "../../../core/schemas/identity.schema.js";
 import { evidenceIdSchema, type PipelineRunId } from "../../../core/schemas/identity.schema.js";
 import { generateArtifactId } from "../../../core/utils/ids.js";
+import { computePlanSourceFingerprint } from "../../../plans/computePlanSourceFingerprint.js";
 import { extractFramingEvidenceViaClaude } from "../prompts/extractFramingEvidence.js";
 import {
   buildingAssembliesArtifactSchema,
@@ -50,6 +51,10 @@ import { resolveRoofFraming } from "../resolvers/resolveRoofFraming.js";
 import { resolveSheathing } from "../resolvers/resolveSheathing.js";
 import { isOpeningPropertyPath } from "../resolvers/openingPropertyPaths.js";
 import { isWallFramingPropertyPath } from "../resolvers/wallFramingPropertyPaths.js";
+import { isFloorFramingUserDecisionPropertyPath } from "../resolvers/floorFramingPropertyPaths.js";
+import { isRoofFramingUserDecisionPropertyPath } from "../resolvers/roofFramingPropertyPaths.js";
+import { isSheathingUserDecisionPropertyPath } from "../resolvers/sheathingPropertyPaths.js";
+import { isStructuralMemberPropertyPath } from "../resolvers/structuralMemberPropertyPaths.js";
 import { applyWallOpeningBacklinks } from "../resolvers/applyWallOpeningBacklinks.js";
 import {
   linkOpeningHeaderRelationships,
@@ -485,6 +490,42 @@ const stages: PipelineStage[] = [
     order: 5,
     name: "extractedEvidence",
     async run(context) {
+      const evidenceReplay = context.userDecisionRunInput?.evidenceReplay;
+      if (evidenceReplay) {
+        const currentFingerprint = computePlanSourceFingerprint(context.planIndex);
+        if (currentFingerprint !== evidenceReplay.sourcePlanFingerprint) {
+          throw new Error(
+            "extractedEvidence: cannot replay Run-1 Evidence because the source plan fingerprint changed. Re-extract explicitly or supply Evidence for the current plan set.",
+          );
+        }
+
+        if (evidenceReplay.artifact.artifactType !== "extracted-framing-evidence") {
+          throw new Error(
+            `extractedEvidence: evidenceReplay.artifact must be artifactType extracted-framing-evidence, got ${evidenceReplay.artifact.artifactType}.`,
+          );
+        }
+
+        const payload = extractedFramingEvidencePayloadSchema.parse(
+          structuredClone(evidenceReplay.artifact.payload),
+        );
+
+        return createFramingStageArtifact(
+          context,
+          5,
+          extractedFramingEvidenceArtifactSchema,
+          "extracted-framing-evidence",
+          payload,
+          {
+            type: "system",
+            identifier: "extractedEvidence-replay",
+          },
+          [
+            evidenceReplay.artifact.artifactId,
+            ...(context.userDecisionRunInput?.inputArtifactIds ?? []),
+          ],
+        );
+      }
+
       const payload = context.useMockAi
         ? buildMockExtractedEvidence(context)
         : await extractFramingEvidenceViaClaude({
@@ -608,7 +649,15 @@ const stages: PipelineStage[] = [
         "extractedEvidence",
       );
       const openingsPayload = getPayload<OpeningsPayload>(context, "openings");
-      const scalarPayload = resolveStructuralMembers(extracted.evidence);
+      const userDecisionRunInput = context.userDecisionRunInput;
+      const scalarPayload = resolveStructuralMembers(extracted.evidence, {
+        ...(userDecisionRunInput
+          ? {
+              userDecisions: userDecisionRunInput.userDecisions,
+              reviewItemsById: userDecisionRunInput.reviewItemsById,
+            }
+          : {}),
+      });
       const linked = linkOpeningHeaderRelationships(
         extracted.evidence,
         openingsPayload,
@@ -622,6 +671,10 @@ const stages: PipelineStage[] = [
         "structural-members",
         scalarPayload,
         { type: "system", identifier: "framing-pipeline" },
+        userDecisionInputArtifactIds(
+          userDecisionRunInput,
+          isStructuralMemberPropertyPath,
+        ),
       );
 
       const sourceOpeningsArtifact = context.completedArtifacts.get("openings");
@@ -678,7 +731,15 @@ const stages: PipelineStage[] = [
         context,
         "extractedEvidence",
       );
-      const payload = resolveSheathing(extracted.evidence);
+      const userDecisionRunInput = context.userDecisionRunInput;
+      const payload = resolveSheathing(extracted.evidence, {
+        ...(userDecisionRunInput
+          ? {
+              userDecisions: userDecisionRunInput.userDecisions,
+              reviewItemsById: userDecisionRunInput.reviewItemsById,
+            }
+          : {}),
+      });
 
       return createFramingStageArtifact(
         context,
@@ -687,6 +748,10 @@ const stages: PipelineStage[] = [
         "sheathing",
         payload,
         { type: "system", identifier: "framing-pipeline" },
+        userDecisionInputArtifactIds(
+          userDecisionRunInput,
+          isSheathingUserDecisionPropertyPath,
+        ),
       );
     },
   },
@@ -698,7 +763,15 @@ const stages: PipelineStage[] = [
         context,
         "extractedEvidence",
       );
-      const payload = resolveFloorFraming(extracted.evidence);
+      const userDecisionRunInput = context.userDecisionRunInput;
+      const payload = resolveFloorFraming(extracted.evidence, {
+        ...(userDecisionRunInput
+          ? {
+              userDecisions: userDecisionRunInput.userDecisions,
+              reviewItemsById: userDecisionRunInput.reviewItemsById,
+            }
+          : {}),
+      });
 
       return createFramingStageArtifact(
         context,
@@ -707,6 +780,10 @@ const stages: PipelineStage[] = [
         "floor-framing",
         payload,
         { type: "system", identifier: "framing-pipeline" },
+        userDecisionInputArtifactIds(
+          userDecisionRunInput,
+          isFloorFramingUserDecisionPropertyPath,
+        ),
       );
     },
   },
@@ -718,7 +795,15 @@ const stages: PipelineStage[] = [
         context,
         "extractedEvidence",
       );
-      const payload = resolveRoofFraming(extracted.evidence);
+      const userDecisionRunInput = context.userDecisionRunInput;
+      const payload = resolveRoofFraming(extracted.evidence, {
+        ...(userDecisionRunInput
+          ? {
+              userDecisions: userDecisionRunInput.userDecisions,
+              reviewItemsById: userDecisionRunInput.reviewItemsById,
+            }
+          : {}),
+      });
 
       return createFramingStageArtifact(
         context,
@@ -727,6 +812,10 @@ const stages: PipelineStage[] = [
         "roof-framing",
         payload,
         { type: "system", identifier: "framing-pipeline" },
+        userDecisionInputArtifactIds(
+          userDecisionRunInput,
+          isRoofFramingUserDecisionPropertyPath,
+        ),
       );
     },
   },

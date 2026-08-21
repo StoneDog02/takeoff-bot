@@ -37,7 +37,11 @@ export function withInjectedEvidence(
   }
 
   return replaceStage(stages, "extractedEvidence", async (context) => {
-    await original.run(context);
+    // Ordinary User Decision Run-2: delegate to production Evidence replay.
+    if (context.userDecisionRunInput?.evidenceReplay) {
+      return original.run(context);
+    }
+
     return createFramingStageArtifact(
       context,
       5,

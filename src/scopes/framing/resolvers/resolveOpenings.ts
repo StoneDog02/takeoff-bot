@@ -7,6 +7,7 @@ import {
   createUserOverrideTrace,
   filterUserDecisionsForPropertyPaths,
   findAppliedUserDecision,
+  type SubjectBinding,
   type UserDecisionIndex,
 } from "./applyUserDecisions.js";
 import type {
@@ -382,16 +383,19 @@ function buildEvidenceById(
   return new Map(evidence.map((record) => [record.id, record]));
 }
 
-function buildOpeningSubjectKeyByObjectId(
+function buildOpeningSubjectBindingByObjectId(
   subjectKeys: readonly string[],
-): Map<ObjectId, string> {
-  const subjectKeyByObjectId = new Map<ObjectId, string>();
+): Map<ObjectId, SubjectBinding> {
+  const subjectBindingByObjectId = new Map<ObjectId, SubjectBinding>();
 
   for (const subjectKey of subjectKeys) {
-    subjectKeyByObjectId.set(createOpeningObjectId(subjectKey), subjectKey);
+    subjectBindingByObjectId.set(createOpeningObjectId(subjectKey), {
+      subjectKey,
+      subjectKind: "opening",
+    });
   }
 
-  return subjectKeyByObjectId;
+  return subjectBindingByObjectId;
 }
 
 function buildUserDecisionContext(
@@ -418,8 +422,9 @@ function buildUserDecisionContext(
         evidenceById: buildEvidenceById(evidence),
       },
       isOpeningPropertyPath,
+      new Set(buildOpeningSubjectBindingByObjectId(subjectKeys).keys()),
     ),
-    buildOpeningSubjectKeyByObjectId(subjectKeys),
+    buildOpeningSubjectBindingByObjectId(subjectKeys),
   );
 }
 

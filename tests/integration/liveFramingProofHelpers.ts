@@ -27,6 +27,10 @@ import {
   STRUCTURAL_MEMBER_QUANTITY_KEYS,
   WALL_QUANTITY_KEYS,
 } from "../../src/scopes/framing/validators/rule-ids.js";
+import {
+  isPlanTextGrounded,
+  normalizePlanText,
+} from "../helpers/planTextNormalize.js";
 
 export const WALL_FRAMING_OPENING_LINKS_COMPANION_SUFFIX = "wall-framing-links";
 export const OPENINGS_HEADER_LINKS_COMPANION_SUFFIX = "openings-header-links";
@@ -41,30 +45,14 @@ export function materialLineItemId(
 }
 
 export function normalize(value: string): string {
-  return value.toLowerCase().replace(/\s+/g, " ").trim();
+  return normalizePlanText(value);
 }
 
 export function isGroundedInPageText(
   originalText: string | null,
   pageText: string,
 ): boolean {
-  if (!originalText) {
-    return false;
-  }
-
-  const haystack = normalize(pageText);
-  const needle = normalize(originalText);
-  if (haystack.includes(needle)) {
-    return true;
-  }
-
-  const tokens = needle
-    .split(" ")
-    .map((token) => token.replace(/[^a-z0-9.x-]/g, ""))
-    .filter((token) => token.length >= 2)
-    .filter((token) => !["the", "and", "at", "of", "for", "in"].includes(token));
-
-  return tokens.length > 0 && tokens.every((token) => haystack.includes(token));
+  return isPlanTextGrounded(originalText, pageText);
 }
 
 export function hasCandidate(

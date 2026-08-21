@@ -26,6 +26,22 @@ export type WallPropertyPath = (typeof WALL_PROPERTY_PATHS)[number];
 export type SegmentPropertyPath = (typeof SEGMENT_PROPERTY_PATHS)[number];
 export type WallFramingPropertyPath = WallPropertyPath | SegmentPropertyPath;
 
+function normalizeToken(value: string): string {
+  return value.trim().toLowerCase().replaceAll(/\s+/g, "-");
+}
+
+/**
+ * Wood-stud wall construction class from wallType alone.
+ * Opening framing eligibility uses this identity (plus material checks).
+ */
+export function isWoodStudWallType(wallType: string): boolean {
+  const token = normalizeToken(wallType);
+  if (token.includes("metal")) {
+    return false;
+  }
+  return token.includes("wood") && token.includes("stud");
+}
+
 function isPositiveNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }

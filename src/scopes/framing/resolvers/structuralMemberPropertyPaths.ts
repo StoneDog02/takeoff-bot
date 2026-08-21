@@ -11,6 +11,7 @@ export const STRUCTURAL_MEMBER_PROPERTY_PATHS = [
   "lengthFeet",
   "quantity",
   "location",
+  "plyCount",
 ] as const;
 
 export const STRUCTURAL_MEMBER_RELATIONSHIP_PROPERTY_PATHS = [
@@ -69,6 +70,7 @@ export function normalizeStructuralMemberCandidate(
     case "lengthFeet":
       return isPositiveNumber(candidateValue) ? candidateValue : undefined;
     case "quantity":
+    case "plyCount":
       return isPositiveInteger(candidateValue) ? candidateValue : undefined;
   }
 }

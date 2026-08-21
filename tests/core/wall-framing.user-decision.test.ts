@@ -519,9 +519,11 @@ describe("wall framing user decision resolution", () => {
     );
   });
 
-  it("rejects unsupported decision result types", () => {
+  it("accepts value-provided decisions for wall provide-value Review Items", () => {
     const runOne = runOneConflictState();
     const reviewItem = ws002LengthReviewItem(runOne.validation);
+    assert.equal(reviewItem.action.type, "provide-value");
+
     const decision = {
       ...conflictResolvedDecision(reviewItem),
       result: {
@@ -531,14 +533,19 @@ describe("wall framing user decision resolution", () => {
       },
     };
 
-    assert.throws(
-      () =>
-        resolveWallFraming(runOne.evidence, {
-          userDecisions: [decision],
-          reviewItemsById: new Map([[reviewItem.id, reviewItem]]),
-        }),
-      /unsupported result type "value-provided"/,
+    const wallFraming = resolveWallFraming(runOne.evidence, {
+      userDecisions: [decision],
+      reviewItemsById: new Map([[reviewItem.id, reviewItem]]),
+    });
+    const segment002 = wallFraming.segments.find(
+      (segment) => segment.id === "WS-002",
     );
+    assert.equal(segment002?.lengthFeet, 14);
+    const lengthTrace = segment002?.resolutionTraces.find(
+      (trace) => trace.propertyPath === "lengthFeet",
+    );
+    assert.equal(lengthTrace?.method, "user-override");
+    assert.deepEqual(lengthTrace?.userDecisionIds, [decision.id]);
   });
 
   it("rejects stale accepted Evidence when the current input no longer contains it", () => {

@@ -46,6 +46,27 @@ function normalizeToken(value: string): string {
   return value.trim().toLowerCase().replaceAll(/\s+/g, "-");
 }
 
+/**
+ * I-joist material class for floor joist type strings.
+ * Matches the I-joist branch of simple-area joist LF eligibility.
+ */
+export function isIJoistType(joistType: string): boolean {
+  const token = normalizeToken(joistType);
+  if (
+    token.includes("truss") ||
+    token.includes("metal") ||
+    token.includes("steel")
+  ) {
+    return false;
+  }
+
+  return (
+    token === "i-joist" ||
+    token === "ijoist" ||
+    token.includes("i-joist")
+  );
+}
+
 export function isFloorSystemPropertyPath(
   propertyPath: string,
 ): propertyPath is FloorSystemPropertyPath {
@@ -71,6 +92,15 @@ export function isFloorFramingPropertyPath(propertyPath: string): boolean {
     isFloorSystemPropertyPath(propertyPath) ||
     isFloorAreaPropertyPath(propertyPath) ||
     isFloorAreaRelationshipPropertyPath(propertyPath)
+  );
+}
+
+/** Scalar Floor properties eligible for User Decision resolution (not relationship tags). */
+export function isFloorFramingUserDecisionPropertyPath(
+  propertyPath: string,
+): boolean {
+  return (
+    isFloorSystemPropertyPath(propertyPath) || isFloorAreaPropertyPath(propertyPath)
   );
 }
 

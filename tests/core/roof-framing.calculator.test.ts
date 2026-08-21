@@ -126,6 +126,8 @@ describe("isStickCommonRafterFramingType", () => {
   it("allows stick rafter classifications", () => {
     assert.equal(isStickCommonRafterFramingType("rafter"), true);
     assert.equal(isStickCommonRafterFramingType("common-rafter"), true);
+    assert.equal(isStickCommonRafterFramingType("stick"), true);
+    assert.equal(isStickCommonRafterFramingType("STICK FRAMED"), true);
   });
 
   it("rejects truss classifications", () => {

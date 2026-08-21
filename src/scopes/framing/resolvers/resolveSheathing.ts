@@ -1,10 +1,16 @@
 import type { Evidence } from "../../../core/schemas/evidence.schema.js";
-import type { EvidenceId, ObjectId } from "../../../core/schemas/identity.schema.js";
+import type {
+  EvidenceId,
+  ObjectId,
+  ReviewItemId,
+} from "../../../core/schemas/identity.schema.js";
 import type {
   PropertyResolutionTrace,
   ResolutionMethod,
 } from "../../../core/schemas/resolved-object.schema.js";
+import type { ReviewItem } from "../../../core/schemas/review-item.schema.js";
 import type { Completion } from "../../../core/schemas/status.schema.js";
+import type { UserDecision } from "../../../core/schemas/user-decision.schema.js";
 import {
   sheathingPayloadSchema,
   type SheathingPayload,
@@ -16,6 +22,15 @@ import type {
   SheathingSystem,
 } from "../schemas/sheathing.schema.js";
 import {
+  buildUserDecisionIndex,
+  createUserOverrideTrace,
+  filterUserDecisionsForPropertyPaths,
+  findAppliedUserDecision,
+  type SubjectBinding,
+  type UserDecisionIndex,
+  type UserDecisionPropertyPath,
+} from "./applyUserDecisions.js";
+import {
   createOpeningObjectId,
   createSheathingAreaObjectId,
   createSheathingSystemObjectId,
@@ -24,16 +39,21 @@ import {
 import {
   isResolvedSheathingAreaPropertyValue,
   isResolvedSheathingSystemPropertyValue,
+  isSheathingUserDecisionPropertyPath,
   normalizeSheathingAreaCandidate,
   normalizeSheathingAreaRelationshipCandidate,
   normalizeSheathingSystemCandidate,
   SHEATHING_AREA_PROPERTY_PATHS,
-  SHEATHING_AREA_RELATIONSHIP_PROPERTY_PATHS,
   SHEATHING_SYSTEM_PROPERTY_PATHS,
   type SheathingAreaPropertyPath,
   type SheathingAreaRelationshipPropertyPath,
   type SheathingSystemPropertyPath,
 } from "./sheathingPropertyPaths.js";
+
+export type ResolveSheathingOptions = {
+  userDecisions?: readonly UserDecision[];
+  reviewItemsById?: ReadonlyMap<ReviewItemId, ReviewItem>;
+};
 
 type CandidateDecision =
   | { kind: "missing" }
@@ -169,6 +189,39 @@ function tracesForDecision(
   return [];
 }
 
+function resolvePropertyAuthority(
+  propertyPath: SheathingSystemPropertyPath | SheathingAreaPropertyPath,
+  records: readonly Evidence[],
+  objectId: ObjectId,
+  userDecisionIndex: UserDecisionIndex,
+  normalize: (
+    path: string,
+    candidateValue: Evidence["candidateValue"],
+  ) => string | number | undefined,
+): { decision: CandidateDecision; traces: PropertyResolutionTrace[] } {
+  const applied = findAppliedUserDecision(
+    userDecisionIndex,
+    objectId,
+    propertyPath as UserDecisionPropertyPath,
+  );
+  if (applied) {
+    return {
+      decision: {
+        kind: "resolved",
+        value: applied.value as string | number,
+        evidenceIds: applied.acceptedEvidenceIds,
+      },
+      traces: [createUserOverrideTrace(applied)],
+    };
+  }
+
+  const decision = selectCandidate(records, propertyPath, normalize);
+  return {
+    decision,
+    traces: tracesForDecision(propertyPath, decision, records),
+  };
+}
+
 function createCompletion(resolvedCount: number, totalCount: number): Completion {
   const percentage = totalCount === 0 ? 0 : (resolvedCount / totalCount) * 100;
   const status =
@@ -265,26 +318,23 @@ function collectRelationshipTags(
 function resolveOneSystem(
   subjectKey: string,
   records: readonly Evidence[],
+  userDecisionIndex: UserDecisionIndex,
 ): SheathingSystem {
   const systemId = createSheathingSystemObjectId(subjectKey);
   const propertyResults = Object.fromEntries(
     SHEATHING_SYSTEM_PROPERTY_PATHS.map((propertyPath) => {
-      const decision = selectCandidate(
-        records,
+      const result = resolvePropertyAuthority(
         propertyPath,
+        records,
+        systemId,
+        userDecisionIndex,
         (path, candidateValue) =>
           normalizeSheathingSystemCandidate(
             path as SheathingSystemPropertyPath,
             candidateValue,
           ),
       );
-      return [
-        propertyPath,
-        {
-          decision,
-          traces: tracesForDecision(propertyPath, decision, records),
-        },
-      ];
+      return [propertyPath, result];
     }),
   ) as Record<
     SheathingSystemPropertyPath,
@@ -383,26 +433,23 @@ function resolveOneSystem(
 function resolveOneArea(
   subjectKey: string,
   records: readonly Evidence[],
+  userDecisionIndex: UserDecisionIndex,
 ): SheathingArea {
   const areaId = createSheathingAreaObjectId(subjectKey);
   const propertyResults = Object.fromEntries(
     SHEATHING_AREA_PROPERTY_PATHS.map((propertyPath) => {
-      const decision = selectCandidate(
-        records,
+      const result = resolvePropertyAuthority(
         propertyPath,
+        records,
+        areaId,
+        userDecisionIndex,
         (path, candidateValue) =>
           normalizeSheathingAreaCandidate(
             path as SheathingAreaPropertyPath,
             candidateValue,
           ),
       );
-      return [
-        propertyPath,
-        {
-          decision,
-          traces: tracesForDecision(propertyPath, decision, records),
-        },
-      ];
+      return [propertyPath, result];
     }),
   ) as Record<
     SheathingAreaPropertyPath,
@@ -555,9 +602,13 @@ function linkSystemAreaIds(
  *
  * Groups Evidence by subjectKind + subjectKey, resolves systems and areas
  * independently, links parent/child relationships, and preserves partial
- * objects when inputs are missing or conflicted.
+ * objects when inputs are missing or conflicted. Optional User Decisions may
+ * resolve missing or conflicted scalar properties before Evidence selection.
  */
-export function resolveSheathing(evidence: readonly Evidence[]): SheathingPayload {
+export function resolveSheathing(
+  evidence: readonly Evidence[],
+  options?: ResolveSheathingOptions,
+): SheathingPayload {
   const systemGroups = groupBySubjectKind(evidence, "sheathing-system");
   const areaGroups = groupBySubjectKind(evidence, "sheathing-area");
 
@@ -579,15 +630,91 @@ export function resolveSheathing(evidence: readonly Evidence[]): SheathingPayloa
 
   assertNoObjectIdCollisions([...systemIdentities, ...areaIdentities]);
 
+  const userDecisionIndex = buildSheathingUserDecisionContext(
+    evidence,
+    systemIdentities,
+    areaIdentities,
+    options,
+  );
+
   const systems = systemIdentities.map(({ subjectKey }) =>
-    resolveOneSystem(subjectKey, systemGroups.get(subjectKey)!),
+    resolveOneSystem(
+      subjectKey,
+      systemGroups.get(subjectKey)!,
+      userDecisionIndex,
+    ),
   );
   const areas = areaIdentities.map(({ subjectKey }) =>
-    resolveOneArea(subjectKey, areaGroups.get(subjectKey)!),
+    resolveOneArea(subjectKey, areaGroups.get(subjectKey)!, userDecisionIndex),
   );
 
   return sheathingPayloadSchema.parse({
     systems: linkSystemAreaIds(systems, areas),
     areas,
   });
+}
+
+function buildEvidenceById(
+  evidence: readonly Evidence[],
+): ReadonlyMap<EvidenceId, Evidence> {
+  return new Map(evidence.map((record) => [record.id, record]));
+}
+
+function buildSheathingSubjectBindingByObjectId(
+  systemIdentities: readonly ResolvedSubjectIdentity[],
+  areaIdentities: readonly ResolvedSubjectIdentity[],
+): Map<ObjectId, SubjectBinding> {
+  const bindings = new Map<ObjectId, SubjectBinding>();
+
+  for (const identity of systemIdentities) {
+    bindings.set(identity.objectId, {
+      subjectKey: identity.subjectKey,
+      subjectKind: "sheathing-system",
+    });
+  }
+
+  for (const identity of areaIdentities) {
+    bindings.set(identity.objectId, {
+      subjectKey: identity.subjectKey,
+      subjectKind: "sheathing-area",
+    });
+  }
+
+  return bindings;
+}
+
+function buildSheathingUserDecisionContext(
+  evidence: readonly Evidence[],
+  systemIdentities: readonly ResolvedSubjectIdentity[],
+  areaIdentities: readonly ResolvedSubjectIdentity[],
+  options?: ResolveSheathingOptions,
+): UserDecisionIndex {
+  const userDecisions = options?.userDecisions ?? [];
+  if (userDecisions.length === 0) {
+    return new Map();
+  }
+
+  if (!options?.reviewItemsById) {
+    throw new Error(
+      "resolveSheathing requires reviewItemsById when userDecisions are supplied.",
+    );
+  }
+
+  return buildUserDecisionIndex(
+    filterUserDecisionsForPropertyPaths(
+      {
+        userDecisions,
+        reviewItemsById: options.reviewItemsById,
+        evidenceById: buildEvidenceById(evidence),
+      },
+      isSheathingUserDecisionPropertyPath,
+      new Set(
+        buildSheathingSubjectBindingByObjectId(
+          systemIdentities,
+          areaIdentities,
+        ).keys(),
+      ),
+    ),
+    buildSheathingSubjectBindingByObjectId(systemIdentities, areaIdentities),
+  );
 }

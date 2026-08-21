@@ -1,0 +1,2048 @@
+{
+  "evidence": [
+    {
+      "id": "E-W1-WALLTYPE",
+      "type": "tag",
+      "relationship": "supports",
+      "description": "Wall identified as wood stud wall.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "W1 EXT BEARING WALL WOOD STUD",
+      "references": [],
+      "subjectKind": "wall",
+      "subjectKey": "W1",
+      "propertyPath": "wallType",
+      "candidateValue": "wood stud wall"
+    },
+    {
+      "id": "E-W1-BEARING",
+      "type": "tag",
+      "relationship": "supports",
+      "description": "Wall labeled bearing wall.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "W1 EXT BEARING WALL WOOD STUD",
+      "references": [],
+      "subjectKind": "wall",
+      "subjectKey": "W1",
+      "propertyPath": "bearingStatus",
+      "candidateValue": "bearing"
+    },
+    {
+      "id": "E-W1-LOCATION",
+      "type": "tag",
+      "relationship": "supports",
+      "description": "Wall labeled exterior.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "W1 EXT BEARING WALL WOOD STUD",
+      "references": [],
+      "subjectKind": "wall",
+      "subjectKey": "W1",
+      "propertyPath": "location",
+      "candidateValue": "exterior"
+    },
+    {
+      "id": "E-W1-STUDSIZE",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Stud size callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "2x6 SPF STUDS @ 16\" O.C.",
+      "references": [],
+      "subjectKind": "wall",
+      "subjectKey": "W1",
+      "propertyPath": "assembly.studSize",
+      "candidateValue": "2x6"
+    },
+    {
+      "id": "E-W1-MATERIAL",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Stud material species.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "2x6 SPF STUDS @ 16\" O.C.",
+      "references": [],
+      "subjectKind": "wall",
+      "subjectKey": "W1",
+      "propertyPath": "assembly.material",
+      "candidateValue": "SPF"
+    },
+    {
+      "id": "E-W1-SPACING",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Stud spacing callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "2x6 SPF STUDS @ 16\" O.C.",
+      "references": [],
+      "subjectKind": "wall",
+      "subjectKey": "W1",
+      "propertyPath": "assembly.studSpacingInches",
+      "candidateValue": 16
+    },
+    {
+      "id": "E-W1-HEIGHT",
+      "type": "dimension",
+      "relationship": "supports",
+      "description": "Wall height callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "HT 9'-0\"",
+      "references": [],
+      "subjectKind": "wall",
+      "subjectKey": "W1",
+      "propertyPath": "assembly.heightFeet",
+      "candidateValue": 9
+    },
+    {
+      "id": "E-W1-PLATECOUNT",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Plate count callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "DBL TOP PLATE + SILL 3 PLATES",
+      "references": [],
+      "subjectKind": "wall",
+      "subjectKey": "W1",
+      "propertyPath": "assembly.plateCount",
+      "candidateValue": 3
+    },
+    {
+      "id": "E-W1-LENGTH",
+      "type": "dimension",
+      "relationship": "supports",
+      "description": "Wall length dimension.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "W1 LENGTH 24'-0\"",
+      "references": [],
+      "subjectKind": "wall",
+      "subjectKey": "W1",
+      "propertyPath": "lengthFeet",
+      "candidateValue": 24
+    },
+    {
+      "id": "E-W3-PARENTWALL-P1",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Window located in wall W1.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "WINDOW W3 IN WALL W1 HEADER H2",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "W3",
+      "propertyPath": "parentWallTag",
+      "candidateValue": "W1"
+    },
+    {
+      "id": "E-W3-HEADER-P1",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Window header association.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "WINDOW W3 IN WALL W1 HEADER H2",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "W3",
+      "propertyPath": "headerMemberTag",
+      "candidateValue": "H2"
+    },
+    {
+      "id": "E-H2-SUPPORTEDOPENING-P1",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Header serves window W3.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H2",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "WINDOW W3 IN WALL W1 HEADER H2",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H2",
+      "propertyPath": "supportedOpeningTag",
+      "candidateValue": "W3"
+    },
+    {
+      "id": "E-D04-PARENTWALL-P1",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Door located in wall W1.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "D04",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "DOOR D04 IN WALL W1 HEADER H3",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "D04",
+      "propertyPath": "parentWallTag",
+      "candidateValue": "W1"
+    },
+    {
+      "id": "E-D04-HEADER-P1",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Door header association.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "D04",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "DOOR D04 IN WALL W1 HEADER H3",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "D04",
+      "propertyPath": "headerMemberTag",
+      "candidateValue": "H3"
+    },
+    {
+      "id": "E-H3-SUPPORTEDOPENING-P1",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Header serves door D04.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "DOOR D04 IN WALL W1 HEADER H3",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H3",
+      "propertyPath": "supportedOpeningTag",
+      "candidateValue": "D04"
+    },
+    {
+      "id": "E-FLOORSYSA-NAME",
+      "type": "tag",
+      "relationship": "supports",
+      "description": "Floor framing system tag.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "FLOOR SYS A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "FLOOR SYS A LEVEL 2 NEW",
+      "references": [],
+      "subjectKind": "floor-framing-system",
+      "subjectKey": "FLOOR SYS A",
+      "propertyPath": "name",
+      "candidateValue": "FLOOR SYS A"
+    },
+    {
+      "id": "E-FLOORSYSA-LEVEL",
+      "type": "tag",
+      "relationship": "supports",
+      "description": "Floor system level.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "FLOOR SYS A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "FLOOR SYS A LEVEL 2 NEW",
+      "references": [],
+      "subjectKind": "floor-framing-system",
+      "subjectKey": "FLOOR SYS A",
+      "propertyPath": "level",
+      "candidateValue": "LEVEL 2"
+    },
+    {
+      "id": "E-FLOORSYSA-PHASE",
+      "type": "tag",
+      "relationship": "supports",
+      "description": "Floor system construction phase.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "FLOOR SYS A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "FLOOR SYS A LEVEL 2 NEW",
+      "references": [],
+      "subjectKind": "floor-framing-system",
+      "subjectKey": "FLOOR SYS A",
+      "propertyPath": "constructionPhase",
+      "candidateValue": "NEW"
+    },
+    {
+      "id": "E-FLOORSYSA-JOISTTYPE",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Joist type callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "FLOOR SYS A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "11-7/8\" I-JOISTS @ 16\" O.C.",
+      "references": [],
+      "subjectKind": "floor-framing-system",
+      "subjectKey": "FLOOR SYS A",
+      "propertyPath": "assembly.joistType",
+      "candidateValue": "I-JOISTS"
+    },
+    {
+      "id": "E-FLOORSYSA-JOISTSIZE",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Joist depth callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "FLOOR SYS A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "11-7/8\" I-JOISTS @ 16\" O.C.",
+      "references": [],
+      "subjectKind": "floor-framing-system",
+      "subjectKey": "FLOOR SYS A",
+      "propertyPath": "assembly.joistSize",
+      "candidateValue": "11-7/8\""
+    },
+    {
+      "id": "E-FLOORSYSA-SPACING",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Joist spacing callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "FLOOR SYS A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "11-7/8\" I-JOISTS @ 16\" O.C.",
+      "references": [],
+      "subjectKind": "floor-framing-system",
+      "subjectKey": "FLOOR SYS A",
+      "propertyPath": "assembly.joistSpacingInches",
+      "candidateValue": 16
+    },
+    {
+      "id": "E-BAYA-PARENTSYS",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Bay references floor system.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "BAY A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "BAY A REF FLOOR SYS A",
+      "references": [],
+      "subjectKind": "floor-framing-area",
+      "subjectKey": "BAY A",
+      "propertyPath": "parentSystemTag",
+      "candidateValue": "FLOOR SYS A"
+    },
+    {
+      "id": "E-BAYA-SPANDIR",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Joist span direction.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "BAY A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "SPAN N-S",
+      "references": [],
+      "subjectKind": "floor-framing-area",
+      "subjectKey": "BAY A",
+      "propertyPath": "spanDirection",
+      "candidateValue": "N-S"
+    },
+    {
+      "id": "E-BAYA-LAYOUTLEN",
+      "type": "dimension",
+      "relationship": "supports",
+      "description": "Bay dimension perpendicular to span.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "BAY A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "BAY A = 20'-0\" E-W",
+      "references": [],
+      "subjectKind": "floor-framing-area",
+      "subjectKey": "BAY A",
+      "propertyPath": "joistLayoutLengthFeet",
+      "candidateValue": 20
+    },
+    {
+      "id": "E-BAYA-MEMBERLEN",
+      "type": "dimension",
+      "relationship": "supports",
+      "description": "Joist member length callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 1,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "BAY A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "JOISTS 12'-0\" LONG",
+      "references": [],
+      "subjectKind": "floor-framing-area",
+      "subjectKey": "BAY A",
+      "propertyPath": "joistMemberLengthFeet",
+      "candidateValue": 12
+    },
+    {
+      "id": "E-ROOFSYSA-NAME",
+      "type": "tag",
+      "relationship": "supports",
+      "description": "Roof framing system tag.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 4,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "ROOF SYS A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "ROOF SYS A STICK FRAMED NEW",
+      "references": [],
+      "subjectKind": "roof-framing-system",
+      "subjectKey": "ROOF SYS A",
+      "propertyPath": "name",
+      "candidateValue": "ROOF SYS A"
+    },
+    {
+      "id": "E-ROOFSYSA-FRAMINGTYPE",
+      "type": "tag",
+      "relationship": "supports",
+      "description": "Roof framing type callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 4,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "ROOF SYS A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "ROOF SYS A STICK FRAMED NEW",
+      "references": [],
+      "subjectKind": "roof-framing-system",
+      "subjectKey": "ROOF SYS A",
+      "propertyPath": "assembly.framingType",
+      "candidateValue": "STICK FRAMED"
+    },
+    {
+      "id": "E-ROOFSYSA-PHASE",
+      "type": "tag",
+      "relationship": "supports",
+      "description": "Roof system construction phase.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 4,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "ROOF SYS A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "ROOF SYS A STICK FRAMED NEW",
+      "references": [],
+      "subjectKind": "roof-framing-system",
+      "subjectKey": "ROOF SYS A",
+      "propertyPath": "constructionPhase",
+      "candidateValue": "NEW"
+    },
+    {
+      "id": "E-ROOFSYSA-MEMBERSIZE",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Rafter size callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 4,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "ROOF SYS A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "2x8 DF RAFTERS @ 16\" O.C.",
+      "references": [],
+      "subjectKind": "roof-framing-system",
+      "subjectKey": "ROOF SYS A",
+      "propertyPath": "assembly.memberSize",
+      "candidateValue": "2x8"
+    },
+    {
+      "id": "E-ROOFSYSA-MEMBERSPACING",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Rafter spacing callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 4,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "ROOF SYS A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "2x8 DF RAFTERS @ 16\" O.C.",
+      "references": [],
+      "subjectKind": "roof-framing-system",
+      "subjectKey": "ROOF SYS A",
+      "propertyPath": "assembly.memberSpacingInches",
+      "candidateValue": 16
+    },
+    {
+      "id": "E-GABLEA-PARENTSYS",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Gable references roof system.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 4,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "GABLE A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "GABLE A REF ROOF SYS A",
+      "references": [],
+      "subjectKind": "roof-plane",
+      "subjectKey": "GABLE A",
+      "propertyPath": "parentSystemTag",
+      "candidateValue": "ROOF SYS A"
+    },
+    {
+      "id": "E-GABLEA-SPANDIR",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Rafter span direction.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 4,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "GABLE A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "RAFTERS SPAN N-S",
+      "references": [],
+      "subjectKind": "roof-plane",
+      "subjectKey": "GABLE A",
+      "propertyPath": "spanDirection",
+      "candidateValue": "N-S"
+    },
+    {
+      "id": "E-GABLEA-LAYOUTLEN",
+      "type": "dimension",
+      "relationship": "supports",
+      "description": "Gable length perpendicular to span.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 4,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "GABLE A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "GABLE LENGTH 20'-0\"",
+      "references": [],
+      "subjectKind": "roof-plane",
+      "subjectKey": "GABLE A",
+      "propertyPath": "rafterLayoutLengthFeet",
+      "candidateValue": 20
+    },
+    {
+      "id": "E-W3-CATEGORY",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Opening schedule category.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "W3 WINDOW",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "W3",
+      "propertyPath": "category",
+      "candidateValue": "window"
+    },
+    {
+      "id": "E-W3-NOMWIDTH",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Nominal opening width.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "NOMINAL 3'-6\" x 5'-0\"",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "W3",
+      "propertyPath": "dimensions.nominalWidthFeet",
+      "candidateValue": 3.5
+    },
+    {
+      "id": "E-W3-NOMHEIGHT",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Nominal opening height.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "NOMINAL 3'-6\" x 5'-0\"",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "W3",
+      "propertyPath": "dimensions.nominalHeightFeet",
+      "candidateValue": 5
+    },
+    {
+      "id": "E-W3-ROUGHWIDTH",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Rough opening width.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "ROUGH OPENING 4'-0\" x 5'-0\"",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "W3",
+      "propertyPath": "dimensions.roughWidthFeet",
+      "candidateValue": 4
+    },
+    {
+      "id": "E-W3-ROUGHHEIGHT",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Rough opening height.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "ROUGH OPENING 4'-0\" x 5'-0\"",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "W3",
+      "propertyPath": "dimensions.roughHeightFeet",
+      "candidateValue": 5
+    },
+    {
+      "id": "E-W3-QTY",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Opening schedule quantity.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "QTY 1",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "W3",
+      "propertyPath": "quantity",
+      "candidateValue": 1
+    },
+    {
+      "id": "E-W3-PARENTWALL-P2",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Schedule wall association.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "WALL W1",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "W3",
+      "propertyPath": "parentWallTag",
+      "candidateValue": "W1"
+    },
+    {
+      "id": "E-W3-HEADER-P2",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Schedule header association.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "HEADER H2",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "W3",
+      "propertyPath": "headerMemberTag",
+      "candidateValue": "H2"
+    },
+    {
+      "id": "E-W3-JACKSTUD",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Jack stud count note.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "W3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "2 JACK STUDS",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "W3",
+      "propertyPath": "jackStudCount",
+      "candidateValue": 2
+    },
+    {
+      "id": "E-D04-CATEGORY",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Opening schedule category.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "D04",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "D04 DOOR",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "D04",
+      "propertyPath": "category",
+      "candidateValue": "door"
+    },
+    {
+      "id": "E-D04-NOMWIDTH",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Nominal opening width.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "D04",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "NOMINAL 2'-8\" x 6'-8\"",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "D04",
+      "propertyPath": "dimensions.nominalWidthFeet",
+      "candidateValue": 2.67
+    },
+    {
+      "id": "E-D04-NOMHEIGHT",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Nominal opening height.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "D04",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "NOMINAL 2'-8\" x 6'-8\"",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "D04",
+      "propertyPath": "dimensions.nominalHeightFeet",
+      "candidateValue": 6.67
+    },
+    {
+      "id": "E-D04-ROUGHWIDTH",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Rough opening width.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "D04",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "ROUGH OPENING 3'-0\" x 7'-0\"",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "D04",
+      "propertyPath": "dimensions.roughWidthFeet",
+      "candidateValue": 3
+    },
+    {
+      "id": "E-D04-ROUGHHEIGHT",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Rough opening height.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "D04",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "ROUGH OPENING 3'-0\" x 7'-0\"",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "D04",
+      "propertyPath": "dimensions.roughHeightFeet",
+      "candidateValue": 7
+    },
+    {
+      "id": "E-D04-QTY",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Opening schedule quantity.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "D04",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "QTY 1",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "D04",
+      "propertyPath": "quantity",
+      "candidateValue": 1
+    },
+    {
+      "id": "E-D04-PARENTWALL-P2",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Schedule wall association.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "D04",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "WALL W1",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "D04",
+      "propertyPath": "parentWallTag",
+      "candidateValue": "W1"
+    },
+    {
+      "id": "E-D04-HEADER-P2",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Schedule header association.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 2,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "D04",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "WINDOW / DOOR SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "HEADER H3",
+      "references": [],
+      "subjectKind": "opening",
+      "subjectKey": "D04",
+      "propertyPath": "headerMemberTag",
+      "candidateValue": "H3"
+    },
+    {
+      "id": "E-H2-CATEGORY",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Header schedule row.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H2",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "HEADER SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "H2 1-3/4 x 11-7/8 LVL",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H2",
+      "propertyPath": "category",
+      "candidateValue": "header"
+    },
+    {
+      "id": "E-H2-SIZE",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Header size callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H2",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "HEADER SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "1-3/4 x 11-7/8 LVL",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H2",
+      "propertyPath": "size",
+      "candidateValue": "1-3/4 x 11-7/8"
+    },
+    {
+      "id": "E-H2-MATERIAL",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Header material type.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H2",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "HEADER SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "1-3/4 x 11-7/8 LVL",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H2",
+      "propertyPath": "materialType",
+      "candidateValue": "LVL"
+    },
+    {
+      "id": "E-H2-LENGTH",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Header length.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H2",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "HEADER SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "6'-0\"",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H2",
+      "propertyPath": "lengthFeet",
+      "candidateValue": 6
+    },
+    {
+      "id": "E-H2-QTY",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Header quantity.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H2",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "HEADER SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "QTY 1",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H2",
+      "propertyPath": "quantity",
+      "candidateValue": 1
+    },
+    {
+      "id": "E-H2-SUPPORTEDOPENING-P3",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Header location references opening.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H2",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "HEADER SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "LOCATION WINDOW W3",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H2",
+      "propertyPath": "supportedOpeningTag",
+      "candidateValue": "W3"
+    },
+    {
+      "id": "E-H3-CATEGORY",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Header schedule row.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "HEADER SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "H3 (2) 2x6 DF",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H3",
+      "propertyPath": "category",
+      "candidateValue": "header"
+    },
+    {
+      "id": "E-H3-SIZE",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Header size callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "HEADER SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "(2) 2x6 DF",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H3",
+      "propertyPath": "size",
+      "candidateValue": "(2) 2x6"
+    },
+    {
+      "id": "E-H3-MATERIAL",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Header material type.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "HEADER SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "(2) 2x6 DF",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H3",
+      "propertyPath": "materialType",
+      "candidateValue": "DF"
+    },
+    {
+      "id": "E-H3-LENGTH",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Header length.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "HEADER SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "4'-0\"",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H3",
+      "propertyPath": "lengthFeet",
+      "candidateValue": 4
+    },
+    {
+      "id": "E-H3-QTY",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Header quantity.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "HEADER SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "QTY 1",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H3",
+      "propertyPath": "quantity",
+      "candidateValue": 1
+    },
+    {
+      "id": "E-H3-SUPPORTEDOPENING-P3",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Header location references opening.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "H3",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "HEADER SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "LOCATION DOOR D04",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "H3",
+      "propertyPath": "supportedOpeningTag",
+      "candidateValue": "D04"
+    },
+    {
+      "id": "E-B1-CATEGORY",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Beam schedule row.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "B1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "BEAM SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "B1 W8x18",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "B1",
+      "propertyPath": "category",
+      "candidateValue": "beam"
+    },
+    {
+      "id": "E-B1-SIZE",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Beam size callout.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "B1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "BEAM SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "W8x18",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "B1",
+      "propertyPath": "size",
+      "candidateValue": "W8x18"
+    },
+    {
+      "id": "E-B1-LENGTH",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Beam length.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "B1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "BEAM SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "16'-0\"",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "B1",
+      "propertyPath": "lengthFeet",
+      "candidateValue": 16
+    },
+    {
+      "id": "E-B1-QTY",
+      "type": "schedule",
+      "relationship": "supports",
+      "description": "Beam quantity.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "B1",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": "BEAM SCHEDULE",
+        "noteReference": null
+      },
+      "originalText": "QTY 1",
+      "references": [],
+      "subjectKind": "structural-member",
+      "subjectKey": "B1",
+      "propertyPath": "quantity",
+      "candidateValue": 1
+    },
+    {
+      "id": "E-WALLSHSYS-NAME",
+      "type": "tag",
+      "relationship": "supports",
+      "description": "Sheathing system tag.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "WALL SH SYS",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "WALL SH SYS EXTERIOR WALLS LEVEL 2",
+      "references": [],
+      "subjectKind": "sheathing-system",
+      "subjectKey": "WALL SH SYS",
+      "propertyPath": "name",
+      "candidateValue": "WALL SH SYS"
+    },
+    {
+      "id": "E-WALLSHSYS-APPLICATION",
+      "type": "tag",
+      "relationship": "supports",
+      "description": "Sheathing system application.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "WALL SH SYS",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "WALL SH SYS EXTERIOR WALLS LEVEL 2",
+      "references": [],
+      "subjectKind": "sheathing-system",
+      "subjectKey": "WALL SH SYS",
+      "propertyPath": "application",
+      "candidateValue": "EXTERIOR WALLS"
+    },
+    {
+      "id": "E-WALLSHSYS-LEVEL",
+      "type": "tag",
+      "relationship": "supports",
+      "description": "Sheathing system level.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "WALL SH SYS",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "WALL SH SYS EXTERIOR WALLS LEVEL 2",
+      "references": [],
+      "subjectKind": "sheathing-system",
+      "subjectKey": "WALL SH SYS",
+      "propertyPath": "level",
+      "candidateValue": "LEVEL 2"
+    },
+    {
+      "id": "E-WALLSHSYS-PANELTYPE",
+      "type": "specification",
+      "relationship": "supports",
+      "description": "Sheathing panel type.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "WALL SH SYS",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "7/16\" OSB WALL SHEATHING",
+      "references": [],
+      "subjectKind": "sheathing-system",
+      "subjectKey": "WALL SH SYS",
+      "propertyPath": "panelSpecification.panelType",
+      "candidateValue": "OSB"
+    },
+    {
+      "id": "E-WALLSHSYS-THICKNESS",
+      "type": "specification",
+      "relationship": "supports",
+      "description": "Sheathing panel thickness.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "WALL SH SYS",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "7/16\" OSB WALL SHEATHING",
+      "references": [],
+      "subjectKind": "sheathing-system",
+      "subjectKey": "WALL SH SYS",
+      "propertyPath": "panelSpecification.thickness",
+      "candidateValue": "7/16\""
+    },
+    {
+      "id": "E-WALLSHA-PARENTSYS",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Sheathing area references system.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "WALL SH A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "WALL SH A REF WALL SH SYS COVER W1",
+      "references": [],
+      "subjectKind": "sheathing-area",
+      "subjectKey": "WALL SH A",
+      "propertyPath": "parentSystemTag",
+      "candidateValue": "WALL SH SYS"
+    },
+    {
+      "id": "E-WALLSHA-COVEREDWALL",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Sheathing area covers wall.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 3,
+          "sheetId": null,
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "elementLabel": "WALL SH A",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": null
+      },
+      "originalText": "WALL SH A REF WALL SH SYS COVER W1",
+      "references": [],
+      "subjectKind": "sheathing-area",
+      "subjectKey": "WALL SH A",
+      "propertyPath": "coveredWallTag",
+      "candidateValue": "W1"
+    }
+  ]
+}

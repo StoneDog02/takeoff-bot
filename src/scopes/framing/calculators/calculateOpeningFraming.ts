@@ -15,6 +15,7 @@ import {
 } from "../schemas/material.schema.js";
 import type { BuildingWall, WallSegment } from "../schemas/wall.schema.js";
 import type { Opening, OpeningCategory } from "../schemas/opening.schema.js";
+import { isWoodStudWallType } from "../resolvers/wallFramingPropertyPaths.js";
 import { createObjectTarget, createReviewItemId } from "../validators/ids.js";
 import {
   OPENING_QUANTITY_KEYS,
@@ -77,11 +78,6 @@ function isWoodStudWall(wall: BuildingWall): boolean {
     return false;
   }
 
-  const wallType = normalizeToken(wall.wallType ?? "");
-  if (wallType.includes("metal")) {
-    return false;
-  }
-
   if (
     material.includes("lumber") ||
     material.includes("wood") ||
@@ -90,7 +86,7 @@ function isWoodStudWall(wall: BuildingWall): boolean {
     return true;
   }
 
-  return wallType.includes("wood") && wallType.includes("stud");
+  return wall.wallType !== null && isWoodStudWallType(wall.wallType);
 }
 
 function resolveParentSegment(

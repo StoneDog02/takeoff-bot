@@ -73,6 +73,15 @@ export function isRoofFramingPropertyPath(propertyPath: string): boolean {
   );
 }
 
+/** Scalar Roof properties eligible for User Decision resolution (not relationship tags). */
+export function isRoofFramingUserDecisionPropertyPath(
+  propertyPath: string,
+): boolean {
+  return (
+    isRoofSystemPropertyPath(propertyPath) || isRoofPlanePropertyPath(propertyPath)
+  );
+}
+
 export function normalizeRoofSystemCandidate(
   propertyPath: RoofSystemPropertyPath,
   candidateValue: Evidence["candidateValue"],

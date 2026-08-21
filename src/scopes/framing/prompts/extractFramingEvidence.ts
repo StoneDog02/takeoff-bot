@@ -99,8 +99,10 @@ subjectKind:
 - For explicitly identified floor framing areas, use "floor-framing-area".
 - For explicitly identified roof framing systems, use "roof-framing-system".
 - For explicitly identified roof planes, use "roof-plane".
-- First controlled structural-member scope: single-piece headers only.
-- First controlled opening scope: scalar opening facts only.
+- Structural-member extraction covers explicitly scheduled or tagged members
+  (headers, beams, girders, posts/columns, and similar) when the source
+  identifies them. Do not invent members that are not tagged or scheduled.
+- Opening extraction covers scalar opening facts and explicit associations only.
 - subjectKind + subjectKey identify the extraction cluster; propertyPath identifies
   the candidate within that cluster.
 - Do not mint ObjectIds or resolved object types here.
@@ -111,36 +113,22 @@ subjectKind:
 
 subjectKey:
 - Use the most stable plan-derived identifier for the future object/cluster.
-- Prefer a wall tag, schedule key, callout, or other extraction-stable label.
-- When a bare wall tag line is present (example: W-001, W-002), use that exact
-  string as subjectKey.
-- When a bare structural member tag line is present (example: HDR-001), use that
-  exact string as subjectKey for every property belonging to that member.
-- When a bare opening tag line is present (example: O-001), use that exact
-  string as subjectKey for every property belonging to that opening.
-- When a bare sheathing system tag line is present (example: SHS-001), use that
-  exact string as subjectKey for every property belonging to that system.
-- When a bare sheathing area tag line is present (example: SHA-001), use that
-  exact string as subjectKey for every property belonging to that area.
-- When a bare floor framing system tag line is present (example: FFS-001), use
-  that exact string as subjectKey for every property belonging to that system.
-- When a bare floor framing area tag line is present (example: FFA-001), use that
-  exact string as subjectKey for every property belonging to that area.
-- When a bare roof framing system tag line is present (example: RFS-001), use
-  that exact string as subjectKey for every property belonging to that system.
-- When a bare roof plane tag line is present (example: RFP-001), use that exact
-  string as subjectKey for every property belonging to that plane.
-- When multiple labeled wall tags appear, emit separate Evidence clusters for
-  each tag. Reuse the same subjectKey for every property belonging to that wall.
-- Never merge facts from one labeled wall into another wall's subjectKey.
-- Never merge facts from one labeled structural member into another member's
-  subjectKey.
-- Never merge facts from one labeled opening into another opening's subjectKey.
+- Prefer the exact wall mark, opening mark, member mark, bay/plane label,
+  schedule mark, or callout text as printed on the plan.
+- Preserve realistic plan marks as-is (examples of form only: W1, W-001,
+  Wall Type A, D04, Window 3, H2, HDR-001, BAY A, GABLE A, FLOOR SYS A).
+  Do not rewrite a plan mark into a different invented code.
+- When a bare tag/mark line is present for a wall, opening, structural member,
+  sheathing system/area, floor system/area, or roof system/plane, use that exact
+  string as subjectKey for every property belonging to that object.
+- When multiple labeled marks appear, emit separate Evidence clusters for each
+  mark. Reuse the same subjectKey for every property belonging to that object.
+- Never merge facts from one labeled object into another object's subjectKey.
 - Conflicting values stay separate Evidence records within the appropriate
   subjectKey only.
 - This is an extraction cluster key, not a resolved ObjectId.
 - Evidence from multiple pages/sheets that concerns the same tagged object
-  must reuse the same subjectKey.
+  must reuse the same subjectKey (cross-page schedule + plan callout).
 - Wall-level properties and segment length may share the same subjectKey.
 - If no tag or schedule key exists, use the exact source label/callout text.
   Do not mint an ObjectId.
@@ -158,9 +146,9 @@ propertyPath:
   dimensions.roughWidthFeet, dimensions.roughHeightFeet, quantity,
   kingStudCount, jackStudCount, scheduleReference, detailReference, fireRating.
 - Examples for openings (explicit wall association in this stage):
-  parentWallTag with the exact plan wall tag such as W-001.
+  parentWallTag with the exact plan wall mark (examples of form: W1, W-001).
 - Examples for openings (explicit header association in this stage):
-  headerMemberTag with the exact plan header tag such as HDR-001.
+  headerMemberTag with the exact plan header mark (examples of form: H2, HDR-001).
 - Examples for sheathing systems: name, level, application, constructionPhase,
   panelSpecification.panelType, panelSpecification.thickness,
   panelSpecification.grade, panelSpecification.spanRating,
@@ -193,7 +181,7 @@ propertyPath:
 - These are examples, not an exhaustive enum. Do not invent resolved
   nested objects.
 
-structural-member extraction rules (headers only in this stage):
+structural-member extraction rules:
 - Emit one Evidence record per atomic property candidate.
 - Do not infer missing quantity as 1.
 - Do not infer category from ambiguous wording.
@@ -201,12 +189,18 @@ structural-member extraction rules (headers only in this stage):
 - Do not infer location if not explicitly evidenced.
 - Do not calculate linear footage.
 - Do not infer built-up plyCount.
-- Do not infer relationships to walls, openings, or other objects.
+- Do not invent relationships to walls, openings, or other objects beyond
+  explicit supportedOpeningTag / schedule location marks.
 - Do not create review items or resolve competing candidates.
 
 opening extraction rules (scalar facts only in this stage):
 - Emit one Evidence record per atomic property candidate.
 - Do not infer missing quantity as 1.
+- When a schedule row includes an explicit quantity column/value for that mark,
+  emit quantity from that column.
+- When a schedule distinguishes NOMINAL vs ROUGH opening sizes, emit
+  dimensions.nominal* and dimensions.rough* separately. Do not copy rough into
+  nominal or nominal into rough.
 - Do not infer category from ambiguous wording.
 - Do not infer rough opening dimensions from nominal dimensions.
 - Do not infer king/jack/cripple/sill framing requirements.
@@ -270,13 +264,14 @@ floor-framing extraction rules (this stage):
 - Do not derive joistLayoutLengthFeet from areaSquareFeet, room polygons, or
   diagrams.
 - Do not infer joist spacing, joist size, joist type, or span direction.
-- Emit joistLayoutLengthFeet only when the page text explicitly states the
+- Emit joistLayoutLengthFeet only when the page text explicitly establishes the
   floor bay length along the joist spacing axis (perpendicular to span), in
-  feet, for that floor area tag.
+  feet, for that floor area — including orthogonal bay dimensions when span
+  direction is stated and the dimension is clearly the spacing-axis length.
 - If the source does not explicitly establish joistLayoutLengthFeet, omit it.
 - Emit joistMemberLengthFeet only when the page text explicitly states the
   installed / common joist member (piece) length for that floor area tag
-  (examples: "Joist member length: 12 feet", "Joists: 12 ft long").
+  (examples of form: member-length callouts or "joists … long").
 - Do not derive joistMemberLengthFeet from areaSquareFeet,
   joistLayoutLengthFeet, walls, clear span alone, dimensions not identified as
   joist member length, IRC/span tables, or generic construction practice.
@@ -292,10 +287,10 @@ roof-framing extraction rules (this stage):
 - Do not derive rafterLayoutLengthFeet from areaSquareFeet, pitch, diagrams,
   or geometric guesses.
 - Do not infer framing type, member size, member spacing, or span direction.
-- Emit rafterLayoutLengthFeet only when the page text explicitly states the
+- Emit rafterLayoutLengthFeet only when the page text explicitly establishes the
   roof plane length along the common-rafter spacing axis (perpendicular to
-  span), in feet, for that roof plane tag (examples: "Rafter layout length:
-  20 feet", "Joist/rafter spacing-axis length: 20 ft").
+  span), in feet, for that roof plane — including gable/ridge length wording
+  when span direction makes that axis unambiguous.
 - If the source does not explicitly establish rafterLayoutLengthFeet, omit it.
 - Do not derive rafter length from pitch, horizontal run, span tables, or
   IRC tables.
@@ -327,52 +322,66 @@ candidateValue:
   source string instead of a number.
 - Do not coerce extracted text into resolved enumerations. Preserve the
   plan wording when it is the candidate (example: "wood stud wall").
+- Exception for schema-token properties only: when the plan meaning is
+  unambiguous, emit the engine token for bearingStatus
+  (bearing | non-bearing | unknown), opening category
+  (door | window | ...), structural-member category
+  (header | beam | girder | post | column | ...), and similar enum fields.
+  If ambiguous, omit rather than guess.
+
+schedule and compact-notation reading rules (this stage):
+- Read schedule tables and pipe/column rows as atomic facts under the row mark.
+  Example form: a header schedule row MARK | SIZE/MATERIAL | LENGTH | QTY maps to
+  structural-member Evidence for that MARK (category, size, materialType,
+  lengthFeet, quantity) when those columns are explicit.
+- Compact assembly callouts such as '2x6 SPF STUDS @ 16" O.C.' may yield separate
+  Evidence for stud size, spacing, and material when clearly stated together.
+- When the plan identifies a wood stud wall (for example "WOOD STUD" / "wood stud
+  wall"), preserve that wood-stud identity in wallType (and material when stated).
+  Opening framing eligibility depends on wood-stud wall identity.
+- Do not invent columns that the schedule does not show (especially jack counts,
+  sheathing SF, member lengths, or king counts).
+- Prefer short originalText quotes from the supporting schedule/callout line.
+- Keep JSON compact: one Evidence record per atomic fact; avoid duplicating the
+  same fact with long restated prose.
+- Keep description to one short clause (<= 12 words). Keep originalText to the
+  shortest supporting quote. Leave unused source fields null. Do not expand
+  schedule rows into narrative paragraphs.
+
+floor / roof spacing-axis dimension rules (this stage):
+- When the source states joist/rafter span (or framing) direction AND an explicit
+  dimension that is clearly the length measured along the axis perpendicular to
+  that span (spacing axis) for a named bay/plane, emit joistLayoutLengthFeet or
+  rafterLayoutLengthFeet for that area/plane.
+  Also emit spanDirection for the bay/plane when the source states span (for
+  example "SPAN N-S" / "RAFTERS SPAN N-S").
+  Examples of form only: bay dimension labeled orthogonal to stated span;
+  gable/ridge length for commons that span perpendicular to the gable.
+- Do not derive layout length from areaSquareFeet, pitch, or unlabeled overall
+  building dimensions.
+- Emit joistMemberLengthFeet only when the source explicitly identifies installed
+  / common joist piece length (for example wording of the form
+  "JOISTS … LONG" or "joist member length …").
+- Never invent rafter member length; V1 does not take roof common LF from
+  extraction.
 
 Return JSON only. No markdown. No explanation.
 
-JSON shape:
+JSON shape (illustrative; do not copy values unless present in page text):
 {
   "evidence": [
-    {
-      "id": "E-W001-CLASS",
-      "type": "note",
-      "relationship": "supports",
-      "description": "Plan note states the wall type.",
-      "source": {
-        "page": {
-          "documentId": null,
-          "pageNumber": 2,
-          "sheetId": "A2.01",
-          "sheetTitle": "Floor Plan - Level 1",
-          "pageLabel": "Floor Plan - Level 1",
-          "revision": null
-        },
-        "region": null,
-        "elementLabel": "W-001",
-        "detailNumber": null,
-        "sectionNumber": null,
-        "scheduleName": null,
-        "noteReference": null
-      },
-      "originalText": "Wall W-001: new exterior non-bearing wood stud wall",
-      "references": [],
-      "subjectKind": "wall",
-      "subjectKey": "W-001",
-      "propertyPath": "wallType",
-      "candidateValue": "wood stud wall"
-    },
     {
       "id": "E-W001-SPACING",
       "type": "dimension",
       "relationship": "supports",
-      "description": "Plan note states stud spacing.",
+      "description": "Stud spacing callout.",
       "source": {
         "page": {
           "documentId": null,
           "pageNumber": 2,
           "sheetId": "A2.01",
-          "sheetTitle": "Floor Plan - Level 1",
-          "pageLabel": "Floor Plan - Level 1",
+          "sheetTitle": null,
+          "pageLabel": null,
           "revision": null
         },
         "region": null,
@@ -393,14 +402,14 @@ JSON shape:
       "id": "E-W002-LENGTH",
       "type": "dimension",
       "relationship": "supports",
-      "description": "Plan note states wall length for W-002.",
+      "description": "Wall length dimension.",
       "source": {
         "page": {
           "documentId": null,
           "pageNumber": 2,
           "sheetId": "A2.01",
-          "sheetTitle": "Floor Plan - Level 1",
-          "pageLabel": "Floor Plan - Level 1",
+          "sheetTitle": null,
+          "pageLabel": null,
           "revision": null
         },
         "region": null,
@@ -419,16 +428,16 @@ JSON shape:
     },
     {
       "id": "E-HDR-001-CATEGORY",
-      "type": "note",
+      "type": "schedule",
       "relationship": "supports",
-      "description": "Plan note states the header category.",
+      "description": "Header schedule category.",
       "source": {
         "page": {
           "documentId": null,
           "pageNumber": 2,
           "sheetId": "A2.01",
-          "sheetTitle": "Floor Plan - Level 1",
-          "pageLabel": "Floor Plan - Level 1",
+          "sheetTitle": null,
+          "pageLabel": null,
           "revision": null
         },
         "region": null,
@@ -438,68 +447,12 @@ JSON shape:
         "scheduleName": null,
         "noteReference": null
       },
-      "originalText": "HDR-001 Header LVL 1.75x11.875 6 ft Quantity: 1 Over Window W-001",
+      "originalText": "HDR-001 Header",
       "references": [],
       "subjectKind": "structural-member",
       "subjectKey": "HDR-001",
       "propertyPath": "category",
       "candidateValue": "header"
-    },
-    {
-      "id": "E-HDR-001-MATERIAL",
-      "type": "note",
-      "relationship": "supports",
-      "description": "Plan note states the header material.",
-      "source": {
-        "page": {
-          "documentId": null,
-          "pageNumber": 2,
-          "sheetId": "A2.01",
-          "sheetTitle": "Floor Plan - Level 1",
-          "pageLabel": "Floor Plan - Level 1",
-          "revision": null
-        },
-        "region": null,
-        "elementLabel": "HDR-001",
-        "detailNumber": null,
-        "sectionNumber": null,
-        "scheduleName": null,
-        "noteReference": null
-      },
-      "originalText": "Material: lvl",
-      "references": [],
-      "subjectKind": "structural-member",
-      "subjectKey": "HDR-001",
-      "propertyPath": "materialType",
-      "candidateValue": "lvl"
-    },
-    {
-      "id": "E-HDR-001-LENGTH",
-      "type": "dimension",
-      "relationship": "supports",
-      "description": "Plan note states the header length.",
-      "source": {
-        "page": {
-          "documentId": null,
-          "pageNumber": 2,
-          "sheetId": "A2.01",
-          "sheetTitle": "Floor Plan - Level 1",
-          "pageLabel": "Floor Plan - Level 1",
-          "revision": null
-        },
-        "region": null,
-        "elementLabel": "HDR-001",
-        "detailNumber": null,
-        "sectionNumber": null,
-        "scheduleName": null,
-        "noteReference": null
-      },
-      "originalText": "Length: 6 ft",
-      "references": [],
-      "subjectKind": "structural-member",
-      "subjectKey": "HDR-001",
-      "propertyPath": "lengthFeet",
-      "candidateValue": 6
     }
   ]
 }
@@ -568,8 +521,10 @@ export async function extractFramingEvidenceViaClaude(
     }),
     schema: extractedFramingEvidencePayloadSchema,
     label: "extracted framing evidence",
-    // Multi-object plan slices can exceed 8192 output tokens; 16k covers the current proof fixture.
-    maxTokens: 16384,
+    // Multi-domain realistic plans can exceed 16k output tokens when verbose;
+    // 32k + compactness rules covers current synthetic multi-page sets without
+    // redesigning extraction into domain-scoped passes.
+    maxTokens: 32768,
   });
 }
 

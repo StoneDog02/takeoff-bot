@@ -142,6 +142,7 @@ describe("countRegularlySpacedJoists", () => {
 describe("isSimpleAreaJoistLinearFeetTypeSupported", () => {
   it("allows dimensional lumber and I-joists", () => {
     assert.equal(isSimpleAreaJoistLinearFeetTypeSupported("i-joist"), true);
+    assert.equal(isSimpleAreaJoistLinearFeetTypeSupported("I-JOISTS"), true);
     assert.equal(
       isSimpleAreaJoistLinearFeetTypeSupported("dimensional-lumber"),
       true,

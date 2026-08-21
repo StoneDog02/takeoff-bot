@@ -10,6 +10,7 @@ import type {
   FloorFramingArea,
   FloorFramingSystem,
 } from "../schemas/floor-framing.schema.js";
+import { isIJoistType } from "../resolvers/floorFramingPropertyPaths.js";
 import { FLOOR_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createMaterialLineItemId } from "./ids.js";
@@ -46,15 +47,16 @@ function normalizeToken(value: string): string {
 export function isSimpleAreaJoistLinearFeetTypeSupported(
   joistType: string,
 ): boolean {
+  if (isIJoistType(joistType)) {
+    return true;
+  }
+
   const token = normalizeToken(joistType);
   if (token.includes("truss") || token.includes("metal") || token.includes("steel")) {
     return false;
   }
 
   return (
-    token === "i-joist" ||
-    token === "ijoist" ||
-    token.includes("i-joist") ||
     token === "dimensional-lumber" ||
     token.startsWith("dimensional-") ||
     token === "dimensional"

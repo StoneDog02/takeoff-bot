@@ -2,6 +2,7 @@ import { env } from "../../config/env.js";
 import { parseJson } from "../../core/utils/parseJson.js";
 import { validateWithSchema } from "../../core/validation/validateWithSchema.js";
 import { getAnthropicClient } from "./client.js";
+import type { Message, MessageParam } from "@anthropic-ai/sdk/resources/messages.js";
 import type { z } from "zod";
 
 export interface RunClaudeJsonInput<T extends z.ZodTypeAny> {
@@ -12,26 +13,68 @@ export interface RunClaudeJsonInput<T extends z.ZodTypeAny> {
   maxTokens?: number;
 }
 
-export async function runClaudeJson<T extends z.ZodTypeAny>(
-  input: RunClaudeJsonInput<T>,
-): Promise<z.infer<T>> {
-  const { systemPrompt, userPrompt, schema, label = "Claude response", maxTokens = 4096 } = input;
-  const client = getAnthropicClient();
+/**
+ * Non-streaming requests are rejected by the SDK when max_tokens implies a
+ * long-running completion. Stream whenever the budget is large enough that
+ * wall-clock time may exceed the non-streaming safety threshold.
+ */
+const STREAM_WHEN_MAX_TOKENS_AT_LEAST = 8192;
 
-  const response = await client.messages.create({
-    model: env.anthropicModel,
-    max_tokens: maxTokens,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userPrompt }],
-  });
-
-  const textBlock = response.content.find((block) => block.type === "text");
+function extractText(message: Message): string {
+  const textBlock = message.content.find((block) => block.type === "text");
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("Claude returned no text content");
   }
+  return textBlock.text;
+}
+
+async function createClaudeMessage(input: {
+  systemPrompt: string;
+  messages: MessageParam[];
+  maxTokens: number;
+}): Promise<Message> {
+  const client = getAnthropicClient();
+  const useStream = input.maxTokens >= STREAM_WHEN_MAX_TOKENS_AT_LEAST;
+
+  if (!useStream) {
+    return client.messages.create({
+      model: env.anthropicModel,
+      max_tokens: input.maxTokens,
+      system: input.systemPrompt,
+      messages: input.messages,
+    });
+  }
+
+  return client.messages
+    .stream({
+      model: env.anthropicModel,
+      max_tokens: input.maxTokens,
+      system: input.systemPrompt,
+      messages: input.messages,
+    })
+    .finalMessage();
+}
+
+export async function runClaudeJson<T extends z.ZodTypeAny>(
+  input: RunClaudeJsonInput<T>,
+): Promise<z.infer<T>> {
+  const {
+    systemPrompt,
+    userPrompt,
+    schema,
+    label = "Claude response",
+    maxTokens = 4096,
+  } = input;
+
+  const firstMessage = await createClaudeMessage({
+    systemPrompt,
+    maxTokens,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  const firstText = extractText(firstMessage);
 
   try {
-    const parsed = parseJson(textBlock.text);
+    const parsed = parseJson(firstText);
     return validateWithSchema(schema, parsed, label);
   } catch (firstError) {
     const repairPrompt = `The previous response was invalid JSON or failed schema validation.
@@ -41,26 +84,21 @@ Validation error:
 ${firstError instanceof Error ? firstError.message : String(firstError)}
 
 Original response:
-${textBlock.text}`;
+${firstText}`;
 
-    const repairResponse = await client.messages.create({
-      model: env.anthropicModel,
-      max_tokens: maxTokens,
-      system: systemPrompt,
+    const repairMessage = await createClaudeMessage({
+      systemPrompt,
+      maxTokens,
       messages: [
         { role: "user", content: userPrompt },
-        { role: "assistant", content: textBlock.text },
+        { role: "assistant", content: firstText },
         { role: "user", content: repairPrompt },
       ],
     });
-
-    const repairBlock = repairResponse.content.find((block) => block.type === "text");
-    if (!repairBlock || repairBlock.type !== "text") {
-      throw new Error("Claude repair attempt returned no text content");
-    }
+    const repairText = extractText(repairMessage);
 
     try {
-      const repaired = parseJson(repairBlock.text);
+      const repaired = parseJson(repairText);
       return validateWithSchema(schema, repaired, `${label} (repaired)`);
     } catch (secondError) {
       throw new Error(

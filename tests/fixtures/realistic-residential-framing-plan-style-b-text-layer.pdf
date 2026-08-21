@@ -1,0 +1,109 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R 7 0 R 9 0 R] /Count 4 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /ProcSet [/PDF /Text] /Font << /F1 11 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 238 >>
+stream
+BT
+/F1 12 Tf
+16 TL
+72 720 Td
+(A2.01 FRAMING PLAN) Tj
+T*
+(W1 EXT BRG 2x6@16 O.C. HT9' 3PLT L=24') Tj
+T*
+(W3 WIN @W1 /H2   D04 DR @W1 /H3) Tj
+T*
+(FLR SYS A  11-7/8 IJ @16 O.C. SPAN N-S) Tj
+T*
+(BAY A->SYS A  BAY A 20' E-W  JSTS 12' LG) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 6 0 R /Resources << /ProcSet [/PDF /Text] /Font << /F1 11 0 R >> >> >>
+endobj
+6 0 obj
+<< /Length 152 >>
+stream
+BT
+/F1 12 Tf
+16 TL
+72 720 Td
+(A3.01 OPENING SCH) Tj
+T*
+(W3 WIN NOM 3'-6"x5' RO 4'x5' Q1 W1 H2 2J) Tj
+T*
+(D04 DR NOM 2'-8"x6'-8" RO 3'x7' Q1 W1 H3) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 8 0 R /Resources << /ProcSet [/PDF /Text] /Font << /F1 11 0 R >> >> >>
+endobj
+8 0 obj
+<< /Length 220 >>
+stream
+BT
+/F1 12 Tf
+16 TL
+72 720 Td
+(S1.01 MEMBERS) Tj
+T*
+(H2 1-3/4x11-7/8 LVL 6' Q1 @W3) Tj
+T*
+(H3 \(2\)2x6 DF 4' Q1 @D04) Tj
+T*
+(B1 W8x18 16' Q1 L2 BRG BM) Tj
+T*
+(WALL SH 7/16" OSB  SYS->WALL SH SYS  AREA WALL SH A /W1) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 10 0 R /Resources << /ProcSet [/PDF /Text] /Font << /F1 11 0 R >> >> >>
+endobj
+10 0 obj
+<< /Length 132 >>
+stream
+BT
+/F1 12 Tf
+16 TL
+72 720 Td
+(A2.02 ROOF) Tj
+T*
+(ROOF SYS A STICK  2x8@16 O.C. SPAN N-S) Tj
+T*
+(GABLE A->SYS A  GABLE LEN 20') Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000133 00000 n 
+0000000282 00000 n 
+0000000571 00000 n 
+0000000720 00000 n 
+0000000923 00000 n 
+0000001072 00000 n 
+0000001343 00000 n 
+0000001493 00000 n 
+0000001677 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R >>
+startxref
+1748
+%%EOF

@@ -24,6 +24,7 @@ import {
   findAppliedUserDecision,
   createUserOverrideTrace,
   filterUserDecisionsForPropertyPaths,
+  type SubjectBinding,
   type UserDecisionIndex,
 } from "./applyUserDecisions.js";
 import { createWallObjectId, createWallSegmentObjectId } from "./ids.js";
@@ -449,19 +450,20 @@ function buildEvidenceById(evidence: readonly Evidence[]): Map<EvidenceId, Evide
   return new Map(evidence.map((record) => [record.id, record]));
 }
 
-function buildSubjectKeyByObjectId(
+function buildSubjectBindingByObjectId(
   subjectKeys: readonly string[],
-): Map<ObjectId, string> {
-  const subjectKeyByObjectId = new Map<ObjectId, string>();
+): Map<ObjectId, SubjectBinding> {
+  const subjectBindingByObjectId = new Map<ObjectId, SubjectBinding>();
 
   for (const subjectKey of subjectKeys) {
     const wallId = createWallObjectId(subjectKey);
     const segmentId = createWallSegmentObjectId(wallId);
-    subjectKeyByObjectId.set(wallId, subjectKey);
-    subjectKeyByObjectId.set(segmentId, subjectKey);
+    const binding: SubjectBinding = { subjectKey, subjectKind: "wall" };
+    subjectBindingByObjectId.set(wallId, binding);
+    subjectBindingByObjectId.set(segmentId, binding);
   }
 
-  return subjectKeyByObjectId;
+  return subjectBindingByObjectId;
 }
 
 function buildUserDecisionContext(
@@ -488,8 +490,9 @@ function buildUserDecisionContext(
         evidenceById: buildEvidenceById(evidence),
       },
       isWallFramingPropertyPath,
+      new Set(buildSubjectBindingByObjectId(subjectKeys).keys()),
     ),
-    buildSubjectKeyByObjectId(subjectKeys),
+    buildSubjectBindingByObjectId(subjectKeys),
   );
 }
 
