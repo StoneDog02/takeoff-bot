@@ -42,12 +42,40 @@ function createEvidenceRecord(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function classifiedPage(input: {
+  pageNumber: number;
+  sheetId?: string | null;
+  discipline?: "architectural" | "structural" | "other";
+  pageType: "cover" | "plan" | "schedule" | "notes" | "detail" | "other";
+  relevantToFraming: boolean;
+}) {
+  const pageKind =
+    input.pageType === "other" ? "other" : input.pageType;
+  return {
+    pageNumber: input.pageNumber,
+    sheetId: input.sheetId ?? null,
+    label: null,
+    pageKind,
+    scopeHints: [] as const,
+    discipline: input.discipline ?? "other",
+    pageType: input.pageType,
+    relevantToFraming: input.relevantToFraming,
+    needsVisualClassification: false,
+    classificationMethod: "text" as const,
+    titleOrLabel: null,
+    evidenceText: null,
+    classificationReason: "test fixture",
+    confidenceLabel: "medium" as const,
+  };
+}
+
 describe("extractFramingEvidence prompts", () => {
   it("selects framing-relevant pages in reading order", () => {
     const planIndex: PlanIndex = {
       pdfPath: "./plans/sample.pdf",
       totalPages: 3,
       indexedAt: new Date().toISOString(),
+      sourceContentHash: null,
       pages: [
         {
           pageNumber: 1,
@@ -74,27 +102,27 @@ describe("extractFramingEvidence prompts", () => {
       planIndex,
       {
         pages: [
-          {
+          classifiedPage({
             pageNumber: 1,
             sheetId: "A1.01",
             discipline: "architectural",
             pageType: "cover",
             relevantToFraming: false,
-          },
-          {
+          }),
+          classifiedPage({
             pageNumber: 2,
             sheetId: "A2.01",
             discipline: "architectural",
             pageType: "plan",
             relevantToFraming: true,
-          },
-          {
+          }),
+          classifiedPage({
             pageNumber: 3,
             sheetId: "S1.01",
             discipline: "structural",
             pageType: "plan",
             relevantToFraming: true,
-          },
+          }),
         ],
       },
       {
@@ -114,6 +142,7 @@ describe("extractFramingEvidence prompts", () => {
       pdfPath: "./tests/fixtures/wall-w001-text-layer.pdf",
       totalPages: 1,
       indexedAt: new Date().toISOString(),
+      sourceContentHash: null,
       pages: [
         {
           pageNumber: 1,
@@ -129,13 +158,13 @@ describe("extractFramingEvidence prompts", () => {
       planIndex,
       {
         pages: [
-          {
+          classifiedPage({
             pageNumber: 1,
             sheetId: null,
             discipline: "other",
             pageType: "other",
             relevantToFraming: true,
-          },
+          }),
         ],
       },
       {
@@ -175,6 +204,14 @@ describe("extractFramingEvidence prompts", () => {
     assert.match(prompt, /floor \/ roof spacing-axis dimension rules/);
     assert.match(prompt, /"subjectKey": "W-002"/);
     assert.match(prompt, /construction-brain-context/);
+    assert.match(prompt, /opening visual floor-plan search rules/);
+    assert.match(prompt, /door swings, window symbols, garage-door openings/);
+    assert.match(prompt, /Do not invent jack\/king counts, header sizes, quantities, or\n {2}framing math/);
+    assert.match(prompt, /page text and\/or\nattached page visuals/);
+    assert.match(prompt, /Do not stop\n {2}after finding one prominent opening/);
+    assert.match(prompt, /"tileId": "t-r0-c1"/);
+    assert.match(prompt, /opening type-mark \/ schedule dimension rules/);
+    assert.match(prompt, /Schedule-row grounding/);
   });
 });
 

@@ -1,9 +1,35 @@
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+import type { ContentBlockParam } from "@anthropic-ai/sdk/resources/messages.js";
+
 import { runClaudeJson } from "../../../ai/anthropic/runClaudeJson.js";
 import {
   formatKnowledgeForPrompt,
   loadKnowledgeFiles,
 } from "../../../core/knowledge/loadKnowledge.js";
+import {
+  buildPlanPagesUserContent,
+  countVisualImageBlocks,
+} from "../../../plans/buildPlanPagesUserContent.js";
 import type { PlanIndex, PlanPage } from "../../../plans/PlanIndex.js";
+import { pageNeedsVisual } from "../../../plans/pageNeedsVisual.js";
+import type { PlanPageVisual, PlanVisualSet } from "../../../plans/PlanPageVisual.js";
+import type {
+  PlanPageTileSet,
+  PlanPageVisualTile,
+} from "../../../plans/PlanPageVisualTile.js";
+import {
+  DEFAULT_PAGE_TILE_GRID,
+  DEFAULT_PAGE_TILE_SOURCE_SCALE,
+} from "../../../plans/PlanPageVisualTile.js";
+import { renderPlanPageVisuals } from "../../../plans/renderPlanPageVisuals.js";
+import { tilePlanPageVisual } from "../../../plans/tilePlanPageVisual.js";
+import type { ExtractionPageBundle } from "../../../plans/ExtractionPageBundle.js";
+import { MAX_VISUAL_IMAGES_PER_EXTRACTION_REQUEST } from "../../../plans/visualImageBudget.js";
+export { MAX_VISUAL_IMAGES_PER_EXTRACTION_REQUEST };
+
 import {
   extractedFramingEvidencePayloadSchema,
   type ExtractedFramingEvidencePayload,
@@ -25,13 +51,69 @@ export interface ExtractFramingEvidenceInput {
     assemblyNames: string[];
     notes: string[];
   };
+  /**
+   * Optional pre-rendered page visuals. When omitted, pages with empty text
+   * layers are rendered on demand into `visualOutputDir` (or a temp directory).
+   */
+  pageVisuals?: PlanVisualSet | readonly PlanPageVisual[];
+  /** Output directory for on-demand page renders. */
+  visualOutputDir?: string;
+  /** pdf.js render scale for on-demand full-page context visuals. Default 1. */
+  visualScale?: number;
+  /**
+   * Optional pre-built tile sets. When omitted and page tiles are enabled,
+   * tiles are generated from a higher-resolution page render.
+   */
+  pageTiles?: readonly PlanPageTileSet[] | ReadonlyMap<number, readonly PlanPageVisualTile[]>;
+  /** Directory root for on-demand tile crops / tile-source renders. */
+  tileOutputDir?: string;
+  /** pdf.js scale for the tile crop source render. Default 2. */
+  tileSourceScale?: number;
+  /** Overlapping grid columns. Default 4. */
+  tileColumns?: number;
+  /** Overlapping grid rows. Default 3. */
+  tileRows?: number;
+  /** Tile overlap fraction in [0, 1). Default 0.2. */
+  tileOverlapFraction?: number;
+  /**
+   * Visual mode for empty-text pages:
+   * - full-page-and-tiles (default): whole-sheet context + overlapping tiles
+   * - full-page: B1.1 behavior
+   * - tiles: detail tiles only
+   */
+  pageVisualMode?: "full-page-and-tiles" | "full-page" | "tiles";
+  /**
+   * Optional routed page bundle. When present, Stage 5 only extracts from the
+   * bundle's ordered pages and applies per-member visual detail levels.
+   */
+  extractionBundle?: ExtractionPageBundle;
+  /** Invoked once per Anthropic messages API call (including schema repair). */
+  onApiCall?: () => void;
+  /** Invoked with token usage after each Anthropic messages API call. */
+  onUsage?: (usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationInputTokens: number | null;
+    cacheReadInputTokens: number | null;
+  }) => void;
 }
 
 function selectPagesForExtraction(
   planIndex: PlanIndex,
   pageClassification: PageClassificationPayload,
   planReadingOrder: PlanReadingOrderPayload,
+  extractionBundle?: ExtractionPageBundle,
 ): PlanPage[] {
+  const pagesByNumber = new Map(
+    planIndex.pages.map((page) => [page.pageNumber, page]),
+  );
+
+  if (extractionBundle) {
+    return extractionBundle.orderedPageNumbers
+      .map((pageNumber) => pagesByNumber.get(pageNumber))
+      .filter((page): page is PlanPage => page !== undefined);
+  }
+
   const relevantPageNumbers = new Set(
     pageClassification.pages
       .filter((page) => page.relevantToFraming)
@@ -47,9 +129,6 @@ function selectPagesForExtraction(
     .sort((a, b) => a - b);
 
   const pageNumbers = [...ordered, ...remaining];
-  const pagesByNumber = new Map(
-    planIndex.pages.map((page) => [page.pageNumber, page]),
-  );
 
   return pageNumbers
     .map((pageNumber) => pagesByNumber.get(pageNumber))
@@ -57,18 +136,32 @@ function selectPagesForExtraction(
 }
 
 function buildSystemPrompt(knowledgeBlock: string): string {
-  return `You extract framing evidence from construction plan page text for a deterministic takeoff engine.
+  return `You extract framing evidence from construction plan page text and/or
+attached page visuals for a deterministic takeoff engine.
 
 Evidence is extracted candidate state, not resolved construction truth.
 Do not assign final ObjectIds, create ResolutionTraces, apply assumptions,
 choose a winner among conflicting candidates, or calculate quantities.
 
 Rules:
-- Extract only what is supported by the provided page text.
+- Extract only what is supported by the provided page text and/or attached
+  page visuals for that pageNumber.
 - Do not invent walls, dimensions, assemblies, openings, or quantities.
+- Prefer exact plan wording in originalText when text is readable; when a fact
+  is visible only in a diagram/image, summarize the visible label/callout
+  faithfully in originalText without inventing unreadable characters.
+- If a value is missing or ambiguous, omit that property rather than guessing.
+- Emit one Evidence record per atomic property candidate.
+- Conflicting candidates must remain separate Evidence records.
+- Do not resolve, validate, or calculate takeoff quantities.
+- Do not emit Assumed Facts, Review Items, or resolved construction objects.
+- When a page has both text and visuals, prefer corroborating both; never invent
+  from construction convention alone.
 - Do not copy sheet IDs, titles, originalText, or candidate values from the
-  example JSON unless they appear in the provided page text.
+  example JSON unless they appear in the provided page text or page visual.
 - Prior-stage assembly names are context only, not plan evidence.
+- When a page visual is attached, treat it as source context for that
+  pageNumber only. Prefer explicit printed marks over guesses.
 - Emit one Evidence record per subjectKind + subjectKey + propertyPath + candidateValue.
 - Do not hide multiple construction properties inside one description.
 - Never calculate material quantities.
@@ -76,11 +169,26 @@ Rules:
 - Use candidateValue null only when the source mentions the property but
   does not provide an extractable value.
 - Leave source.region null unless coordinates are explicitly provided.
+- Tile provenance: when a fact is read from an attached Tile image block, set
+  source.tileId to that block's exact tileId (example: t-r0-c1). When a fact is
+  read only from page text or only from the Full Sheet image, leave
+  source.tileId null. If both full sheet and a tile show the same fact, set
+  tileId to the tile only when you actually used that tile image to read the
+  fact; otherwise leave null. Do not leave tileId null for every record merely
+  because a full sheet was also attached. Do not invent tileIds or semantic
+  region names. Do not guess a tileId by spatial post-processing after the fact.
+- Optionally set source.region to the tile's geometryNormalized box with
+  coordinateSpace "normalized" when using a tile.
 - Use evidence IDs matching this pattern: E-<SUBJECT>-<ASPECT>
   (example: E-W001-SPACING). Make IDs unique when the same property has
   more than one candidate (example: E-W001-SPACING-NOTE).
+- Evidence IDs must be unique within a single extraction response. Prefer
+  stable aspect names so the same plan mark can share a subjectKey across
+  pages/passes; do not invent pass-specific subjectKeys for the same tagged
+  object.
 - IDs may only use letters, numbers, and . _ : -
-- originalText must quote or closely paraphrase the supporting plan text.
+- originalText must quote or closely paraphrase the supporting plan text or
+  visible tile text.
 - source.page.pageNumber and sheetId must match the provided page catalog.
 - relationship should be "supports" for the candidate this record extracts.
   Use "conflicts" only when the same source text is explicitly contradicting
@@ -207,6 +315,68 @@ opening extraction rules (scalar facts only in this stage):
 - Do not calculate framing quantities.
 - Do not create review items or resolve competing candidates.
 
+opening visual floor-plan search rules (this stage):
+- On plan/floor-plan visuals (full sheet and tiles), systematically search for
+  construction openings across the complete primary plan viewport. Do not stop
+  after finding one prominent opening (for example a labeled garage door).
+- Inspect each primary wall region (via full sheet context and each attached
+  tile) for door swings, window symbols, garage-door openings, cased openings,
+  and explicit opening labels or dimension strings adjacent to those symbols.
+- Emit a separate opening subjectKey for each distinct visually identified
+  opening. Do not collapse multiple doors/windows into one subject merely
+  because they share a similar size label.
+- Prefer exact printed marks as subjectKey when present (examples of form only:
+  D1, W12, GARAGE DOOR, WINDOW TYPE MARK, 2'-4" x 6'-8" DOOR). When several openings
+  share an identical size string, keep clusters separate by appending a short
+  distinguishing visible cue printed next to that opening (examples of form
+  only: adjacent room name, "ENTRY", "CLOSET") — use only text visible on the
+  plan. Do not mint ObjectIds or invent marks.
+- A bare wall-line interruption without a readable door/window/garage symbol or
+  opening label is not enough; omit that candidate rather than inventing an
+  opening.
+- Emit category only when the symbol/label supports it: door, window,
+  garage-door, cased, or other/unknown when ambiguous. Prefer garage-door when
+  the plan explicitly labels a garage door opening.
+- Emit dimensions.nominalWidthFeet / dimensions.nominalHeightFeet only when an
+  explicit width x height (or equivalent) label is readable for that opening,
+  or when a schedule/type key explicitly supplies those sizes for that opening's
+  mark (see opening type-mark / schedule dimension rules). Convert feet-inches
+  labels to decimal feet without inventing missing parts. Do not infer standard
+  door/window sizes or copy one opening's dimensions onto another.
+- Emit headerMemberTag only when a header/member mark is explicitly linked to
+  that opening by callout/leader/note (not by vague proximity alone). Attach
+  the header tag to the correct opening subject only. If the same association is
+  already emitted as structural-member supportedOpeningTag, you may omit the
+  reciprocal opening headerMemberTag — deterministic linking can invert one
+  explicit relationship. Prefer one clear source-grounded link over duplicate
+  reciprocal narration.
+- Emit parentWallTag only when the source explicitly states the wall mark that
+  owns the opening. Do not invent wall marks from shear-wall type notes alone
+  or from layout proximity.
+- If an opening is visible but a property is unreadable/ambiguous, omit that
+  property. Do not invent jack/king counts, header sizes, quantities, or
+  framing math.
+- Opening search applies in addition to schedule-based opening extraction; both
+  may contribute Evidence for the same subjectKey across pages.
+
+opening type-mark / schedule dimension rules (this stage):
+- Opening type marks (examples of form only: compact door codes, window type
+  codes) identify the opening subject. They do not authorize dimensions by
+  themselves.
+- Emit opening dimensions from a type mark only when the source explicitly
+  defines how that mark maps to width/height (schedule row, legend, note, or
+  printed W×H beside the opening). Do not decode industry size conventions
+  without that explicit key.
+- When an opening label itself prints explicit width x height (examples of form
+  only: 3'-0" x 6'-8", 22" x 30"), emit dimensions.nominalWidthFeet /
+  dimensions.nominalHeightFeet for that opening subject.
+- A schedule-derived opening property may attach only when an explicit
+  unambiguous key links plan opening mark → schedule/type row → property.
+  Do not associate dimensions by visual similarity, ordering, proximity alone,
+  construction convention, or "standard" sizes.
+- If the current pages do not contain sufficient authority for a dimension,
+  omit it. Missing is preferable to inferred.
+
 opening kingStudCount extraction rules (this stage):
 - Emit kingStudCount only when the page text explicitly states the king-stud
   count for that opening (examples: "King studs: 2", "2 king studs",
@@ -231,20 +401,23 @@ opening jackStudCount extraction rules (this stage):
   jackStudCount Evidence entirely. Do not default to 2 or any other value.
 
 opening wall-association extraction rules (this stage):
-- Emit parentWallTag only when the page text explicitly states which wall
-  tag owns the opening (example: "O-001 in Wall W-001").
+- Emit parentWallTag only when the source (page text or visual label/callout)
+  explicitly states which wall tag owns the opening (example of form:
+  "O-001 in Wall W-001").
 - Use the exact wall tag string from the plan as candidateValue.
 - Do not emit ObjectIds, WS-* segment IDs, or parentObjectId values.
 - Do not infer a parent wall from proximity, layout, or header references.
 - Do not infer parentWallTag when the association is missing or ambiguous.
 
 opening header-association extraction rules (this stage):
-- Emit headerMemberTag only when the page text explicitly states which header
-  tag serves the opening (example: "Header HDR-001 at Opening O-001" may also
-  be represented on the opening as headerMemberTag HDR-001).
+- Emit headerMemberTag only when the source (page text or visual callout/leader)
+  explicitly associates a header/member mark with the opening (example of form:
+  "Header HDR-001 at Opening O-001", or a plan leader from a header mark to
+  that opening).
 - Use the exact header tag string from the plan as candidateValue.
 - Do not emit ObjectIds, SM-* IDs, or headerMemberId values.
-- Do not infer header associations from opening width, category, or proximity.
+- Do not infer header associations from opening width, category, or vague
+  proximity without a linking callout/leader/note.
 - Do not infer headerMemberTag when the association is missing or ambiguous.
 
 sheathing extraction rules (this stage):
@@ -301,13 +474,17 @@ roof-framing extraction rules (this stage):
 - Do not create review items or resolve competing candidates.
 
 structural-member opening-association extraction rules (this stage):
-- Emit supportedOpeningTag only when the page text explicitly states which
-  opening tag the header serves (example: "Header HDR-001 at Opening O-001").
-- Use the exact opening tag string from the plan as candidateValue.
+- Emit supportedOpeningTag when the source (page text or visual callout/leader)
+  explicitly associates a header/member with an opening identity (examples of
+  form: "Header HDR-001 at Opening O-001", or a plan leader tying a member mark
+  to a labeled opening).
+- Use the exact opening identity string from the plan as candidateValue (same
+  string used as the opening subjectKey when possible).
 - Do not emit ObjectIds or supportedObjectIds values.
-- Do not infer supportedOpeningTag from location wording unless an explicit
-  opening tag is present in the source text.
-- Do not infer supportedOpeningTag when the association is missing or ambiguous.
+- Do not infer supportedOpeningTag from vague proximity without a linking
+  callout/leader/note.
+- Do not require a reciprocal opening headerMemberTag for the same association;
+  one explicit direction is enough for deterministic linking later.
 
 candidateValue:
 - Emit only the extracted scalar: string, number, boolean, or null.
@@ -334,11 +511,23 @@ schedule and compact-notation reading rules (this stage):
   Example form: a header schedule row MARK | SIZE/MATERIAL | LENGTH | QTY maps to
   structural-member Evidence for that MARK (category, size, materialType,
   lengthFeet, quantity) when those columns are explicit.
+- Schedule-row grounding: a schedule-derived property belongs only to the
+  explicitly keyed row/column subject shown in the source. Attach assembly,
+  material, fastener, or similar cells only to that row's mark.
+- Do not propagate a schedule cell to neighboring marks, visually similar marks,
+  unlisted marks, or marks that appear only as detail references on another
+  sheet unless that exact mark has its own readable schedule row with that cell.
+- Do not reason that because SW-class / wall-type / member-class rows nearby use
+  a material, another mark "probably" uses it too. Missing is preferable to
+  generalized Evidence.
+- When a row cell explicitly points to a detail/note instead of stating a value,
+  emit that reference (for example detailReference / specificationReference /
+  noteReference) rather than inventing the missing cell value from other rows.
 - Compact assembly callouts such as '2x6 SPF STUDS @ 16" O.C.' may yield separate
   Evidence for stud size, spacing, and material when clearly stated together.
 - When the plan identifies a wood stud wall (for example "WOOD STUD" / "wood stud
   wall"), preserve that wood-stud identity in wallType (and material when stated).
-  Opening framing eligibility depends on wood-stud wall identity.
+  Opening framing eligibility depends on wood-stud identity.
 - Do not invent columns that the schedule does not show (especially jack counts,
   sheathing SF, member lengths, or king counts).
 - Prefer short originalText quotes from the supporting schedule/callout line.
@@ -385,6 +574,7 @@ JSON shape (illustrative; do not copy values unless present in page text):
           "revision": null
         },
         "region": null,
+        "tileId": null,
         "elementLabel": "W-001",
         "detailNumber": null,
         "sectionNumber": null,
@@ -413,6 +603,7 @@ JSON shape (illustrative; do not copy values unless present in page text):
           "revision": null
         },
         "region": null,
+        "tileId": "t-r0-c1",
         "elementLabel": "W-002",
         "detailNumber": null,
         "sectionNumber": null,
@@ -441,6 +632,7 @@ JSON shape (illustrative; do not copy values unless present in page text):
           "revision": null
         },
         "region": null,
+        "tileId": null,
         "elementLabel": "HDR-001",
         "detailNumber": null,
         "sectionNumber": null,
@@ -492,8 +684,240 @@ Page text:
 ${pageBlocks}`;
 }
 
+function buildExtractionPreamble(
+  buildingAssemblies: ExtractFramingEvidenceInput["buildingAssemblies"],
+  extractionBundle?: ExtractionPageBundle,
+): string {
+  const bundleLines: string[] = [];
+  if (extractionBundle) {
+    bundleLines.push(
+      "",
+      `Extraction page bundle: ${extractionBundle.bundleId}`,
+      `Scope intent: ${extractionBundle.intent}`,
+      "Bundle page roles (source context only — not construction objects):",
+    );
+    for (const member of extractionBundle.members) {
+      bundleLines.push(
+        `- page ${member.pageNumber}: role=${member.role}, visual=${member.visualDetailLevel}` +
+          (member.reason ? ` (${member.reason})` : ""),
+      );
+    }
+    if (extractionBundle.intent === "referenced-detail") {
+      const hasSelectedTiles = extractionBundle.members.some(
+        (member) =>
+          Array.isArray(member.selectedTileIds) &&
+          member.selectedTileIds.length > 0,
+      );
+      bundleLines.push(
+        "This is a referenced-detail observation pass reached via an explicit plan reference.",
+        "Identify the explicitly referenced detail/callout on the provided visuals when visible.",
+        "Extract source-grounded framing facts that belong to that referenced detail.",
+        "A reference authorizes inspection; it does not assign every fact on the sheet to the originating subject.",
+        "Only link facts to an existing subjectKey when the source explicitly identifies that same mark/tag.",
+        "Do not calculate quantities. Do not invent jack/king/header framing math.",
+        "Do not extract neighboring/unrelated detail callouts that are outside the requested detail.",
+        hasSelectedTiles
+          ? "Selected tiles are a higher-resolution view of the same page — set source.tileId when the fact was read from a Tile image block; leave tileId null if read only from the Full Sheet."
+          : "Preserve pageNumber provenance; leave tileId null for full-sheet-only referenced passes.",
+        ...extractionBundle.routingNotes
+          .filter((note) => note.trim().length > 0)
+          .map((note) => `Routing note: ${note}`),
+      );
+    } else {
+      bundleLines.push(
+        "The primary page is the detailed source for this pass.",
+        "Supporting/global pages are project-level context only.",
+        "Attribute each Evidence record to the pageNumber where the fact was actually observed.",
+        "When the fact was read from a Tile image block, also set source.tileId to that tile's tileId.",
+        "When the fact was read only from the Full Sheet or from page text, leave source.tileId null.",
+        "Do not attribute global/support-page facts to the primary pageNumber.",
+      );
+    }
+  }
+
+  return `Extract framing evidence from these plan pages.
+
+Known assemblies from prior stage (context only, not plan text):
+${JSON.stringify(buildingAssemblies, null, 2)}
+${bundleLines.join("\n")}
+
+Each page block below is labeled with pageNumber. Attached full-sheet images and
+tiles, when present, are visuals for that pageNumber only. Tile labels are
+provenance identifiers (tileId + geometry), not semantic interpretations.`;
+}
+
+
+function visualsToMap(
+  visuals: PlanVisualSet | readonly PlanPageVisual[] | undefined,
+): Map<number, PlanPageVisual> {
+  if (!visuals) {
+    return new Map();
+  }
+
+  const list: readonly PlanPageVisual[] =
+    "pages" in visuals ? visuals.pages : visuals;
+
+  return new Map(list.map((visual) => [visual.pageNumber, visual]));
+}
+
+function tilesToMap(
+  tiles:
+    | readonly PlanPageTileSet[]
+    | ReadonlyMap<number, readonly PlanPageVisualTile[]>
+    | undefined,
+): Map<number, PlanPageVisualTile[]> {
+  if (!tiles) {
+    return new Map();
+  }
+
+  if (Array.isArray(tiles)) {
+    const tileSets = tiles as readonly PlanPageTileSet[];
+    return new Map(
+      tileSets.map((tileSet) => [tileSet.pageNumber, [...tileSet.tiles]]),
+    );
+  }
+
+  const asMap = tiles as ReadonlyMap<number, readonly PlanPageVisualTile[]>;
+  return new Map(
+    [...asMap.entries()].map(([pageNumber, list]) => [pageNumber, [...list]]),
+  );
+}
+
 /**
- * Calls Claude to extract structured framing evidence from plan page text.
+ * Resolves page visuals for Stage 5. Renders only pages that lack usable text
+ * unless pre-rendered visuals are supplied for those pages.
+ */
+export async function resolvePageVisualsForExtraction(input: {
+  planIndex: PlanIndex;
+  pages: readonly PlanPage[];
+  pageVisuals?: PlanVisualSet | readonly PlanPageVisual[];
+  visualOutputDir?: string;
+  visualScale?: number;
+}): Promise<Map<number, PlanPageVisual>> {
+  const provided = visualsToMap(input.pageVisuals);
+  const missingPageNumbers = input.pages
+    .filter((page) => pageNeedsVisual(page) && !provided.has(page.pageNumber))
+    .map((page) => page.pageNumber);
+
+  if (missingPageNumbers.length === 0) {
+    return provided;
+  }
+
+  const outputDir =
+    input.visualOutputDir ??
+    (await mkdtemp(path.join(tmpdir(), "takeoff-bot-page-visuals-")));
+
+  const rendered = await renderPlanPageVisuals({
+    pdfPath: input.planIndex.pdfPath,
+    pageNumbers: missingPageNumbers,
+    outputDir,
+    scale: input.visualScale,
+  });
+
+  for (const visual of rendered.pages) {
+    provided.set(visual.pageNumber, visual);
+  }
+
+  return provided;
+}
+
+/**
+ * Resolves overlapping page tiles for empty-text pages.
+ * Crops from a higher-resolution page render (default scale 2).
+ */
+export async function resolvePageTilesForExtraction(input: {
+  planIndex: PlanIndex;
+  pages: readonly PlanPage[];
+  pageTiles?:
+    | readonly PlanPageTileSet[]
+    | ReadonlyMap<number, readonly PlanPageVisualTile[]>;
+  tileOutputDir?: string;
+  tileSourceScale?: number;
+  tileColumns?: number;
+  tileRows?: number;
+  tileOverlapFraction?: number;
+}): Promise<Map<number, PlanPageVisualTile[]>> {
+  const provided = tilesToMap(input.pageTiles);
+  const missingPageNumbers = input.pages
+    .filter((page) => pageNeedsVisual(page) && !provided.has(page.pageNumber))
+    .map((page) => page.pageNumber);
+
+  if (missingPageNumbers.length === 0) {
+    return provided;
+  }
+
+  const rootDir =
+    input.tileOutputDir ??
+    (await mkdtemp(path.join(tmpdir(), "takeoff-bot-page-tiles-")));
+  const sourceDir = path.join(rootDir, "tile-source");
+  const cropsDir = path.join(rootDir, "tiles");
+
+  const sourceSet = await renderPlanPageVisuals({
+    pdfPath: input.planIndex.pdfPath,
+    pageNumbers: missingPageNumbers,
+    outputDir: sourceDir,
+    scale: input.tileSourceScale ?? DEFAULT_PAGE_TILE_SOURCE_SCALE,
+  });
+
+  for (const sourcePageVisual of sourceSet.pages) {
+    const pageTileDir = path.join(
+      cropsDir,
+      `page-${String(sourcePageVisual.pageNumber).padStart(4, "0")}`,
+    );
+    const tileSet = await tilePlanPageVisual({
+      sourcePageVisual,
+      outputDir: pageTileDir,
+      columns: input.tileColumns ?? DEFAULT_PAGE_TILE_GRID.columns,
+      rows: input.tileRows ?? DEFAULT_PAGE_TILE_GRID.rows,
+      overlapFraction:
+        input.tileOverlapFraction ?? DEFAULT_PAGE_TILE_GRID.overlapFraction,
+    });
+    provided.set(sourcePageVisual.pageNumber, tileSet.tiles);
+  }
+
+  return provided;
+}
+
+/**
+ * Builds Stage 5 multimodal user content without calling Anthropic.
+ * Used by extraction and by deterministic contract tests.
+ */
+export async function buildExtractionUserContent(input: {
+  pages: readonly PlanPage[];
+  buildingAssemblies: ExtractFramingEvidenceInput["buildingAssemblies"];
+  visualsByPageNumber?: ReadonlyMap<number, PlanPageVisual>;
+  tilesByPageNumber?: ReadonlyMap<number, readonly PlanPageVisualTile[]>;
+  extractionBundle?: ExtractionPageBundle;
+}): Promise<ContentBlockParam[]> {
+  return buildPlanPagesUserContent({
+    pages: input.pages,
+    visualsByPageNumber: input.visualsByPageNumber,
+    tilesByPageNumber: input.tilesByPageNumber,
+    preambleText: buildExtractionPreamble(
+      input.buildingAssemblies,
+      input.extractionBundle,
+    ),
+  });
+}
+
+function assertVisualImageBudget(input: {
+  pages: readonly PlanPage[];
+  visualsByPageNumber: ReadonlyMap<number, PlanPageVisual>;
+  tilesByPageNumber: ReadonlyMap<number, readonly PlanPageVisualTile[]>;
+}): void {
+  const imageCount = countVisualImageBlocks(input);
+  if (imageCount <= MAX_VISUAL_IMAGES_PER_EXTRACTION_REQUEST) {
+    return;
+  }
+
+  throw new Error(
+    `extractedEvidence: multimodal request would include ${imageCount} images, exceeding the safe single-request budget of ${MAX_VISUAL_IMAGES_PER_EXTRACTION_REQUEST}. Use page routing / page bundles to scope Stage 5 to fewer pages before sending full-sheet context plus overlapping tiles.`,
+  );
+}
+
+/**
+ * Calls Claude to extract structured framing evidence from plan page text
+ * and optional page visuals / tiles.
  */
 export async function extractFramingEvidenceViaClaude(
   input: ExtractFramingEvidenceInput,
@@ -502,6 +926,7 @@ export async function extractFramingEvidenceViaClaude(
     input.planIndex,
     input.pageClassification,
     input.planReadingOrder,
+    input.extractionBundle,
   );
 
   if (pages.length === 0) {
@@ -512,20 +937,131 @@ export async function extractFramingEvidenceViaClaude(
 
   const knowledge = await loadKnowledgeFiles(EXTRACTION_KNOWLEDGE_PATHS);
   const knowledgeBlock = formatKnowledgeForPrompt(knowledge);
+  const systemPrompt = buildSystemPrompt(knowledgeBlock);
+  const pageVisualMode = input.pageVisualMode ?? "full-page-and-tiles";
+  const bundle = input.extractionBundle;
+
+  const needsVisualChannel = pages.some((page) => pageNeedsVisual(page));
+  if (!needsVisualChannel) {
+    return runClaudeJson({
+      systemPrompt,
+      userPrompt: buildUserPrompt({
+        pages,
+        buildingAssemblies: input.buildingAssemblies,
+      }),
+      schema: extractedFramingEvidencePayloadSchema,
+      label: "extracted framing evidence",
+      // Multi-domain realistic plans can exceed 16k output tokens when verbose;
+      // 32k + articulation rules covers current synthetic multi-page sets without
+      // redesigning extraction into domain-scoped passes.
+      maxTokens: 32768,
+    });
+  }
+
+  const pagesNeedingFull = bundle
+    ? pages.filter((page) => {
+        const member = bundle.members.find((m) => m.pageNumber === page.pageNumber);
+        return (
+          member?.visualDetailLevel === "full-page" ||
+          member?.visualDetailLevel === "full-page-and-tiles" ||
+          member?.visualDetailLevel === "full-page-and-selected-tiles"
+        );
+      })
+    : pageVisualMode === "full-page" || pageVisualMode === "full-page-and-tiles"
+      ? pages
+      : [];
+
+  const pagesNeedingTiles = bundle
+    ? pages.filter((page) => {
+        const member = bundle.members.find((m) => m.pageNumber === page.pageNumber);
+        return (
+          member?.visualDetailLevel === "full-page-and-tiles" ||
+          member?.visualDetailLevel === "full-page-and-selected-tiles" ||
+          member?.visualDetailLevel === "selected-tiles"
+        );
+      })
+    : pageVisualMode === "tiles" || pageVisualMode === "full-page-and-tiles"
+      ? pages
+      : [];
+
+  const visualsByPageNumber =
+    pagesNeedingFull.length > 0
+      ? await resolvePageVisualsForExtraction({
+          planIndex: input.planIndex,
+          pages: pagesNeedingFull,
+          pageVisuals: input.pageVisuals,
+          visualOutputDir: input.visualOutputDir,
+          visualScale: input.visualScale,
+        })
+      : new Map<number, PlanPageVisual>();
+
+  const tilesByPageNumber =
+    pagesNeedingTiles.length > 0
+      ? await resolvePageTilesForExtraction({
+          planIndex: input.planIndex,
+          pages: pagesNeedingTiles,
+          pageTiles: input.pageTiles,
+          tileOutputDir: input.tileOutputDir,
+          tileSourceScale: input.tileSourceScale,
+          tileColumns: input.tileColumns,
+          tileRows: input.tileRows,
+          tileOverlapFraction: input.tileOverlapFraction,
+        })
+      : new Map<number, PlanPageVisualTile[]>();
+
+  // Restrict to selectedTileIds when the bundle member requests localization.
+  if (bundle) {
+    for (const member of bundle.members) {
+      const selected = member.selectedTileIds;
+      if (!selected || selected.length === 0) {
+        continue;
+      }
+      const level = member.visualDetailLevel;
+      if (
+        level !== "selected-tiles" &&
+        level !== "full-page-and-selected-tiles"
+      ) {
+        continue;
+      }
+      const allowed = new Set(selected);
+      const existing = tilesByPageNumber.get(member.pageNumber) ?? [];
+      const filtered = existing.filter((tile) => allowed.has(tile.tileId));
+      if (filtered.length === 0) {
+        throw new Error(
+          `extractFramingEvidenceViaClaude: none of selectedTileIds [${selected.join(", ")}] were available for page ${member.pageNumber}.`,
+        );
+      }
+      tilesByPageNumber.set(member.pageNumber, filtered);
+    }
+  }
+
+  assertVisualImageBudget({
+    pages,
+    visualsByPageNumber,
+    tilesByPageNumber,
+  });
+
+  const userContent = await buildExtractionUserContent({
+    pages,
+    buildingAssemblies: input.buildingAssemblies,
+    visualsByPageNumber,
+    tilesByPageNumber,
+    extractionBundle: bundle,
+  });
 
   return runClaudeJson({
-    systemPrompt: buildSystemPrompt(knowledgeBlock),
-    userPrompt: buildUserPrompt({
-      pages,
-      buildingAssemblies: input.buildingAssemblies,
-    }),
+    systemPrompt,
+    userContent,
     schema: extractedFramingEvidencePayloadSchema,
     label: "extracted framing evidence",
-    // Multi-domain realistic plans can exceed 16k output tokens when verbose;
-    // 32k + compactness rules covers current synthetic multi-page sets without
-    // redesigning extraction into domain-scoped passes.
     maxTokens: 32768,
+    onApiCall: input.onApiCall,
+    onUsage: input.onUsage,
   });
 }
 
-export { buildSystemPrompt, selectPagesForExtraction };
+export {
+  buildSystemPrompt,
+  buildUserPrompt,
+  selectPagesForExtraction,
+};

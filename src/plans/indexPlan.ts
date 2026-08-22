@@ -4,7 +4,9 @@ import path from "node:path";
 
 import { convert } from "@opendataloader/pdf";
 
+import { computePdfContentHash } from "./computePdfContentHash.js";
 import type { PlanIndex, PlanPage } from "./PlanIndex.js";
+import { readPdfOutlinePageMap } from "./readPdfOutlinePageMap.js";
 
 const PAGE_NUMBER_KEY = "page number";
 const CONTENT_KEY = "content";
@@ -13,11 +15,14 @@ const NUMBER_OF_PAGES_KEY = "number of pages";
 /**
  * Indexes a PDF file into a PlanIndex using OpenDataLoader text/structured
  * extraction. Page count and textContent come from the PDF. sheetId and label
- * stay null until a later deterministic parser can derive them from extracted
- * text without fabricating values.
+ * are filled from PDF outline/bookmark titles when present (generic identity
+ * only — not semantic page-type classification). sourceContentHash is the
+ * SHA-256 of raw PDF bytes for visual-plan fingerprinting.
  */
 export async function indexPlan(pdfPath: string): Promise<PlanIndex> {
   await assertPdfFile(pdfPath);
+
+  const sourceContentHash = await computePdfContentHash(pdfPath);
 
   let pages: PlanPage[];
   try {
@@ -26,12 +31,44 @@ export async function indexPlan(pdfPath: string): Promise<PlanIndex> {
     throw wrapIndexError(pdfPath, error);
   }
 
+  pages = await enrichPagesWithOutlineIdentity(pdfPath, pages);
+
   return {
     pdfPath,
     totalPages: pages.length,
     pages,
     indexedAt: new Date().toISOString(),
+    sourceContentHash,
   };
+}
+
+async function enrichPagesWithOutlineIdentity(
+  pdfPath: string,
+  pages: PlanPage[],
+): Promise<PlanPage[]> {
+  let outlineByPage: Map<number, string>;
+  try {
+    outlineByPage = await readPdfOutlinePageMap(pdfPath);
+  } catch {
+    // Outline enrichment is best-effort identity; text indexing already succeeded.
+    return pages;
+  }
+
+  if (outlineByPage.size === 0) {
+    return pages;
+  }
+
+  return pages.map((page) => {
+    const outlineTitle = outlineByPage.get(page.pageNumber);
+    if (!outlineTitle) {
+      return page;
+    }
+    return {
+      ...page,
+      sheetId: page.sheetId ?? outlineTitle,
+      label: page.label ?? outlineTitle,
+    };
+  });
 }
 
 async function assertPdfFile(pdfPath: string): Promise<void> {

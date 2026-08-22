@@ -9,6 +9,7 @@ function samplePlan(overrides: Partial<PlanIndex> = {}): PlanIndex {
     pdfPath: "/tmp/plan.pdf",
     totalPages: 2,
     indexedAt: "2026-01-01T00:00:00.000Z",
+    sourceContentHash: null,
     pages: [
       {
         pageNumber: 1,
@@ -58,6 +59,16 @@ describe("computePlanSourceFingerprint", () => {
           },
         ],
       }),
+    );
+    assert.notEqual(base, changed);
+  });
+
+  it("changes when sourceContentHash changes with identical text", () => {
+    const base = computePlanSourceFingerprint(
+      samplePlan({ sourceContentHash: "a".repeat(64) }),
+    );
+    const changed = computePlanSourceFingerprint(
+      samplePlan({ sourceContentHash: "b".repeat(64) }),
     );
     assert.notEqual(base, changed);
   });

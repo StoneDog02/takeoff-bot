@@ -1,0 +1,257 @@
+{
+  "source": "artifacts/beckstead-b1.4-live/live-classification-report.json",
+  "note": "contentRoles enriched for B1.5A schema; values follow live visual classification evidence, not router title parsing.",
+  "pages": [
+    {
+      "pageNumber": 1,
+      "sheetId": "11",
+      "label": "11",
+      "pageKind": "mixed",
+      "scopeHints": [
+        "structural",
+        "general",
+        "wall",
+        "openings"
+      ],
+      "contentRoles": [
+        "index",
+        "notes",
+        "schedule"
+      ],
+      "discipline": "structural",
+      "pageType": "other",
+      "relevantToFraming": true,
+      "needsVisualClassification": false,
+      "classificationMethod": "visual",
+      "titleOrLabel": "S1.1 - Index, General Structural Notes, Schedules",
+      "evidenceText": "INDEX, GENERAL STRUCTURAL NOTES, SCHEDULES / METAL HOLDOWN SCHEDULE / CONCRETE FOUNDATION WALL SCHEDULE / WOOD BEAM/HEADER SCHEDULE / SHEAR WALL SCHEDULE / SHEET INDEX",
+      "classificationReason": "Sheet combines multiple schedules, general structural notes, sheet index, and small elevation/floor plan thumbnails with no single kind dominating.",
+      "confidenceLabel": "high"
+    },
+    {
+      "pageNumber": 2,
+      "sheetId": "21",
+      "label": "21",
+      "pageKind": "elevation",
+      "scopeHints": [
+        "architectural"
+      ],
+      "contentRoles": [
+        "elevation"
+      ],
+      "discipline": "architectural",
+      "pageType": "other",
+      "relevantToFraming": false,
+      "needsVisualClassification": false,
+      "classificationMethod": "visual",
+      "titleOrLabel": "S2.1 - Elevations",
+      "evidenceText": "REAR ELEVATION / LEFT ELEVATION / RIGHT ELEVATION / FRONT ELEVATION, SHEET S2.1 ELEVATIONS",
+      "classificationReason": "Sheet titled ELEVATIONS shows four building elevation views (front, rear, left, right) with dimension and material callouts.",
+      "confidenceLabel": "high"
+    },
+    {
+      "pageNumber": 3,
+      "sheetId": "22",
+      "label": "22",
+      "pageKind": "framing-plan",
+      "scopeHints": [
+        "structural",
+        "floor",
+        "framing"
+      ],
+      "contentRoles": [
+        "plan-layout"
+      ],
+      "discipline": "structural",
+      "pageType": "plan",
+      "relevantToFraming": true,
+      "needsVisualClassification": false,
+      "classificationMethod": "visual",
+      "titleOrLabel": "S2.2 - Crawl Space/Foundation Plan",
+      "evidenceText": "CRAWL SPACE/FOUNDATION PLAN, SCALE: 1/4\"=1'-0\", NOTES TO PLAN: FOOTINGS, FOUNDATION WALLS, FLOOR JOISTS, SHEAR WALLS",
+      "classificationReason": "Sheet titled CRAWL SPACE/FOUNDATION PLAN depicts foundation walls, footings, and floor framing supports with associated structural notes.",
+      "confidenceLabel": "high"
+    },
+    {
+      "pageNumber": 4,
+      "sheetId": "23",
+      "label": "23",
+      "pageKind": "plan",
+      "scopeHints": [
+        "architectural",
+        "floor",
+        "structural"
+      ],
+      "contentRoles": [
+        "plan-layout"
+      ],
+      "discipline": "structural",
+      "pageType": "plan",
+      "relevantToFraming": true,
+      "needsVisualClassification": false,
+      "classificationMethod": "visual",
+      "titleOrLabel": "S2.3 - Main Floor Plan",
+      "evidenceText": "MAIN FLOOR PLAN, SCALE: 1/4\"=1'-0\", MAIN FLOOR AREA = 1621 SQ. FT., GARAGE AREA, COV. PORCH AREA",
+      "classificationReason": "Sheet titled MAIN FLOOR PLAN shows room layout, dimensions, and structural callouts (beams, shear walls) typical of a main floor plan sheet.",
+      "confidenceLabel": "high"
+    },
+    {
+      "pageNumber": 5,
+      "sheetId": "31",
+      "label": "31",
+      "pageKind": "mixed",
+      "scopeHints": [
+        "roof",
+        "structural",
+        "general"
+      ],
+      "contentRoles": [
+        "plan-layout"
+      ],
+      "discipline": "structural",
+      "pageType": "other",
+      "relevantToFraming": true,
+      "needsVisualClassification": false,
+      "classificationMethod": "visual",
+      "titleOrLabel": "S3.1 - Roof Layout and Electrical Plan",
+      "evidenceText": "ROOF LAYOUT AND ELECTRICAL PLAN, MAIN FLOOR ELEC./H.V.A.C. LAYOUT, ROOF LAYOUT, RAISED PATIO SLAB DETAIL",
+      "classificationReason": "Sheet combines a roof layout plan, an electrical/HVAC plan, and two construction details, with no single kind dominating the sheet.",
+      "confidenceLabel": "high"
+    },
+    {
+      "pageNumber": 6,
+      "sheetId": "41",
+      "label": "41",
+      "pageKind": "detail",
+      "scopeHints": [
+        "structural"
+      ],
+      "contentRoles": [
+        "detail"
+      ],
+      "discipline": "structural",
+      "pageType": "detail",
+      "relevantToFraming": true,
+      "needsVisualClassification": false,
+      "classificationMethod": "visual",
+      "titleOrLabel": "S4.1 - Footing and Foundation Details",
+      "evidenceText": "FOOTING AND FOUNDATION DETAILS, CONCRETE RETAINING WALL SCHEDULE, STEPPED FOOTING DETAIL, FOUNDATION WALL ON FOOTING",
+      "classificationReason": "Sheet titled FOOTING AND FOUNDATION DETAILS presents numbered construction detail drawings for footings, retaining walls, and foundation conditions.",
+      "confidenceLabel": "high"
+    },
+    {
+      "pageNumber": 7,
+      "sheetId": "42",
+      "label": "42",
+      "pageKind": "detail",
+      "scopeHints": [
+        "structural",
+        "framing"
+      ],
+      "contentRoles": [
+        "detail"
+      ],
+      "discipline": "structural",
+      "pageType": "detail",
+      "relevantToFraming": true,
+      "needsVisualClassification": false,
+      "classificationMethod": "visual",
+      "titleOrLabel": "S4.2 - FOOTING AND FOUNDATION DETAILS",
+      "evidenceText": "FOOTING AND FOUNDATION DETAILS, S4.2, EXTERIOR STEEL POST ON CONC. FOOTING, CRAWL SPACE CONC. FDTN. WALL ON CONC. FOOTING",
+      "classificationReason": "Sheet title block reads 'FOOTING AND FOUNDATION DETAILS' with multiple numbered no-scale construction details for footings, posts, and foundation walls.",
+      "confidenceLabel": "high"
+    },
+    {
+      "pageNumber": 8,
+      "sheetId": "51",
+      "label": "51",
+      "pageKind": "detail",
+      "scopeHints": [
+        "framing",
+        "floor",
+        "structural"
+      ],
+      "contentRoles": [
+        "detail"
+      ],
+      "discipline": "structural",
+      "pageType": "detail",
+      "relevantToFraming": true,
+      "needsVisualClassification": false,
+      "classificationMethod": "visual",
+      "titleOrLabel": "S5.1 - FLOOR FRAMING DETAILS",
+      "evidenceText": "FLOOR FRAMING DETAILS, S5.1, BEARING/SHEAR WALL WITH FLOOR JOISTS PERPENDICULAR TO CONC. FDTN. WALL",
+      "classificationReason": "Title block reads 'FLOOR FRAMING DETAILS' with numbered no-scale detail drawings covering floor joist and wall connections.",
+      "confidenceLabel": "high"
+    },
+    {
+      "pageNumber": 9,
+      "sheetId": "52",
+      "label": "52",
+      "pageKind": "detail",
+      "scopeHints": [
+        "framing",
+        "floor",
+        "structural"
+      ],
+      "contentRoles": [
+        "detail"
+      ],
+      "discipline": "structural",
+      "pageType": "detail",
+      "relevantToFraming": true,
+      "needsVisualClassification": false,
+      "classificationMethod": "visual",
+      "titleOrLabel": "S5.2 - FLOOR FRAMING DETAILS",
+      "evidenceText": "FLOOR FRAMING DETAILS, S5.2, FDTN. WALL WITH DOUBLE PLATE OPTION, CANTILEVERED FLOOR",
+      "classificationReason": "Title block reads 'FLOOR FRAMING DETAILS' with a series of numbered construction details for floor and foundation connections.",
+      "confidenceLabel": "high"
+    },
+    {
+      "pageNumber": 10,
+      "sheetId": "61",
+      "label": "61",
+      "pageKind": "detail",
+      "scopeHints": [
+        "framing",
+        "roof",
+        "structural"
+      ],
+      "contentRoles": [
+        "detail"
+      ],
+      "discipline": "structural",
+      "pageType": "detail",
+      "relevantToFraming": true,
+      "needsVisualClassification": false,
+      "classificationMethod": "visual",
+      "titleOrLabel": "S6.1 - ROOF FRAMING DETAILS",
+      "evidenceText": "ROOF FRAMING DETAILS, S6.1, BEARING/SHEAR WALL AT ROOF TRUSSES, GABLE END AND/OR SHEAR WALL PARALLEL TO ROOF TRUSSES",
+      "classificationReason": "Title block reads 'ROOF FRAMING DETAILS' with numbered no-scale details for roof truss and shear wall connections.",
+      "confidenceLabel": "high"
+    },
+    {
+      "pageNumber": 11,
+      "sheetId": "62",
+      "label": "62",
+      "pageKind": "detail",
+      "scopeHints": [
+        "framing",
+        "roof",
+        "structural"
+      ],
+      "contentRoles": [
+        "detail"
+      ],
+      "discipline": "structural",
+      "pageType": "detail",
+      "relevantToFraming": true,
+      "needsVisualClassification": false,
+      "classificationMethod": "visual",
+      "titleOrLabel": "S6.2 - ROOF FRAMING DETAILS",
+      "evidenceText": "ROOF FRAMING DETAILS, S6.2, CS16x40 STRAP INSTALLATION, ROOF FRAMING OVERBUILD, TRUSS TO BEARING/SHEAR WALL",
+      "classificationReason": "Title block reads 'ROOF FRAMING DETAILS' with numbered construction details for roof truss framing, overbuilds, and strap installations.",
+      "confidenceLabel": "high"
+    }
+  ]
+}

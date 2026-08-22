@@ -69,6 +69,11 @@ export const sourceRegionSchema = z
 export const sourceLocationSchema = z.object({
   page: sourcePageSchema,
   region: sourceRegionSchema.nullable().default(null),
+  /**
+   * Optional deterministic visual tile id (e.g. `t-r0-c1`) when Evidence was
+   * extracted from a page tile rather than whole-page text/visual alone.
+   */
+  tileId: z.string().trim().min(1).nullable().default(null),
   elementLabel: z.string().trim().min(1).nullable().default(null),
   detailNumber: z.string().trim().min(1).nullable().default(null),
   sectionNumber: z.string().trim().min(1).nullable().default(null),

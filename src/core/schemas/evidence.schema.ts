@@ -123,6 +123,13 @@ export const evidenceSchema = z.object({
   subjectKey: evidenceSubjectKeySchema,
   propertyPath: evidencePropertyPathSchema,
   candidateValue: evidenceCandidateValueSchema,
+  /**
+   * Optional scoped extraction pass id when Evidence was produced by a
+   * routed page-bundle pass. Null for single-pass / text-only extractions.
+   */
+  extractionPassId: z.string().trim().min(1).nullable().default(null),
+  /** Optional page-bundle id for multi-pass visual routing provenance. */
+  bundleId: z.string().trim().min(1).nullable().default(null),
 });
 
 /**

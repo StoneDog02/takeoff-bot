@@ -9,6 +9,8 @@ import type { ArtifactId } from "../../../core/schemas/identity.schema.js";
 import { evidenceIdSchema, type PipelineRunId } from "../../../core/schemas/identity.schema.js";
 import { generateArtifactId } from "../../../core/utils/ids.js";
 import { computePlanSourceFingerprint } from "../../../plans/computePlanSourceFingerprint.js";
+import { classifyPlanPagesDeterministically } from "../../../plans/classifyPlanPages.js";
+import { buildPlanReadingOrderFromClassification } from "../../../plans/buildPlanReadingOrder.js";
 import { extractFramingEvidenceViaClaude } from "../prompts/extractFramingEvidence.js";
 import {
   buildingAssembliesArtifactSchema,
@@ -383,28 +385,6 @@ function buildMockExtractedEvidence(
   });
 }
 
-function classifyPage(sheetId: string | null, label: string | null) {
-  const normalizedLabel = label?.toLowerCase() ?? "";
-  const discipline = sheetId?.startsWith("S")
-    ? "structural"
-    : sheetId?.startsWith("A")
-      ? "architectural"
-      : "other";
-  const pageType = normalizedLabel.includes("cover")
-    ? "cover"
-    : normalizedLabel.includes("schedule")
-      ? "schedule"
-      : normalizedLabel.includes("note")
-        ? "notes"
-        : normalizedLabel.includes("detail")
-          ? "detail"
-          : normalizedLabel.includes("plan")
-            ? "plan"
-            : "other";
-
-  return { discipline, pageType } as const;
-}
-
 const stages: PipelineStage[] = [
   {
     order: 1,
@@ -423,22 +403,13 @@ const stages: PipelineStage[] = [
     order: 2,
     name: "pageClassification",
     async run(context) {
+      const pages = classifyPlanPagesDeterministically(context.planIndex);
       return createFramingStageArtifact(
         context,
         2,
         pageClassificationArtifactSchema,
         "page-classification",
-        {
-          pages: context.planIndex.pages.map((page) => {
-            const classification = classifyPage(page.sheetId, page.label);
-            return {
-              pageNumber: page.pageNumber,
-              sheetId: page.sheetId,
-              ...classification,
-              relevantToFraming: classification.pageType !== "cover",
-            };
-          }),
-        },
+        { pages },
       );
     },
   },
@@ -446,25 +417,14 @@ const stages: PipelineStage[] = [
     order: 3,
     name: "planReadingOrder",
     async run(context) {
-      const preferredOrder = [1, 6, 4, 2, 3, 5, 7, 8];
-      const availablePages = new Set(
-        context.planIndex.pages.map((page) => page.pageNumber),
-      );
+      const classified = classifyPlanPagesDeterministically(context.planIndex);
+      const readingOrder = buildPlanReadingOrderFromClassification(classified);
       return createFramingStageArtifact(
         context,
         3,
         planReadingOrderArtifactSchema,
         "plan-reading-order",
-        {
-          orderedPageNumbers: preferredOrder.filter((pageNumber) =>
-            availablePages.has(pageNumber),
-          ),
-          rationale: [
-            "Verify project identity and notes before resolving geometry.",
-            "Read structural context before architectural wall extraction.",
-            "Read schedules and details before final resolution.",
-          ],
-        },
+        readingOrder,
       );
     },
   },

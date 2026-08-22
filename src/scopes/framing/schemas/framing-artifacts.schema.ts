@@ -34,6 +34,7 @@ import {
 } from "./sheathing.schema.js";
 import { structuralMemberSchema } from "./structural-member.schema.js";
 import { buildingWallSchema, wallSegmentSchema } from "./wall.schema.js";
+import { classifiedPlanPageSchema } from "../../../plans/pageClassification.js";
 
 export const verifiedPlanSetPayloadSchema = z.object({
   pdfPath: z.string().trim().min(1),
@@ -47,25 +48,15 @@ export const verifiedPlanSetPayloadSchema = z.object({
     }),
   ),
   indexedAt: z.string().datetime({ offset: true }),
+  sourceContentHash: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/i)
+    .nullable()
+    .default(null),
 });
 
 export const pageClassificationPayloadSchema = z.object({
-  pages: z.array(
-    z.object({
-      pageNumber: z.number().int().positive(),
-      sheetId: z.string().trim().min(1).nullable(),
-      discipline: z.enum(["architectural", "structural", "other"]),
-      pageType: z.enum([
-        "cover",
-        "plan",
-        "schedule",
-        "notes",
-        "detail",
-        "other",
-      ]),
-      relevantToFraming: z.boolean(),
-    }),
-  ),
+  pages: z.array(classifiedPlanPageSchema),
 });
 
 export const planReadingOrderPayloadSchema = z.object({
