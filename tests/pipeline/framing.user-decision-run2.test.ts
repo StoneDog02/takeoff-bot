@@ -155,7 +155,7 @@ function withTwoWallConflictEvidence(stages: PipelineStage[]): PipelineStage[] {
     const artifact = await original.run(context);
     return createFramingStageArtifact(
       context,
-      5,
+      6,
       extractedFramingEvidenceArtifactSchema,
       "extracted-framing-evidence",
       { evidence: twoWallConflictEvidence() },
@@ -488,7 +488,7 @@ describe("framing pipeline Run-2 user decision replay", () => {
       const staleStages = replaceStage(stages, "extractedEvidence", async (context) =>
         createFramingStageArtifact(
           context,
-          5,
+          6,
           extractedFramingEvidenceArtifactSchema,
           "extracted-framing-evidence",
           {

@@ -51,7 +51,7 @@ function withInjectedEvidence(
     await original.run(context);
     return createFramingStageArtifact(
       context,
-      5,
+      6,
       extractedFramingEvidenceArtifactSchema,
       "extracted-framing-evidence",
       { evidence },
@@ -113,7 +113,7 @@ describe("framing pipeline sheathing slice", () => {
       });
 
       assert.equal(result.success, true);
-      assert.equal(result.stageResults.length, 15);
+      assert.equal(result.stageResults.length, 16);
 
       const calculationsStage = result.stageResults.find(
         (entry) => entry.name === "calculations",

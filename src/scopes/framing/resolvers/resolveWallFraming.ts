@@ -37,8 +37,25 @@ import {
   type SegmentPropertyPath,
   type WallPropertyPath,
 } from "./wallFramingPropertyPaths.js";
+import {
+  SEMANTIC_TYPE_KEY_PROPERTY_PATH,
+  BINDING_AUTHORITY_GRADE_PROPERTY_PATH,
+} from "../geometry/semanticBindingConstants.js";
 
-type SupportedPropertyPath = WallPropertyPath | SegmentPropertyPath;
+const BINDING_PROPERTY_PATHS = [
+  SEMANTIC_TYPE_KEY_PROPERTY_PATH,
+  BINDING_AUTHORITY_GRADE_PROPERTY_PATH,
+] as const;
+
+type BindingPropertyPath = (typeof BINDING_PROPERTY_PATHS)[number];
+type SupportedPropertyPath =
+  | WallPropertyPath
+  | SegmentPropertyPath
+  | BindingPropertyPath;
+
+function isPhysicalRunSubjectKey(subjectKey: string): boolean {
+  return subjectKey.trim().startsWith("physical-run:");
+}
 
 type CandidateDecision =
   | { kind: "missing" }
@@ -58,6 +75,24 @@ function uniqueSortedIds(ids: readonly string[]): EvidenceId[] {
   return [...new Set(ids)].sort(compareIds) as EvidenceId[];
 }
 
+function normalizeBindingCandidate(
+  propertyPath: BindingPropertyPath,
+  candidateValue: Evidence["candidateValue"],
+): string | undefined {
+  if (candidateValue === null || typeof candidateValue !== "string") {
+    return undefined;
+  }
+  if (propertyPath === SEMANTIC_TYPE_KEY_PROPERTY_PATH) {
+    return candidateValue.trim().length > 0 ? candidateValue.trim() : undefined;
+  }
+  if (propertyPath === BINDING_AUTHORITY_GRADE_PROPERTY_PATH) {
+    return candidateValue === "A" || candidateValue === "B"
+      ? candidateValue
+      : undefined;
+  }
+  return undefined;
+}
+
 function selectCandidate(
   records: readonly Evidence[],
   propertyPath: SupportedPropertyPath,
@@ -69,7 +104,17 @@ function selectCandidate(
       continue;
     }
 
-    const value = normalizeWallFramingCandidate(propertyPath, record.candidateValue);
+    const value =
+      (WALL_PROPERTY_PATHS as readonly string[]).includes(propertyPath) ||
+      (SEGMENT_PROPERTY_PATHS as readonly string[]).includes(propertyPath)
+        ? normalizeWallFramingCandidate(
+            propertyPath as WallPropertyPath | SegmentPropertyPath,
+            record.candidateValue,
+          )
+        : normalizeBindingCandidate(
+            propertyPath as BindingPropertyPath,
+            record.candidateValue,
+          );
     if (value === undefined) {
       continue;
     }
@@ -185,20 +230,25 @@ function resolvePropertyAuthority(
   objectId: ObjectId,
   userDecisionIndex: UserDecisionIndex,
 ): { decision: CandidateDecision; traces: PropertyResolutionTrace[] } {
-  const applied = findAppliedUserDecision(
-    userDecisionIndex,
-    objectId,
-    propertyPath,
-  );
-  if (applied) {
-    return {
-      decision: {
-        kind: "resolved",
-        value: applied.value,
-        evidenceIds: applied.acceptedEvidenceIds,
-      },
-      traces: [createUserOverrideTrace(applied)],
-    };
+  if (
+    (WALL_PROPERTY_PATHS as readonly string[]).includes(propertyPath) ||
+    (SEGMENT_PROPERTY_PATHS as readonly string[]).includes(propertyPath)
+  ) {
+    const applied = findAppliedUserDecision(
+      userDecisionIndex,
+      objectId,
+      propertyPath as WallPropertyPath | SegmentPropertyPath,
+    );
+    if (applied) {
+      return {
+        decision: {
+          kind: "resolved",
+          value: applied.value,
+          evidenceIds: applied.acceptedEvidenceIds,
+        },
+        traces: [createUserOverrideTrace(applied)],
+      };
+    }
   }
 
   const decision = selectCandidate(records, propertyPath);
@@ -274,14 +324,45 @@ function resolveOneWall(
   subjectKey: string,
   records: readonly Evidence[],
   userDecisionIndex: UserDecisionIndex,
+  allGroups: Map<string, Evidence[]>,
 ): { wall: BuildingWall; segment: WallSegment } {
   const wallId = createWallObjectId(subjectKey);
   const segmentId = createWallSegmentObjectId(wallId);
 
+  const semanticTypeDecision = isPhysicalRunSubjectKey(subjectKey)
+    ? selectCandidate(records, SEMANTIC_TYPE_KEY_PROPERTY_PATH)
+    : { kind: "missing" as const };
+  const semanticTypeKey =
+    semanticTypeDecision.kind === "resolved"
+      ? (semanticTypeDecision.value as string)
+      : null;
+
+  const gradeDecision = isPhysicalRunSubjectKey(subjectKey)
+    ? selectCandidate(records, BINDING_AUTHORITY_GRADE_PROPERTY_PATH)
+    : { kind: "missing" as const };
+  const bindingAuthorityGrade =
+    gradeDecision.kind === "resolved" &&
+    (gradeDecision.value === "A" || gradeDecision.value === "B")
+      ? gradeDecision.value
+      : null;
+
+  const typeClusterRecords =
+    semanticTypeKey != null ? (allGroups.get(semanticTypeKey) ?? []) : [];
+  const wallResolutionRecords =
+    semanticTypeKey != null && typeClusterRecords.length > 0
+      ? [...records, ...typeClusterRecords]
+      : records;
+  const segmentResolutionRecords = records;
+
   const wallPropertyResults = Object.fromEntries(
     WALL_PROPERTY_PATHS.map((propertyPath) => [
       propertyPath,
-      resolvePropertyAuthority(propertyPath, records, wallId, userDecisionIndex),
+      resolvePropertyAuthority(
+        propertyPath,
+        wallResolutionRecords,
+        wallId,
+        userDecisionIndex,
+      ),
     ]),
   ) as Record<
     WallPropertyPath,
@@ -301,7 +382,7 @@ function resolveOneWall(
 
   const lengthResolved = resolvePropertyAuthority(
     "lengthFeet",
-    records,
+    segmentResolutionRecords,
     segmentId,
     userDecisionIndex,
   );
@@ -357,12 +438,12 @@ function resolveOneWall(
 
   const lengthFeet = resolvedValue<number>(lengthResolved.decision, null);
   const wallEvidenceIds = uniqueSortedIds(
-    records
+    wallResolutionRecords
       .filter((record) => !isSegmentPropertyPath(record.propertyPath))
       .map((record) => record.id),
   );
   const segmentEvidenceIds = uniqueSortedIds(
-    records
+    segmentResolutionRecords
       .filter((record) => isSegmentPropertyPath(record.propertyPath))
       .map((record) => record.id),
   );
@@ -380,6 +461,8 @@ function resolveOneWall(
     resolutionTraces: wallTraces,
     name: subjectKey,
     level: null,
+    semanticTypeKey,
+    bindingAuthorityGrade,
     ...wallValues,
     segmentIds: [segmentId],
   };
@@ -534,6 +617,7 @@ export function resolveWallFraming(
       subjectKey,
       groups.get(subjectKey) ?? [],
       userDecisionIndex,
+      groups,
     );
     walls.push(wall);
     segments.push(segment);

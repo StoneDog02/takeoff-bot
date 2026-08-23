@@ -185,16 +185,26 @@ function validateWallTypeResolved(wall: BuildingWall): ValidationBatch {
     );
   }
 
+  // When stud/plate assembly inputs are independently evidenced (plan notes /
+  // thickness legend), missing wallType must not block those quantities.
+  const studsCalculableWithoutType =
+    wall.assembly.studSize != null && wall.assembly.studSpacingInches != null;
+  const platesCalculableWithoutType = wall.assembly.plateCount != null;
+
   const quantityImpacts = [
     {
       quantityKey: WALL_QUANTITY_KEYS.studs,
-      description: "Stud size and spacing depend on the wall type.",
-      canCalculate: false,
+      description: studsCalculableWithoutType
+        ? "Stud size and spacing are resolved independently of wall type."
+        : "Stud size and spacing depend on the wall type.",
+      canCalculate: studsCalculableWithoutType,
     },
     {
       quantityKey: WALL_QUANTITY_KEYS.plates,
-      description: "Plate sizing depends on the wall type.",
-      canCalculate: false,
+      description: platesCalculableWithoutType
+        ? "Plate count is resolved independently of wall type."
+        : "Plate sizing depends on the wall type.",
+      canCalculate: platesCalculableWithoutType,
     },
   ];
 

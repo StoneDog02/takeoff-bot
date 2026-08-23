@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { ArtifactStore } from "../core/artifacts/ArtifactStore.js";
@@ -36,6 +36,13 @@ import {
   type FramingMaterialComparison,
   type LoadedFramingRunState,
 } from "./loadFramingRunState.js";
+import { loadPipelineRunResultFromArtifactDir } from "./loadPipelineRunResultFromArtifactDir.js";
+
+export type FramingTakeoffServiceOptions = {
+  artifactRoot?: string;
+  artifactDir?: string | null;
+  pdfPath?: string | null;
+};
 
 export type TakeoffViewState = {
   sessionId: string;
@@ -66,6 +73,7 @@ type FramingTakeoffSession = {
   userDecisions: UserDecision[];
   userDecisionArtifacts: string[];
   run1ReviewItemsById: Map<ReviewItemId, ReviewItem>;
+  readOnly: boolean;
 };
 
 function stageByName(result: PipelineRunResult, name: string) {
@@ -100,10 +108,63 @@ function toViewState(session: FramingTakeoffSession): TakeoffViewState {
 
 export class FramingTakeoffService {
   private readonly sessions = new Map<string, FramingTakeoffSession>();
+  private readonly artifactRoot: string;
+  private readonly artifactDir: string | null;
+  private readonly pdfPathOverride: string | null;
 
-  constructor(
-    private readonly artifactRoot = path.resolve("artifacts", "ui-sessions"),
-  ) {}
+  constructor(options: string | FramingTakeoffServiceOptions = {}) {
+    if (typeof options === "string") {
+      this.artifactRoot = path.resolve(options);
+      this.artifactDir = process.env.TAKEOFF_UI_ARTIFACT_DIR?.trim() || null;
+      this.pdfPathOverride = process.env.TAKEOFF_UI_PDF_PATH?.trim() || null;
+      return;
+    }
+
+    this.artifactRoot =
+      options.artifactRoot ?? path.resolve("artifacts", "ui-sessions");
+    this.artifactDir =
+      options.artifactDir ?? process.env.TAKEOFF_UI_ARTIFACT_DIR?.trim() ?? null;
+    this.pdfPathOverride =
+      options.pdfPath ?? process.env.TAKEOFF_UI_PDF_PATH?.trim() ?? null;
+  }
+
+  async startSession(): Promise<TakeoffViewState> {
+    if (this.artifactDir) {
+      return this.startFromArtifactDir(this.artifactDir);
+    }
+    return this.startDemoRun();
+  }
+
+  async startFromArtifactDir(artifactDir: string): Promise<TakeoffViewState> {
+    const { result, projectId, pdfPath } =
+      await loadPipelineRunResultFromArtifactDir(artifactDir);
+    const loaded = await loadFramingRunState(result);
+    const run1ValidationStage = stageByName(result, "validation");
+    const run1ValidationArtifact = validationArtifactSchema.parse(
+      JSON.parse(await readFile(run1ValidationStage.artifactPath, "utf8")),
+    );
+
+    const sessionId = generateUiSessionId();
+    const session: FramingTakeoffSession = {
+      id: sessionId,
+      projectId,
+      pdfPath: this.pdfPathOverride ?? pdfPath ?? "",
+      run1: {
+        artifactRoot: path.resolve(artifactDir),
+        result,
+        loaded,
+      },
+      userDecisions: [],
+      userDecisionArtifacts: [],
+      run1ReviewItemsById: new Map<ReviewItemId, ReviewItem>(
+        run1ValidationArtifact.payload.reviewItems.map((item) => [item.id, item]),
+      ),
+      readOnly: true,
+    };
+
+    this.sessions.set(sessionId, session);
+    return toViewState(session);
+  }
 
   async startDemoRun(): Promise<TakeoffViewState> {
     const sessionId = generateUiSessionId();
@@ -146,6 +207,7 @@ export class FramingTakeoffService {
       userDecisions: [],
       userDecisionArtifacts: [],
       run1ReviewItemsById,
+      readOnly: false,
     };
 
     this.sessions.set(sessionId, session);
@@ -170,6 +232,12 @@ export class FramingTakeoffService {
 
     if (session.run2) {
       throw new Error("This session already completed Run 2.");
+    }
+
+    if (session.readOnly) {
+      throw new Error(
+        "This session loaded completed artifacts for inspection and does not support Run 2 replay.",
+      );
     }
 
     const reviewItem = session.run1.loaded.reviewWorkspace.items.find(

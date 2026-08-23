@@ -129,7 +129,7 @@ export function createUiServer(service = new FramingTakeoffService()) {
       }
 
       if (request.method === "POST" && pathname === "/api/sessions") {
-        const state = await service.startDemoRun();
+        const state = await service.startSession();
         sendJson(response, 201, state);
         return;
       }

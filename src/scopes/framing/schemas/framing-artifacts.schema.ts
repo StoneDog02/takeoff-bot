@@ -35,6 +35,8 @@ import {
 import { structuralMemberSchema } from "./structural-member.schema.js";
 import { buildingWallSchema, wallSegmentSchema } from "./wall.schema.js";
 import { classifiedPlanPageSchema } from "../../../plans/pageClassification.js";
+import { compiledDrawingPageSchema } from "../../../drawing-compiler/schemas/compiledDrawingPage.schema.js";
+import { governedProjectDictionarySchema } from "../../../project-interpreter/schemas/projectDictionary.schema.js";
 
 export const verifiedPlanSetPayloadSchema = z.object({
   pdfPath: z.string().trim().min(1),
@@ -71,6 +73,59 @@ export const buildingAssembliesPayloadSchema = z.object({
 
 export const extractedFramingEvidencePayloadSchema = z.object({
   evidence: z.array(evidenceSchema),
+});
+
+export const compiledDrawingPagesPayloadSchema = z.object({
+  pages: z.array(compiledDrawingPageSchema),
+});
+
+export const compilerAutomationAuditPayloadSchema = z.object({
+  compiledPageNumbers: z.array(z.number().int().positive()),
+  physicalRuns: z.object({
+    detected: z.number().int().nonnegative(),
+    highAuthority: z.number().int().nonnegative(),
+    governedEmit: z.number().int().nonnegative(),
+    lengthResolved: z.number().int().nonnegative(),
+  }),
+  byReason: z.object({
+    automated: z.number().int().nonnegative(),
+    "compiler-unresolved": z.number().int().nonnegative(),
+    "source-authority-missing": z.number().int().nonnegative(),
+    "page-role-blocked": z.number().int().nonnegative(),
+    "scale-unresolved": z.number().int().nonnegative(),
+    "scale-rejected": z.number().int().nonnegative(),
+    "virtual-text-blocked": z.number().int().nonnegative(),
+    "conflicting-authority": z.number().int().nonnegative(),
+  }),
+  conflicts: z.array(
+    z.object({
+      physicalRunKey: z.string(),
+      compilerEvidenceId: z.string(),
+      claudeEvidenceId: z.string(),
+      compilerFeet: z.number(),
+      claudeFeet: z.number(),
+    }),
+  ),
+  timingMs: z.object({
+    total: z.number().nonnegative(),
+    perPage: z.record(z.number().nonnegative()),
+  }),
+});
+
+export const projectDictionaryPayloadSchema = governedProjectDictionarySchema;
+
+export const semanticBindingAuditPayloadSchema = z.object({
+  compiledPageNumbers: z.array(z.number().int().positive()),
+  perPage: z.record(z.unknown()),
+  directSemanticBindingAutomationRate: z.number().nonnegative(),
+  eligibleButUnboundRuns: z.number().int().nonnegative(),
+  semanticPropertySignalsNotUsedAsIdentity: z.number().int().nonnegative(),
+  ambiguousDirectBindings: z.number().int().nonnegative(),
+  bindingConflicts: z.number().int().nonnegative(),
+  calculablePhysicalRunRate: z.number().nonnegative(),
+  topologyPropagationOpportunities: z.number().int().nonnegative(),
+  directEmitCount: z.number().int().nonnegative(),
+  eligibleRunCount: z.number().int().nonnegative(),
 });
 
 export const wallFramingPayloadSchema = z.object({
@@ -170,6 +225,26 @@ export const extractedFramingEvidenceArtifactSchema =
     "extracted-framing-evidence",
     extractedFramingEvidencePayloadSchema,
   );
+export const compiledDrawingPagesArtifactSchema =
+  createTypedArtifactEnvelopeSchema(
+    "compiled-drawing-pages",
+    compiledDrawingPagesPayloadSchema,
+  );
+export const compilerAutomationAuditArtifactSchema =
+  createTypedArtifactEnvelopeSchema(
+    "compiler-automation-audit",
+    compilerAutomationAuditPayloadSchema,
+  );
+export const projectDictionaryArtifactSchema =
+  createTypedArtifactEnvelopeSchema(
+    "project-dictionary",
+    projectDictionaryPayloadSchema,
+  );
+export const semanticBindingAuditArtifactSchema =
+  createTypedArtifactEnvelopeSchema(
+    "semantic-binding-audit",
+    semanticBindingAuditPayloadSchema,
+  );
 export const wallFramingArtifactSchema = createTypedArtifactEnvelopeSchema(
   "wall-framing",
   wallFramingPayloadSchema,
@@ -258,6 +333,18 @@ export type BuildingAssembliesPayload = z.infer<
 >;
 export type ExtractedFramingEvidencePayload = z.infer<
   typeof extractedFramingEvidencePayloadSchema
+>;
+export type CompiledDrawingPagesPayload = z.infer<
+  typeof compiledDrawingPagesPayloadSchema
+>;
+export type CompilerAutomationAuditPayload = z.infer<
+  typeof compilerAutomationAuditPayloadSchema
+>;
+export type ProjectDictionaryPayload = z.infer<
+  typeof projectDictionaryPayloadSchema
+>;
+export type SemanticBindingAuditPayload = z.infer<
+  typeof semanticBindingAuditPayloadSchema
 >;
 export type WallFramingPayload = z.infer<typeof wallFramingPayloadSchema>;
 export type FloorFramingPayload = z.infer<typeof floorFramingPayloadSchema>;

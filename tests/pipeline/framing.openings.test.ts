@@ -54,7 +54,7 @@ function withInjectedWallAndOpeningEvidence(
     await original.run(context);
     return createFramingStageArtifact(
       context,
-      5,
+      6,
       extractedFramingEvidenceArtifactSchema,
       "extracted-framing-evidence",
       {

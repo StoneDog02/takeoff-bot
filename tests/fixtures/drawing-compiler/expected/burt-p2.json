@@ -1,0 +1,12 @@
+{
+  "pageNumber": 2,
+  "pageRole": "unknown",
+  "allowsWallPlanLengthEvidence": true,
+  "assignedEvidenceCount": 1,
+  "observationCount": 1,
+  "physicalRunKey": "physical-run:p2:fa43ee3ee11e",
+  "exampleText": "19'-6\"",
+  "exampleFeetApprox": 19.5,
+  "requiresNativeTextAuthority": true,
+  "forbiddenFeetApprox": 240
+}

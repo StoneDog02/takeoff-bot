@@ -81,7 +81,7 @@ function withCountedExtractor(
     extractCallCount.value += 1;
     return createFramingStageArtifact(
       context,
-      5,
+      6,
       extractedFramingEvidenceArtifactSchema,
       "extracted-framing-evidence",
       { evidence },

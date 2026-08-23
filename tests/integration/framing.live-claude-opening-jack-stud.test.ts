@@ -58,7 +58,7 @@ describe("live Claude opening jack stud proof", { skip: !RUN_LIVE }, () => {
         });
 
         assert.equal(result.success, true, result.errors.join("\n"));
-        assert.equal(result.stageResults.length, 15);
+        assert.equal(result.stageResults.length, 16);
 
         const snapshot = await snapshotLiveFramingPipeline(pageText, result);
         assert.equal(snapshot.pageText, WALL_O001_HDR001_JACK2_TEXT);

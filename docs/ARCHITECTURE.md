@@ -26,6 +26,8 @@ Optimize every implementation toward accurate material takeoffs rather than maxi
 
 Claude extracts evidence.
 
+**Project Interpreter** (optional layer between compiler artifacts and Evidence governance) induces a project-local dictionary via bounded, tool-grounded investigation. It does not replace deterministic compilation, resolution, or calculation. Interpreter output is governed before any Evidence emit.
+
 TypeScript resolves.
 
 Artifacts preserve deterministic state.
@@ -316,3 +318,11 @@ When implementation choices exist, prefer:
 Challenge existing designs only when there is a materially better architecture.
 
 Do not redesign stable architecture unnecessarily.
+
+---
+
+# Schedule definition extraction (B2.2L.6)
+
+Compiler schedule extraction establishes **definitions** only (`SW* → properties`). It does **not** bind physical runs or infer ownership. Promoted path: heading-anchored table region + row-band OCR (`extractScheduleFromRowBands`) with `DictionaryGovernor.verifyDefinitionPropertyCitation` against `schedule-*` OCR cache entries.
+
+**Full Framing Takeoff Audit:** Run after B2.2L.6 reaches governed schedule definitions (S3) **and** a subsequent bridge milestone improves end-to-end takeoff completion — see `artifacts/b2.2l.6/RESEARCH.md` §SOP. L.6 does not implement the audit runner.

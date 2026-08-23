@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -9,13 +10,25 @@ import { createMaterialLineItemId } from "../../src/scopes/framing/calculators/i
 import { OPENING_QUANTITY_KEYS } from "../../src/scopes/framing/validators/rule-ids.js";
 import { FramingTakeoffService } from "../../src/ui/framingTakeoffService.js";
 
+const BECKSTEAD_ARTIFACT_DIR = path.resolve(
+  "artifacts/b2.2m.2/runs/beckstead-audit-a/framing",
+);
+
+function createDemoService(artifactRoot: string) {
+  return new FramingTakeoffService({
+    artifactRoot,
+    artifactDir: null,
+    pdfPath: null,
+  });
+}
+
 describe("framing takeoff UI service", () => {
   it("runs demo takeoff and replays O-002 kingStudCount through Run 2", async () => {
     const artifactRoot = await mkdtemp(path.join(tmpdir(), "takeoff-ui-service-"));
 
     try {
-      const service = new FramingTakeoffService(artifactRoot);
-      const run1 = await service.startDemoRun();
+      const service = createDemoService(artifactRoot);
+      const run1 = await service.startSession();
 
       assert.equal(run1.activeRun, 1);
       assert.ok(run1.takeoff.materials.length >= 10);
@@ -88,8 +101,8 @@ describe("framing takeoff UI service", () => {
     const artifactRoot = await mkdtemp(path.join(tmpdir(), "takeoff-ui-invalid-"));
 
     try {
-      const service = new FramingTakeoffService(artifactRoot);
-      const run1 = await service.startDemoRun();
+      const service = createDemoService(artifactRoot);
+      const run1 = await service.startSession();
       const o002King = run1.reviewWorkspace.items.find(
         (item) =>
           item.objectId === "O-002" && item.targetProperty === "kingStudCount",
@@ -114,4 +127,86 @@ describe("framing takeoff UI service", () => {
       await rm(artifactRoot, { recursive: true, force: true });
     }
   });
+
+  it("uses demo pipeline when artifactDir is not configured", async () => {
+    const artifactRoot = await mkdtemp(path.join(tmpdir(), "takeoff-ui-demo-only-"));
+
+    try {
+      const service = createDemoService(artifactRoot);
+      const run1 = await service.startSession();
+
+      assert.equal(run1.projectId, "ui-demo-multi-object");
+      assert.ok(run1.takeoff.materials.length >= 10);
+      assert.ok(
+        run1.reviewWorkspace.items.some((item) => item.objectId === "O-002"),
+      );
+    } finally {
+      await rm(artifactRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("fails clearly when artifactDir is invalid and does not fall back to demo", async () => {
+    const artifactRoot = await mkdtemp(path.join(tmpdir(), "takeoff-ui-artifact-fail-"));
+
+    try {
+      const service = new FramingTakeoffService({
+        artifactRoot,
+        artifactDir: path.join(tmpdir(), "takeoff-ui-nonexistent-artifacts"),
+      });
+
+      await assert.rejects(
+        () => service.startSession(),
+        /TAKEOFF_UI_ARTIFACT_DIR does not exist or is not readable/,
+      );
+    } finally {
+      await rm(artifactRoot, { recursive: true, force: true });
+    }
+  });
+
+  if (existsSync(BECKSTEAD_ARTIFACT_DIR)) {
+    it("loads Beckstead Audit #3 through loadFramingRunState", async () => {
+      const artifactRoot = await mkdtemp(
+        path.join(tmpdir(), "takeoff-ui-beckstead-"),
+      );
+
+      try {
+        const service = new FramingTakeoffService({
+          artifactRoot,
+          artifactDir: BECKSTEAD_ARTIFACT_DIR,
+        });
+        const run1 = await service.startSession();
+
+        assert.equal(run1.projectId, "beckstead-audit-a");
+        assert.notEqual(run1.projectId, "ui-demo-multi-object");
+        assert.equal(run1.takeoff.summary.materialLineItemCount, 52);
+        assert.equal(run1.takeoff.materials.length, 52);
+        assert.equal(run1.reviewWorkspace.summary.activeReviewItemCount, 107);
+        assert.equal(
+          run1.takeoff.materials.some((material) =>
+            material.id.includes("physical-run:p1:"),
+          ),
+          false,
+        );
+        assert.equal(
+          run1.takeoff.materials.some((material) =>
+            material.id.includes("physical-run:p3:"),
+          ),
+          true,
+        );
+
+        await assert.rejects(
+          () =>
+            service.submitValueProvidedDecision({
+              sessionId: run1.sessionId,
+              reviewItemId: run1.reviewWorkspace.items[0]!.reviewItemId,
+              value: 1,
+              rationale: "Should be blocked in artifact inspection mode.",
+            }),
+          /does not support Run 2 replay/,
+        );
+      } finally {
+        await rm(artifactRoot, { recursive: true, force: true });
+      }
+    });
+  }
 });

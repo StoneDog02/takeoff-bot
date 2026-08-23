@@ -31,6 +31,8 @@ export const wallAssemblySchema = z.object({
   sheathing: z.string().trim().min(1).nullable().default(null),
 });
 
+export const semanticBindingAuthorityGradeSchema = z.enum(["A", "B"]);
+
 export const buildingWallSchema = resolvedObjectBaseSchema.extend({
   objectType: z.literal("building-wall"),
   name: z.string().trim().min(1),
@@ -40,6 +42,9 @@ export const buildingWallSchema = resolvedObjectBaseSchema.extend({
    */
   level: z.string().trim().min(1).nullable().default(null),
   wallType: z.string().trim().min(1).nullable().default(null),
+  /** Governed semantic type identifier (e.g. SW2) bound to this physical instance. */
+  semanticTypeKey: z.string().trim().min(1).nullable().default(null),
+  bindingAuthorityGrade: semanticBindingAuthorityGradeSchema.nullable().default(null),
   location: wallLocationSchema,
   bearingStatus: wallBearingStatusSchema,
   isShearOrBraced: z.boolean().nullable().default(null),

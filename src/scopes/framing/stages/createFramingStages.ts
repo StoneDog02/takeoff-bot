@@ -12,8 +12,31 @@ import { computePlanSourceFingerprint } from "../../../plans/computePlanSourceFi
 import { classifyPlanPagesDeterministically } from "../../../plans/classifyPlanPages.js";
 import { buildPlanReadingOrderFromClassification } from "../../../plans/buildPlanReadingOrder.js";
 import { extractFramingEvidenceViaClaude } from "../prompts/extractFramingEvidence.js";
+import { compileDrawingPage } from "../../../drawing-compiler/compileDrawingPage.js";
+import { buildCompilerAutomationAudit } from "../compiler/buildCompilerAutomationAudit.js";
+import { buildSemanticBindingAudit } from "../compiler/buildSemanticBindingAudit.js";
+import { isDrawingSemanticBindingEnabled } from "../compiler/isDrawingSemanticBindingEnabled.js";
+import { isProjectOrientationEnabled } from "../compiler/isProjectOrientationEnabled.js";
+import {
+  isDrawingCompilerEnabled,
+  selectPagesForDrawingCompiler,
+} from "../compiler/selectPagesForDrawingCompiler.js";
+import { buildOrientationDictionary } from "../../../project-interpreter/buildOrientationDictionary.js";
+import { CompilerInvestigationFacade } from "../../../project-interpreter/compilerInvestigationFacade.js";
+import { DictionaryGovernor } from "../../../project-interpreter/dictionaryGovernor.js";
+import type { ProjectOrientationContext } from "../../../project-interpreter/projectOrientationContext.js";
+import type { SemanticDefinition } from "../../../drawing-compiler/schemas/semanticDefinition.schema.js";
+import { buildGeometryEvidenceFromCompiledPages } from "../geometry/buildGeometryEvidenceFromCompiledPages.js";
+import { buildGovernedSemanticCompilerEvidence } from "../geometry/buildGovernedSemanticCompilerEvidence.js";
+import { buildSemanticBindingEvidenceFromCompiledPages } from "../geometry/buildSemanticBindingEvidenceFromCompiledPages.js";
+import { collectWallAssemblyNoteTexts } from "../geometry/collectWallAssemblyNoteTexts.js";
+import { mergeExtractedAndGeometryEvidence } from "../geometry/mergeExtractedAndGeometryEvidence.js";
 import {
   buildingAssembliesArtifactSchema,
+  compilerAutomationAuditArtifactSchema,
+  compiledDrawingPagesArtifactSchema,
+  projectDictionaryArtifactSchema,
+  semanticBindingAuditArtifactSchema,
   confidenceArtifactSchema,
   extractedFramingEvidenceArtifactSchema,
   extractedFramingEvidencePayloadSchema,
@@ -30,6 +53,7 @@ import {
   verifiedPlanSetArtifactSchema,
   wallFramingArtifactSchema,
   type BuildingAssembliesPayload,
+  type CompiledDrawingPagesPayload,
   type ConfidencePayload,
   type ExtractedFramingEvidencePayload,
   type FloorFramingPayload,
@@ -136,6 +160,9 @@ export function createFramingStageArtifact<TSchema extends z.ZodTypeAny>(
   return parsed as ArtifactEnvelope<unknown>;
 }
 
+const COMPILER_AUTOMATION_AUDIT_COMPANION_SUFFIX = "compiler-automation-audit";
+const PROJECT_DICTIONARY_COMPANION_SUFFIX = "project-dictionary";
+const SEMANTIC_BINDING_AUDIT_COMPANION_SUFFIX = "semantic-binding-audit";
 const WALL_FRAMING_OPENING_LINKS_COMPANION_SUFFIX = "wall-framing-links";
 const OPENINGS_HEADER_LINKS_COMPANION_SUFFIX = "openings-header-links";
 const STRUCTURAL_MEMBERS_OPENING_LINKS_COMPANION_SUFFIX =
@@ -174,7 +201,7 @@ function createLinkedWallFramingArtifact(
   const now = new Date().toISOString();
 
   return wallFramingArtifactSchema.parse({
-    artifactId: generateArtifactId(7),
+    artifactId: generateArtifactId(8),
     artifactType: "wall-framing",
     schemaVersion: SCHEMA_VERSION,
     artifactVersion: 2,
@@ -208,7 +235,7 @@ function createLinkedOpeningsArtifact(
   const now = new Date().toISOString();
 
   return openingsArtifactSchema.parse({
-    artifactId: generateArtifactId(8),
+    artifactId: generateArtifactId(9),
     artifactType: "openings",
     schemaVersion: SCHEMA_VERSION,
     artifactVersion: 2,
@@ -242,7 +269,7 @@ function createLinkedStructuralMembersArtifact(
   const now = new Date().toISOString();
 
   return structuralMembersArtifactSchema.parse({
-    artifactId: generateArtifactId(8),
+    artifactId: generateArtifactId(9),
     artifactType: "structural-members",
     schemaVersion: SCHEMA_VERSION,
     artifactVersion: 2,
@@ -448,6 +475,120 @@ const stages: PipelineStage[] = [
   },
   {
     order: 5,
+    name: "compiledDrawingPages",
+    async run(context) {
+      const pageClassification = getPayload<PageClassificationPayload>(
+        context,
+        "pageClassification",
+      );
+      const planReadingOrder = getPayload<PlanReadingOrderPayload>(
+        context,
+        "planReadingOrder",
+      );
+
+      const pages: CompiledDrawingPagesPayload["pages"] = [];
+      let orientationContext: ProjectOrientationContext | undefined;
+      let crossPageDefinitions: readonly SemanticDefinition[] = [];
+
+      if (isDrawingCompilerEnabled()) {
+        const emptyTextPageNumbers = context.planIndex.pages
+          .filter((page) => page.textContent.trim().length === 0)
+          .map((page) => page.pageNumber);
+        const selected = selectPagesForDrawingCompiler({
+          classifiedPages: pageClassification.pages,
+          orderedPageNumbers: planReadingOrder.orderedPageNumbers,
+          emptyTextPageNumbers,
+        });
+
+        if (isProjectOrientationEnabled()) {
+          const facade = await CompilerInvestigationFacade.create(
+            context.planIndex.pdfPath,
+          );
+          const built = await buildOrientationDictionary({
+            projectId: context.planIndex.pdfPath,
+            pdfPath: context.planIndex.pdfPath,
+            facade,
+          });
+          const governor = new DictionaryGovernor(facade);
+          const govReport = await governor.govern(built.dictionary);
+          orientationContext = built.orientationContext;
+          crossPageDefinitions = built.orientationContext.definitions;
+
+          const dictionaryArtifact = createFramingStageArtifact(
+            context,
+            5,
+            projectDictionaryArtifactSchema,
+            "project-dictionary",
+            {
+              ...govReport.dictionary,
+              governance: {
+                evaluatedAt: govReport.evaluatedAt,
+                passRate: govReport.passRate,
+                acceptedHypothesisIds: govReport.acceptedHypothesisIds,
+                rejectedHypothesisIds: govReport.rejectedHypothesisIds,
+                acceptedBindingIds: govReport.acceptedBindingIds,
+                rejectedBindingIds: govReport.rejectedBindingIds,
+                validatorResults: govReport.validatorResults,
+                greenOutcome: govReport.greenOutcome,
+                greenCriterion: govReport.greenCriterion,
+              },
+            },
+            { type: "system", identifier: "project-orientation" },
+          );
+          context.stageSideEffects.publishCompanionArtifact(
+            PROJECT_DICTIONARY_COMPANION_SUFFIX,
+            dictionaryArtifact,
+          );
+          context.stageSideEffects.publishArtifactOverride(
+            "projectDictionary",
+            dictionaryArtifact,
+          );
+        }
+
+        for (const pageNumber of selected) {
+          const compiled = await compileDrawingPage({
+            pdfPath: context.planIndex.pdfPath,
+            pageNumber,
+            options: {
+              crossPageDefinitions:
+                crossPageDefinitions.length > 0
+                  ? crossPageDefinitions
+                  : undefined,
+              orientationContext,
+              referenceMechanism:
+                orientationContext?.referenceMechanismHint ?? undefined,
+            },
+          });
+          pages.push(compiled);
+        }
+      }
+
+      const audit = buildCompilerAutomationAudit(pages);
+      const auditArtifact = createFramingStageArtifact(
+        context,
+        5,
+        compilerAutomationAuditArtifactSchema,
+        "compiler-automation-audit",
+        audit,
+        { type: "system", identifier: "drawing-compiler" },
+      );
+      context.stageSideEffects.publishCompanionArtifact(
+        COMPILER_AUTOMATION_AUDIT_COMPANION_SUFFIX,
+        auditArtifact,
+      );
+
+      return createFramingStageArtifact(
+        context,
+        5,
+        compiledDrawingPagesArtifactSchema,
+        "compiled-drawing-pages",
+        { pages },
+        { type: "system", identifier: "drawing-compiler" },
+      );
+    },
+  },
+  {
+    order: 6,
     name: "extractedEvidence",
     async run(context) {
       const evidenceReplay = context.userDecisionRunInput?.evidenceReplay;
@@ -471,7 +612,7 @@ const stages: PipelineStage[] = [
 
         return createFramingStageArtifact(
           context,
-          5,
+          6,
           extractedFramingEvidenceArtifactSchema,
           "extracted-framing-evidence",
           payload,
@@ -486,7 +627,7 @@ const stages: PipelineStage[] = [
         );
       }
 
-      const payload = context.useMockAi
+      const claudePayload = context.useMockAi
         ? buildMockExtractedEvidence(context)
         : await extractFramingEvidenceViaClaude({
             planIndex: context.planIndex,
@@ -504,12 +645,85 @@ const stages: PipelineStage[] = [
             ),
           });
 
+      const compiledPages = getPayload<CompiledDrawingPagesPayload>(
+        context,
+        "compiledDrawingPages",
+      );
+      const geometryEvidence = buildGeometryEvidenceFromCompiledPages(
+        compiledPages.pages,
+      );
+      const merged = mergeExtractedAndGeometryEvidence({
+        claudeEvidence: claudePayload.evidence,
+        geometryEvidence,
+      });
+
+      let evidence = merged.evidence;
+
+      const dictionaryEnvelope = context.completedArtifacts.get("projectDictionary");
+      const dictionaryPayload = dictionaryEnvelope
+        ? projectDictionaryArtifactSchema.parse(dictionaryEnvelope).payload
+        : null;
+      const wallAssemblyNoteTexts = await collectWallAssemblyNoteTexts({
+        pdfPath: context.planIndex.pdfPath,
+        pageNumbers: [1, 3, 4],
+        ocrCacheDir: process.env.TAKEOFF_WALL_ASSEMBLY_OCR_CACHE_DIR ?? null,
+      });
+      const semanticCompilerEvidence = buildGovernedSemanticCompilerEvidence(
+        compiledPages.pages,
+        dictionaryPayload,
+        { noteTexts: wallAssemblyNoteTexts },
+      );
+      if (semanticCompilerEvidence.length > 0) {
+        evidence = [...evidence, ...semanticCompilerEvidence];
+      }
+
+      if (isDrawingSemanticBindingEnabled()) {
+        const bindingEvidence = buildSemanticBindingEvidenceFromCompiledPages(
+          compiledPages.pages,
+        );
+        evidence = [...evidence, ...bindingEvidence];
+
+        const bindingAudit = buildSemanticBindingAudit(compiledPages.pages);
+        context.stageSideEffects.publishCompanionArtifact(
+          SEMANTIC_BINDING_AUDIT_COMPANION_SUFFIX,
+          createFramingStageArtifact(
+            context,
+            6,
+            semanticBindingAuditArtifactSchema,
+            "semantic-binding-audit",
+            bindingAudit,
+            { type: "system", identifier: "drawing-compiler" },
+          ),
+        );
+      }
+
+      const baseAudit = buildCompilerAutomationAudit(compiledPages.pages);
+      const enrichedAudit = {
+        ...baseAudit,
+        byReason: {
+          ...baseAudit.byReason,
+          "conflicting-authority": merged.audit.conflicts.length,
+        },
+        conflicts: merged.audit.conflicts,
+      };
+      context.stageSideEffects.publishCompanionArtifact(
+        COMPILER_AUTOMATION_AUDIT_COMPANION_SUFFIX,
+        createFramingStageArtifact(
+          context,
+          6,
+          compilerAutomationAuditArtifactSchema,
+          "compiler-automation-audit",
+          enrichedAudit,
+          { type: "system", identifier: "drawing-compiler" },
+        ),
+      );
+
       return createFramingStageArtifact(
         context,
-        5,
+        6,
         extractedFramingEvidenceArtifactSchema,
         "extracted-framing-evidence",
-        payload,
+        { evidence },
         context.useMockAi
           ? { type: "system", identifier: "framing-pipeline" }
           : { type: "claude", identifier: "extractedEvidence" },
@@ -517,7 +731,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 6,
+    order: 7,
     name: "wallFraming",
     async run(context) {
       const extracted = getPayload<ExtractedFramingEvidencePayload>(
@@ -534,7 +748,7 @@ const stages: PipelineStage[] = [
 
       return createFramingStageArtifact(
         context,
-        6,
+        7,
         wallFramingArtifactSchema,
         "wall-framing",
         payload,
@@ -544,7 +758,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 7,
+    order: 8,
     name: "openings",
     async run(context) {
       const extracted = getPayload<ExtractedFramingEvidencePayload>(
@@ -566,7 +780,7 @@ const stages: PipelineStage[] = [
 
       const openingsArtifact = createFramingStageArtifact(
         context,
-        7,
+        8,
         openingsArtifactSchema,
         "openings",
         payload,
@@ -601,7 +815,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 8,
+    order: 9,
     name: "structuralMembers",
     async run(context) {
       const extracted = getPayload<ExtractedFramingEvidencePayload>(
@@ -626,7 +840,7 @@ const stages: PipelineStage[] = [
 
       const structuralMembersArtifact = createFramingStageArtifact(
         context,
-        8,
+        9,
         structuralMembersArtifactSchema,
         "structural-members",
         scalarPayload,
@@ -684,7 +898,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 9,
+    order: 10,
     name: "sheathing",
     async run(context) {
       const extracted = getPayload<ExtractedFramingEvidencePayload>(
@@ -703,7 +917,7 @@ const stages: PipelineStage[] = [
 
       return createFramingStageArtifact(
         context,
-        9,
+        10,
         sheathingArtifactSchema,
         "sheathing",
         payload,
@@ -716,7 +930,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 10,
+    order: 11,
     name: "floorFraming",
     async run(context) {
       const extracted = getPayload<ExtractedFramingEvidencePayload>(
@@ -735,7 +949,7 @@ const stages: PipelineStage[] = [
 
       return createFramingStageArtifact(
         context,
-        10,
+        11,
         floorFramingArtifactSchema,
         "floor-framing",
         payload,
@@ -748,7 +962,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 11,
+    order: 12,
     name: "roofFraming",
     async run(context) {
       const extracted = getPayload<ExtractedFramingEvidencePayload>(
@@ -767,7 +981,7 @@ const stages: PipelineStage[] = [
 
       return createFramingStageArtifact(
         context,
-        11,
+        12,
         roofFramingArtifactSchema,
         "roof-framing",
         payload,
@@ -780,7 +994,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 12,
+    order: 13,
     name: "validation",
     async run(context) {
       const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
@@ -806,7 +1020,7 @@ const stages: PipelineStage[] = [
 
       return createFramingStageArtifact(
         context,
-        12,
+        13,
         validationArtifactSchema,
         "validation",
         validationPayload,
@@ -814,7 +1028,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 13,
+    order: 14,
     name: "calculations",
     async run(context) {
       const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
@@ -842,7 +1056,7 @@ const stages: PipelineStage[] = [
 
       return createFramingStageArtifact(
         context,
-        13,
+        14,
         framingCalculationsArtifactSchema,
         "framing-calculations",
         payload,
@@ -850,7 +1064,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 14,
+    order: 15,
     name: "confidence",
     async run(context) {
       const extracted = getPayload<ExtractedFramingEvidencePayload>(
@@ -877,7 +1091,7 @@ const stages: PipelineStage[] = [
 
       return createFramingStageArtifact(
         context,
-        14,
+        15,
         confidenceArtifactSchema,
         "confidence",
         payload,
@@ -885,7 +1099,7 @@ const stages: PipelineStage[] = [
     },
   },
   {
-    order: 15,
+    order: 16,
     name: "report",
     async run(context) {
       const wallPayload = getPayload<WallFramingPayload>(context, "wallFraming");
@@ -912,7 +1126,7 @@ const stages: PipelineStage[] = [
 
       return createFramingStageArtifact(
         context,
-        15,
+        16,
         finalFramingTakeoffArtifactSchema,
         "final-framing-takeoff",
         {

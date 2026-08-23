@@ -153,7 +153,7 @@ async function runLiveMultiObjectPipeline(projectId: string, artifactRoot: strin
 
   assert.equal(result.success, true, result.errors.join("\n"));
   assert.equal(result.errors.length, 0);
-  assert.equal(result.stageResults.length, 15);
+  assert.equal(result.stageResults.length, 16);
 
   return snapshotLiveFramingPipeline(pageText, result);
 }

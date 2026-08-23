@@ -173,7 +173,7 @@ function mapExtractedEvidence(
     const payload = artifact.payload as ExtractedFramingEvidencePayload;
     return createFramingStageArtifact(
       context,
-      5,
+      6,
       extractedFramingEvidenceArtifactSchema,
       "extracted-framing-evidence",
       { evidence: mapEvidence(payload.evidence) },
@@ -186,7 +186,7 @@ function withCalculableMember(stages: PipelineStage[]): PipelineStage[] {
   return replaceStage(stages, "structuralMembers", async (context) =>
     createFramingStageArtifact(
       context,
-      8,
+      9,
       structuralMembersArtifactSchema,
       "structural-members",
       buildCalculableMember(),
@@ -235,7 +235,7 @@ function hasResolvedTrace(
 }
 
 describe("framing pipeline", () => {
-  it("resolves Stage 6 from Evidence and calculates Evidence-driven quantities", async () => {
+  it("resolves Stage 7 from Evidence and calculates Evidence-driven quantities", async () => {
     const { artifactRoot, result } = await runFramingPipeline(
       createFramingStages(),
     );
@@ -243,7 +243,7 @@ describe("framing pipeline", () => {
     try {
       assert.equal(result.success, true);
       assert.equal(result.errors.length, 0);
-      assert.equal(result.stageResults.length, 15);
+      assert.equal(result.stageResults.length, 16);
       assert.deepEqual(
         result.stageResults.map((stage) => [stage.order, stage.name]),
         [
@@ -251,17 +251,18 @@ describe("framing pipeline", () => {
           [2, "pageClassification"],
           [3, "planReadingOrder"],
           [4, "buildingAssemblies"],
-          [5, "extractedEvidence"],
-          [6, "wallFraming"],
-          [7, "openings"],
-          [8, "structuralMembers"],
-          [9, "sheathing"],
-          [10, "floorFraming"],
-          [11, "roofFraming"],
-          [12, "validation"],
-          [13, "calculations"],
-          [14, "confidence"],
-          [15, "report"],
+          [5, "compiledDrawingPages"],
+          [6, "extractedEvidence"],
+          [7, "wallFraming"],
+          [8, "openings"],
+          [9, "structuralMembers"],
+          [10, "sheathing"],
+          [11, "floorFraming"],
+          [12, "roofFraming"],
+          [13, "validation"],
+          [14, "calculations"],
+          [15, "confidence"],
+          [16, "report"],
         ],
       );
 
@@ -305,8 +306,8 @@ describe("framing pipeline", () => {
 
       const validationStage = stageByName(result, "validation");
       const calculationsStage = stageByName(result, "calculations");
-      assert.equal(validationStage.order, 12);
-      assert.equal(calculationsStage.order, 13);
+      assert.equal(validationStage.order, 13);
+      assert.equal(calculationsStage.order, 14);
       assert.ok(validationStage.order < calculationsStage.order);
 
       const validationArtifact = await readArtifact(validationStage.artifactPath);
@@ -489,7 +490,7 @@ describe("framing pipeline", () => {
       async (context) =>
         createFramingStageArtifact(
           context,
-          6,
+          7,
           wallFramingArtifactSchema,
           "wall-framing",
           wallFraming,
