@@ -169,6 +169,31 @@ export const runtimeCostSchema = z.object({
   estimatedCostUsd: z.number().nonnegative().optional(),
 });
 
+export const openingCoverageSchema = z.object({
+  openingsDetected: z.number().int().nonnegative(),
+  openingsWithParentWall: z.number().int().nonnegative(),
+  openingsWithGovernedWidth: z.number().int().nonnegative(),
+  openingsDimensionEstablished: z.number().int().nonnegative(),
+  openingsDimensionAmbiguous: z.number().int().nonnegative(),
+  openingsDimensionUnresolved: z.number().int().nonnegative(),
+  openingsMaterialAuthoritative: z.number().int().nonnegative(),
+  openingsAffectingStudCalculation: z.number().int().nonnegative(),
+  /**
+   * Stud qty delta using the same overlap/blocking rules as calculateWallFraming.
+   * Negative when production path would deduct; 0 when overlap blocks or no eligible openings.
+   */
+  regularStudQuantityDelta: z.number(),
+  /**
+   * Actual calculator delta: calculateWallFraming(with openings) − calculateWallFraming(baseline).
+   * Prefer this for GREEN; equals regularStudQuantityDelta when wiring is correct.
+   */
+  productionStudQuantityDelta: z.number(),
+  segmentsWithNetDeduction: z.number().int().nonnegative(),
+  segmentsBlockedByOpeningOverlap: z.number().int().nonnegative(),
+});
+
+export type OpeningCoverage = z.infer<typeof openingCoverageSchema>;
+
 export const groundTruthCheckSchema = z.object({
   checkId: z.string(),
   label: groundTruthLabelSchema,
@@ -264,6 +289,12 @@ export const CAPABILITY_INVENTORY: z.infer<typeof capabilityInventoryEntrySchema
     status: "production",
     notes:
       "MULTI_SOURCE: note OCR + thickness legend → studSize/spacing/plateCount (B2.2M.2)",
+  },
+  {
+    name: "openingGeometryEvidence",
+    status: "flag_gated",
+    envFlags: ["TAKEOFF_OPENING_GEOMETRY=1"],
+    notes: "PBG gap + governed dimension → opening Evidence (B2.2M.3)",
   },
   {
     name: "dereferenceEvidenceBridge",

@@ -13,12 +13,18 @@ export const OPENING_COMPLETION_PROPERTY_PATHS = [
   "quantity",
 ] as const;
 
+export const OPENING_GEOMETRY_PROPERTY_PATHS = [
+  "positionOffsetFeetFromSegmentStart",
+  "dimensionOwnershipStatus",
+] as const;
+
 export const OPENING_OPTIONAL_PROPERTY_PATHS = [
   "scheduleReference",
   "detailReference",
   "fireRating",
   "kingStudCount",
   "jackStudCount",
+  ...OPENING_GEOMETRY_PROPERTY_PATHS,
 ] as const;
 
 export const OPENING_PROPERTY_PATHS = [
@@ -33,6 +39,7 @@ export type OpeningPropertyPath = (typeof OPENING_PROPERTY_PATHS)[number];
 
 export const OPENING_RELATIONSHIP_PROPERTY_PATHS = [
   "parentWallTag",
+  "parentPhysicalRunKey",
   "headerMemberTag",
 ] as const;
 
@@ -90,6 +97,17 @@ export function normalizeOpeningCandidate(
     case "kingStudCount":
     case "jackStudCount":
       return isPositiveInteger(candidateValue) ? candidateValue : undefined;
+    case "positionOffsetFeetFromSegmentStart":
+      return typeof candidateValue === "number" &&
+        Number.isFinite(candidateValue) &&
+        candidateValue >= 0
+        ? candidateValue
+        : undefined;
+    case "dimensionOwnershipStatus":
+      return typeof candidateValue === "string" &&
+        ["ESTABLISHED", "AMBIGUOUS", "UNRESOLVED"].includes(candidateValue)
+        ? candidateValue
+        : undefined;
   }
 }
 
@@ -113,7 +131,7 @@ export function normalizeOpeningRelationshipCandidate(
     return undefined;
   }
 
-  if (propertyPath === "parentWallTag") {
+  if (propertyPath === "parentWallTag" || propertyPath === "parentPhysicalRunKey") {
     return typeof candidateValue === "string" && candidateValue.trim().length > 0
       ? candidateValue.trim()
       : undefined;

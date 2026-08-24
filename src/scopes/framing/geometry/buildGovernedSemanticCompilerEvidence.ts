@@ -1,6 +1,8 @@
 import type { CompiledDrawingPage } from "../../../drawing-compiler/schemas/compiledDrawingPage.schema.js";
 import type { Evidence } from "../../../core/schemas/evidence.schema.js";
 import type { GovernedProjectDictionary } from "../../../project-interpreter/schemas/projectDictionary.schema.js";
+import { isOpeningGeometryEnabled } from "../compiler/isOpeningGeometryEnabled.js";
+import { buildOpeningEvidenceFromCompiledPages } from "./buildOpeningEvidenceFromCompiledPages.js";
 import { buildProjectDictionaryBindingEvidence } from "./buildProjectDictionaryBindingEvidence.js";
 import { buildSemanticDefinitionEvidenceFromCompiledPages } from "./buildSemanticDefinitionEvidenceFromCompiledPages.js";
 import { buildWallAssemblyEvidenceFromPlanNotes } from "./buildWallAssemblyEvidenceFromPlanNotes.js";
@@ -30,5 +32,13 @@ export function buildGovernedSemanticCompilerEvidence(
           dictionary,
         })
       : [];
-  return [...definitionEvidence, ...dictionaryEvidence, ...wallAssemblyEvidence];
+  const openingEvidence = isOpeningGeometryEnabled()
+    ? buildOpeningEvidenceFromCompiledPages(pages)
+    : [];
+  return [
+    ...definitionEvidence,
+    ...dictionaryEvidence,
+    ...wallAssemblyEvidence,
+    ...openingEvidence,
+  ];
 }

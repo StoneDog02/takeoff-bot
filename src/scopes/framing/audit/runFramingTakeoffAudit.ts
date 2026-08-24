@@ -5,6 +5,7 @@ import { ArtifactStore } from "../../../core/artifacts/ArtifactStore.js";
 import { PipelineRunner } from "../../../core/pipeline/PipelineRunner.js";
 import type { PipelineRunResult } from "../../../core/pipeline/types.js";
 import { indexPlan } from "../../../plans/indexPlan.js";
+import { collectOpeningCoverage } from "./collectOpeningCoverage.js";
 import {
   auditSummarySchema,
   automationCoverageSchema,
@@ -13,6 +14,7 @@ import {
   geometrySummarySchema,
   materialOutputSummarySchema,
   ocrWarningAuditSchema,
+  openingCoverageSchema,
   resolutionCoverageSchema,
   runtimeCostSchema,
   scopeCoverageSchema,
@@ -243,6 +245,13 @@ export async function runFramingTakeoffAudit(
         await writeFile(
           path.join(options.metricsDir, "geometry-summary.json"),
           JSON.stringify(geometrySummarySchema.parse(primaryGeometry), null, 2),
+        );
+      }
+      if (mode === "A" && artifacts) {
+        const openingCoverage = collectOpeningCoverage(artifacts);
+        await writeFile(
+          path.join(options.metricsDir, `opening-coverage-${mode}.json`),
+          JSON.stringify(openingCoverageSchema.parse(openingCoverage), null, 2),
         );
       }
     } else {

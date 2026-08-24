@@ -46,7 +46,11 @@ export function coordinateFramingCalculations(
 
   if (input.wallFraming) {
     materials.push(
-      ...calculateWallFraming(input.wallFraming, input.validation),
+      ...calculateWallFraming(
+        input.wallFraming,
+        input.validation,
+        input.openings,
+      ),
     );
   }
 

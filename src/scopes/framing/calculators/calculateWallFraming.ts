@@ -1,4 +1,5 @@
 import type {
+  OpeningsPayload,
   ValidationPayload,
   WallFramingPayload,
 } from "../schemas/framing-artifacts.schema.js";
@@ -7,11 +8,17 @@ import {
   type FramingMaterialLineItem,
 } from "../schemas/material.schema.js";
 import type { BuildingWall, WallSegment } from "../schemas/wall.schema.js";
+import type { Opening } from "../schemas/opening.schema.js";
 import { WALL_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createMaterialLineItemId } from "./ids.js";
 import { isQuantityBlocked } from "./isQuantityBlocked.js";
 import { isQuantityInputResolved } from "./isQuantityInputResolved.js";
+import {
+  computeNetStudDeduction,
+  countRegularlySpacedStuds,
+  roughOpeningZonesOverlap,
+} from "./netStudDeduction.js";
 
 const LENGTH_PROPERTY_PATH = "lengthFeet";
 const STUD_SPACING_PROPERTY_PATH = "assembly.studSpacingInches";
@@ -22,23 +29,10 @@ function compareIds(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-/**
- * Baseline regularly spaced stud count for one wall segment.
- *
- * Layout and count: `knowledge/framing/04-building-assemblies.md`.
- * Whole-piece rounding policy: `knowledge/framing/10-assumptions.md`.
- */
-function countRegularlySpacedStuds(
-  lengthFeet: number,
-  spacingInches: number,
-): number {
-  return Math.ceil((lengthFeet * 12) / spacingInches) + 1;
-}
+export { countRegularlySpacedStuds };
 
 /**
  * Net plate linear footage for one wall segment.
- *
- * Quantity semantics: `knowledge/framing/04-building-assemblies.md`.
  */
 function plateLinearFootage(
   lengthFeet: number,
@@ -57,10 +51,85 @@ function emitLineItem(
   return framingMaterialLineItemSchema.parse(item);
 }
 
+function openingsOnSegment(
+  segmentId: string,
+  openings: readonly Opening[],
+): Opening[] {
+  return openings.filter((o) => o.parentObjectId === segmentId);
+}
+
+function segmentNetStudDeduction(
+  wall: BuildingWall,
+  segment: WallSegment,
+  openings: readonly Opening[],
+): { deductCount: number; blocked: boolean } {
+  const segmentOpenings = openingsOnSegment(segment.id, openings);
+  if (segmentOpenings.length === 0) {
+    return { deductCount: 0, blocked: false };
+  }
+
+  const eligible = segmentOpenings.filter(
+    (o) =>
+      o.positionOffsetFeetFromSegmentStart != null &&
+      o.dimensions.roughWidthFeet != null,
+  );
+
+  if (eligible.length === 0) {
+    return { deductCount: 0, blocked: false };
+  }
+
+  for (let i = 0; i < eligible.length; i++) {
+    for (let j = i + 1; j < eligible.length; j++) {
+      const a = eligible[i]!;
+      const b = eligible[j]!;
+      if (
+        roughOpeningZonesOverlap(
+          a.positionOffsetFeetFromSegmentStart!,
+          a.dimensions.roughWidthFeet!,
+          b.positionOffsetFeetFromSegmentStart!,
+          b.dimensions.roughWidthFeet!,
+        )
+      ) {
+        return { deductCount: 0, blocked: true };
+      }
+    }
+  }
+
+  if (
+    !isQuantityInputResolved(
+      segment.lengthFeet,
+      segment.resolutionTraces,
+      LENGTH_PROPERTY_PATH,
+    ) ||
+    !isQuantityInputResolved(
+      wall.assembly.studSpacingInches,
+      wall.resolutionTraces,
+      STUD_SPACING_PROPERTY_PATH,
+    )
+  ) {
+    return { deductCount: 0, blocked: false };
+  }
+
+  let totalDeduct = 0;
+  for (const opening of eligible) {
+    const result = computeNetStudDeduction({
+      lengthFeet: segment.lengthFeet!,
+      spacingInches: wall.assembly.studSpacingInches!,
+      positionOffsetFeetFromSegmentStart:
+        opening.positionOffsetFeetFromSegmentStart!,
+      roughWidthFeet: opening.dimensions.roughWidthFeet!,
+    });
+    totalDeduct += result.deductCount;
+  }
+
+  return { deductCount: totalDeduct, blocked: false };
+}
+
 function calculateSegmentStuds(
   wall: BuildingWall,
   segment: WallSegment,
   validation: ValidationPayload | undefined,
+  openings: readonly Opening[],
 ): FramingMaterialLineItem | null {
   const quantityKey = WALL_QUANTITY_KEYS.studs;
   const contributingObjects = [wall, segment];
@@ -95,10 +164,19 @@ function calculateSegmentStuds(
     return null;
   }
 
-  const quantity = countRegularlySpacedStuds(
+  const baseline = countRegularlySpacedStuds(
     segment.lengthFeet,
     wall.assembly.studSpacingInches,
   );
+  const { deductCount, blocked } = segmentNetStudDeduction(
+    wall,
+    segment,
+    openings,
+  );
+  const quantity = blocked
+    ? baseline
+    : Math.max(0, baseline - deductCount);
+
   const provenance = collectLineItemProvenance(contributingObjects, [
     LENGTH_PROPERTY_PATH,
     STUD_SPACING_PROPERTY_PATH,
@@ -189,19 +267,19 @@ function calculateSegmentPlates(
 /**
  * Calculates net wall framing quantities from a resolved Wall Framing payload.
  *
- * Stud layout/count and plate LF follow `knowledge/framing/04-building-assemblies.md`.
- * Emits baseline regularly spaced stud counts and unrounded plate linear
- * footage. Does not apply waste, stock-length optimization, opening
- * deductions, or extra framing members.
+ * When openings with governed position + rough width are linked to a segment,
+ * applies ch.13 Layer 2 net regular-stud deductions before emitting stud counts.
  */
 export function calculateWallFraming(
   wallFraming: WallFramingPayload,
   validation?: ValidationPayload,
+  openings?: OpeningsPayload,
 ): FramingMaterialLineItem[] {
   const wallsById = new Map(wallFraming.walls.map((wall) => [wall.id, wall]));
   const segments = [...wallFraming.segments].sort((left, right) =>
     compareIds(left.id, right.id),
   );
+  const openingList = openings?.openings ?? [];
   const materials: FramingMaterialLineItem[] = [];
 
   for (const segment of segments) {
@@ -210,7 +288,12 @@ export function calculateWallFraming(
       continue;
     }
 
-    const studs = calculateSegmentStuds(wall, segment, validation);
+    const studs = calculateSegmentStuds(
+      wall,
+      segment,
+      validation,
+      openingList,
+    );
     if (studs) {
       materials.push(studs);
     }

@@ -250,6 +250,85 @@ function valueForCompletionPath(
   }
 }
 
+function resolvePhysicalRunRelationship(
+  parentPhysicalRunKeyDecision: CandidateDecision,
+  records: readonly Evidence[],
+  wallFraming: WallFramingPayload | undefined,
+): {
+  parentWallId: ObjectId | null;
+  parentObjectId: ObjectId | null;
+  traces: PropertyResolutionTrace[];
+} {
+  const keyTraces = tracesForDecision(
+    "parentPhysicalRunKey",
+    parentPhysicalRunKeyDecision,
+    records,
+  );
+
+  if (parentPhysicalRunKeyDecision.kind !== "resolved") {
+    return {
+      parentWallId: null,
+      parentObjectId: null,
+      traces: keyTraces,
+    };
+  }
+
+  const runKey = parentPhysicalRunKeyDecision.value as string;
+  const parentWallId = createWallObjectId(runKey);
+  const parentObjectId = createWallSegmentObjectId(parentWallId);
+
+  const wall = wallFraming?.walls.find((candidate) => candidate.id === parentWallId);
+  const segment = wallFraming?.segments.find(
+    (candidate) => candidate.id === parentObjectId,
+  );
+
+  const relationshipTraces: PropertyResolutionTrace[] = [...keyTraces];
+
+  if (wall && segment && segment.parentWallId === parentWallId) {
+    relationshipTraces.push(
+      createTrace(
+        "parentWallId",
+        "deterministic-calculation",
+        `Mapped physical run key ${runKey} to resolved wall ${parentWallId}.`,
+        parentPhysicalRunKeyDecision.evidenceIds,
+      ),
+      createTrace(
+        "parentObjectId",
+        "deterministic-calculation",
+        `Mapped physical run key ${runKey} to wall segment ${parentObjectId}.`,
+        parentPhysicalRunKeyDecision.evidenceIds,
+      ),
+    );
+
+    return {
+      parentWallId,
+      parentObjectId,
+      traces: relationshipTraces,
+    };
+  }
+
+  relationshipTraces.push(
+    createTrace(
+      "parentWallId",
+      "deterministic-calculation",
+      `Mapped physical run key ${runKey} to ObjectId ${parentWallId}, but no matching resolved wall exists.`,
+      parentPhysicalRunKeyDecision.evidenceIds,
+    ),
+    createTrace(
+      "parentObjectId",
+      "deterministic-calculation",
+      `Mapped physical run key ${runKey} to segment ObjectId ${parentObjectId}, but no matching wall segment exists.`,
+      parentPhysicalRunKeyDecision.evidenceIds,
+    ),
+  );
+
+  return {
+    parentWallId,
+    parentObjectId,
+    traces: relationshipTraces,
+  };
+}
+
 function resolveWallRelationship(
   parentWallTagDecision: CandidateDecision,
   records: readonly Evidence[],
@@ -457,15 +536,34 @@ function resolveOneOpening(
     ]),
   ) as Record<OpeningPropertyPath, CandidateDecision>;
 
+  const parentPhysicalRunKeyDecision = selectCandidate(
+    records,
+    "parentPhysicalRunKey",
+    normalizeOpeningPropertyOrRelationship,
+  );
   const parentWallTagDecision = selectCandidate(
     records,
     "parentWallTag",
     normalizeOpeningPropertyOrRelationship,
   );
-  const relationship = resolveWallRelationship(
-    parentWallTagDecision,
+  const relationship =
+    parentPhysicalRunKeyDecision.kind === "resolved"
+      ? resolvePhysicalRunRelationship(
+          parentPhysicalRunKeyDecision,
+          records,
+          wallFraming,
+        )
+      : resolveWallRelationship(parentWallTagDecision, records, wallFraming);
+
+  const positionOffsetDecision = selectCandidate(
     records,
-    wallFraming,
+    "positionOffsetFeetFromSegmentStart",
+    normalizeOpeningPropertyOrRelationship,
+  );
+  const dimensionOwnershipDecision = selectCandidate(
+    records,
+    "dimensionOwnershipStatus",
+    normalizeOpeningPropertyOrRelationship,
   );
 
   const resolutionTraces = [
@@ -473,6 +571,16 @@ function resolveOneOpening(
       (propertyPath) => propertyResults[propertyPath]!.traces,
     ),
     ...relationship.traces,
+    ...tracesForDecision(
+      "positionOffsetFeetFromSegmentStart",
+      positionOffsetDecision,
+      records,
+    ),
+    ...tracesForDecision(
+      "dimensionOwnershipStatus",
+      dimensionOwnershipDecision,
+      records,
+    ),
   ];
 
   const categoryDecision = decisions.category;
@@ -501,6 +609,10 @@ function resolveOneOpening(
   };
 
   const quantity = resolvedNumberValue(decisions.quantity, null);
+  const positionOffsetFeetFromSegmentStart =
+    positionOffsetDecision.kind === "resolved"
+      ? (positionOffsetDecision.value as number)
+      : null;
 
   const completionValues = {
     category,
@@ -540,6 +652,7 @@ function resolveOneOpening(
     fireRating: resolvedStringValue(decisions.fireRating, null),
     kingStudCount: resolvedNumberValue(decisions.kingStudCount, null),
     jackStudCount: resolvedNumberValue(decisions.jackStudCount, null),
+    positionOffsetFeetFromSegmentStart,
   };
 }
 

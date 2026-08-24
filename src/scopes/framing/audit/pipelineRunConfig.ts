@@ -30,6 +30,8 @@ export const TRACKED_ENV_KEYS = [
   "TAKEOFF_SEMANTIC_DEFINITION_EXTRACTION",
   "TAKEOFF_B2_2L3_PROOF",
   "TAKEOFF_SCHEDULE_PAGE_NUMBERS",
+  "TAKEOFF_OPENING_GEOMETRY",
+  "TAKEOFF_WALL_ASSEMBLY_OCR_CACHE_DIR",
   "ANTHROPIC_API_KEY",
 ] as const;
 
@@ -47,6 +49,7 @@ export function applyRunModeEnv(
     "TAKEOFF_SEMANTIC_DEFINITION_EXTRACTION",
     "TAKEOFF_B2_2L3_PROOF",
     "TAKEOFF_SCHEDULE_PAGE_NUMBERS",
+    "TAKEOFF_OPENING_GEOMETRY",
   ];
   for (const key of clearFlags) {
     delete process.env[key];
@@ -63,6 +66,7 @@ export function applyRunModeEnv(
   process.env.TAKEOFF_SEMANTIC_DEFINITION_EXTRACTION = "1";
   process.env.TAKEOFF_B2_2L3_PROOF = "1";
   process.env.TAKEOFF_SCHEDULE_PAGE_NUMBERS = "1";
+  process.env.TAKEOFF_OPENING_GEOMETRY = "1";
 
   if (options?.maxPages != null) {
     process.env.TAKEOFF_COMPILER_MAX_PAGES = String(options.maxPages);

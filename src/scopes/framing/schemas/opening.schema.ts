@@ -45,6 +45,16 @@ export const openingSchema = resolvedObjectBaseSchema.extend({
    * See `knowledge/framing/13-opening-wall-framing-calculations.md`.
    */
   jackStudCount: z.number().int().positive().nullable().default(null),
+  /**
+   * Distance from segment start to rough-opening left edge (feet).
+   * Required for net regular-stud deductions per ch.13 Layer 2.
+   */
+  positionOffsetFeetFromSegmentStart: z
+    .number()
+    .finite()
+    .nonnegative()
+    .nullable()
+    .default(null),
 });
 
 export type OpeningCategory = z.infer<typeof openingCategorySchema>;
