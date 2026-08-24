@@ -5,6 +5,7 @@ import type {
 } from "../schemas/floor-framing.schema.js";
 import type { FloorFramingPayload } from "../schemas/framing-artifacts.schema.js";
 import { isSimpleAreaJoistLinearFeetTypeSupported } from "../calculators/calculateFloorFraming.js";
+import { hasJoistCountLayoutAxisAuthority } from "../resolvers/floorLayoutAuthority.js";
 import {
   buildFailedBatch,
   buildPassedBatch,
@@ -108,6 +109,64 @@ function isAreaSquareFeetResolved(area: FloorFramingArea): boolean {
   return (
     area.areaSquareFeet !== null ||
     isPropertyResolved(area.resolutionTraces, "areaSquareFeet")
+  );
+}
+
+function validateInferredParentSystemReview(
+  area: FloorFramingArea,
+): ValidationBatch | null {
+  const parentTrace = area.resolutionTraces.find(
+    (trace) =>
+      trace.propertyPath === "parentSystemTag" &&
+      trace.method === "supported-inference",
+  );
+
+  if (!parentTrace) {
+    return null;
+  }
+
+  const target = createObjectTarget(area.id, area.objectType);
+  const ruleId = FLOOR_FRAMING_RULE_IDS.areaParentSystemResolved;
+  const evidenceIds = collectEvidenceIds(area);
+  const explanation = `Floor area ${area.id} parent system was inferred (${parentTrace.explanation}). Confirm ownership before relying on material output.`;
+
+  return buildFailedBatch(
+    {
+      ruleId,
+      level: "relationship",
+      severity: "warning",
+      ruleViolated:
+        "Inferred floor area parent system relationship requires confirmation.",
+      explanation,
+      target,
+      recommendedUserAction:
+        "Confirm the inferred parent floor framing system for this area.",
+      evidenceIds,
+      quantityImpacts: allowBothJoistQuantities(
+        "Baseline joist quantities may calculate while inferred parent link is confirmed.",
+      ),
+    },
+    {
+      ruleId,
+      target,
+      title: `Confirm inferred parent system for floor area ${area.id}`,
+      description: explanation,
+      action: {
+        type: "confirm",
+        instruction:
+          "Confirm the parent floor framing system inferred from corroborating plan evidence.",
+        targetProperty: "parentSystemId",
+      },
+      reviewStatus: "review-required",
+      blockingStatus: "not-blocked",
+      affectedObjects: [{ objectId: area.id, objectType: area.objectType }],
+      quantityImpacts: toReviewQuantityImpacts(
+        allowBothJoistQuantities(
+          "Baseline joist quantities may calculate while inferred parent link is confirmed.",
+        ),
+      ),
+      evidenceIds,
+    },
   );
 }
 
@@ -413,48 +472,50 @@ function validateJoistSpacingResolved(
   );
 }
 
-function validateSpanDirectionResolved(area: FloorFramingArea): ValidationBatch {
+function validateLayoutAxisAuthorityResolved(area: FloorFramingArea): ValidationBatch {
   const target = createObjectTarget(area.id, area.objectType);
   const ruleId = FLOOR_FRAMING_RULE_IDS.spanDirectionResolved;
   const evidenceIds = collectEvidenceIds(area);
 
-  if (isSpanDirectionResolved(area)) {
+  if (hasJoistCountLayoutAxisAuthority(area)) {
     return buildPassedBatch(
       ruleId,
       "object",
       target,
-      `Floor area ${area.id} has a resolved span direction.`,
+      `Floor area ${area.id} has layout-axis authority for baseline joist count (span direction or spacing-axis layout authority).`,
       evidenceIds,
     );
   }
 
   const quantityImpacts = blockBothJoistQuantities(
-    "Floor joist layout requires a resolved span direction.",
+    "Floor joist count requires layout-axis authority: valid span direction or explicit spacing-axis layout authority on joistLayoutLengthFeet.",
   );
 
-  const explanation = `Floor area ${area.id} is missing span direction.`;
+  const explanation = `Floor area ${area.id} lacks layout-axis authority for baseline joist count.`;
 
   return buildFailedBatch(
     {
       ruleId,
       level: "object",
       severity: "critical",
-      ruleViolated: "Floor area span direction must be resolved.",
+      ruleViolated:
+        "Floor area must have span direction or established spacing-axis layout authority.",
       explanation,
       target,
       recommendedUserAction:
-        "Confirm span direction from floor framing plans or details.",
+        "Confirm span direction or provide explicit spacing-axis bay dimension for joistLayoutLengthFeet.",
       evidenceIds,
       quantityImpacts,
     },
     {
       ruleId,
       target,
-      title: `Resolve span direction for floor area ${area.id}`,
+      title: `Resolve layout-axis authority for floor area ${area.id}`,
       description: explanation,
       action: {
         type: "provide-value",
-        instruction: "Provide the span direction for this floor area.",
+        instruction:
+          "Provide span direction or explicit spacing-axis layout length authority for this floor area.",
         targetProperty: "spanDirection",
       },
       reviewStatus: "review-required",
@@ -923,7 +984,11 @@ export function validateFloorFraming(
 
   for (const area of input.payload.areas) {
     batches.push(validateAreaParentSystemResolved(area, systemsById));
-    batches.push(validateSpanDirectionResolved(area));
+    const inferredParentReview = validateInferredParentSystemReview(area);
+    if (inferredParentReview) {
+      batches.push(inferredParentReview);
+    }
+    batches.push(validateLayoutAxisAuthorityResolved(area));
     batches.push(validateJoistLayoutLengthResolved(area));
     batches.push(validateJoistMemberLengthResolved(area));
     batches.push(validateAreaSquareFeetResolved(area));

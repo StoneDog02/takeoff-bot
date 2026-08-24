@@ -49,6 +49,16 @@ import {
   type FloorAreaRelationshipPropertyPath,
   type FloorSystemPropertyPath,
 } from "./floorFramingPropertyPaths.js";
+import {
+  inferJoistSizeFromJoistType,
+  isSpacingAxisLayoutAuthorityEstablished,
+  memberLengthFromMisassignedSpanEvidence,
+  SPACING_AXIS_AUTHORITY_EXPLANATION_MARKER,
+} from "./floorLayoutAuthority.js";
+import {
+  parentSystemLinkTrace,
+  resolveFloorAreaParentSystemLink,
+} from "./resolveFloorAreaParentSystem.js";
 
 export type ResolveFloorFramingOptions = {
   userDecisions?: readonly UserDecision[];
@@ -405,6 +415,42 @@ function resolveOneSystem(
   };
 }
 
+function applyJoistSizeInference(system: FloorFramingSystem): FloorFramingSystem {
+  if (system.assembly.joistSize !== null) {
+    return system;
+  }
+
+  const inferred = inferJoistSizeFromJoistType(system.assembly.joistType);
+  if (!inferred) {
+    return system;
+  }
+
+  const joistTypeTrace = system.resolutionTraces.find(
+    (trace) => trace.propertyPath === "assembly.joistType",
+  );
+
+  return {
+    ...system,
+    assembly: {
+      ...system.assembly,
+      joistSize: inferred,
+    },
+    resolutionTraces: [
+      ...system.resolutionTraces,
+      createTrace(
+        "assembly.joistSize",
+        "supported-inference",
+        `Inferred joist size "${inferred}" from resolved joist type assembly string.`,
+        joistTypeTrace?.evidenceIds ?? [],
+      ),
+    ],
+    completion: createCompletion(
+      (system.completion.completedItems ?? 0) + 1,
+      system.completion.totalItems ?? FLOOR_SYSTEM_PROPERTY_PATHS.length,
+    ),
+  };
+}
+
 function resolveOneArea(
   subjectKey: string,
   records: readonly Evidence[],
@@ -527,6 +573,131 @@ function resolveOneArea(
   };
 }
 
+function applyMemberLengthFromMisassignedSpan(
+  area: FloorFramingArea,
+  records: readonly Evidence[],
+): FloorFramingArea {
+  if (area.joistMemberLengthFeet !== null) {
+    return area;
+  }
+
+  const recovered = memberLengthFromMisassignedSpanEvidence(records);
+  if (!recovered) {
+    return area;
+  }
+
+  return {
+    ...area,
+    joistMemberLengthFeet: recovered.value,
+    resolutionTraces: [
+      ...area.resolutionTraces,
+      createTrace(
+        "joistMemberLengthFeet",
+        "explicit-project-value",
+        `Resolved joist member length from explicit MAX SPAN callout evidence (mis-assigned to spanDirection).`,
+        recovered.evidenceIds as EvidenceId[],
+      ),
+    ],
+    evidenceIds: uniqueSortedIds([
+      ...area.evidenceIds,
+      ...(recovered.evidenceIds as EvidenceId[]),
+    ]),
+  };
+}
+
+function applySpacingAxisLayoutAuthority(
+  area: FloorFramingArea,
+  areaRecords: readonly Evidence[],
+  relatedSystemRecords: readonly Evidence[],
+): FloorFramingArea {
+  if (
+    !isSpacingAxisLayoutAuthorityEstablished(
+      area,
+      areaRecords,
+      relatedSystemRecords,
+    )
+  ) {
+    return area;
+  }
+
+  const layoutEvidenceIds = areaRecords
+    .filter((record) => record.propertyPath === "joistLayoutLengthFeet")
+    .map((record) => record.id);
+
+  const assemblyEvidenceIds = relatedSystemRecords
+    .filter((record) =>
+      [
+        "assembly.joistType",
+        "assembly.joistSize",
+        "assembly.joistSpacingInches",
+      ].includes(record.propertyPath),
+    )
+    .map((record) => record.id);
+
+  const existingLayoutTrace = area.resolutionTraces.find(
+    (trace) => trace.propertyPath === "joistLayoutLengthFeet",
+  );
+
+  const spacingAxisTrace = createTrace(
+    "joistLayoutLengthFeet",
+    existingLayoutTrace?.method === "explicit-project-value"
+      ? "explicit-project-value"
+      : "supported-inference",
+    `${SPACING_AXIS_AUTHORITY_EXPLANATION_MARKER}: explicit bay dimension corroborated as spacing-axis layout length for baseline joist count.`,
+    uniqueSortedIds([...layoutEvidenceIds, ...assemblyEvidenceIds]),
+  );
+
+  const otherTraces = area.resolutionTraces.filter(
+    (trace) => trace.propertyPath !== "joistLayoutLengthFeet",
+  );
+
+  return {
+    ...area,
+    resolutionTraces: [...otherTraces, spacingAxisTrace],
+  };
+}
+
+function applyInferredParentSystemLink(
+  area: FloorFramingArea,
+  areaSubjectKey: string,
+  areaRecords: readonly Evidence[],
+  systemCandidates: ReadonlyArray<{
+    subjectKey: string;
+    records: readonly Evidence[];
+  }>,
+): FloorFramingArea {
+  if (!area.parentSystemId.endsWith("UNRESOLVED")) {
+    return area;
+  }
+
+  const link = resolveFloorAreaParentSystemLink({
+    areaSubjectKey,
+    areaRecords,
+    explicitParentSystemTag: null,
+    systemCandidates,
+  });
+
+  if (!link) {
+    return area;
+  }
+
+  const parentTrace = parentSystemLinkTrace(link);
+  const filteredTraces = area.resolutionTraces.filter(
+    (trace) => trace.propertyPath !== "parentSystemTag",
+  );
+
+  return {
+    ...area,
+    parentSystemId: link.systemId,
+    resolutionTraces: [...filteredTraces, parentTrace],
+    evidenceIds: uniqueSortedIds([...area.evidenceIds, ...link.evidenceIds]),
+    completion: createCompletion(
+      (area.completion.completedItems ?? 0) + 1,
+      area.completion.totalItems ?? FLOOR_AREA_PROPERTY_PATHS.length + 1,
+    ),
+  };
+}
+
 type ResolvedSubjectIdentity = {
   subjectKey: string;
   objectId: ObjectId;
@@ -628,15 +799,46 @@ export function resolveFloorFraming(
   );
 
   const systems = systemIdentities.map(({ subjectKey }) =>
-    resolveOneSystem(
-      subjectKey,
-      systemGroups.get(subjectKey)!,
-      userDecisionIndex,
+    applyJoistSizeInference(
+      resolveOneSystem(
+        subjectKey,
+        systemGroups.get(subjectKey)!,
+        userDecisionIndex,
+      ),
     ),
   );
-  const areas = areaIdentities.map(({ subjectKey }) =>
-    resolveOneArea(subjectKey, areaGroups.get(subjectKey)!, userDecisionIndex),
-  );
+
+  const systemCandidates = systemIdentities.map(({ subjectKey }) => ({
+    subjectKey,
+    records: systemGroups.get(subjectKey)!,
+  }));
+
+  const areas = areaIdentities.map(({ subjectKey }) => {
+    const areaRecords = areaGroups.get(subjectKey)!;
+    let area = resolveOneArea(subjectKey, areaRecords, userDecisionIndex);
+    area = applyMemberLengthFromMisassignedSpan(area, areaRecords);
+    area = applyInferredParentSystemLink(
+      area,
+      subjectKey,
+      areaRecords,
+      systemCandidates,
+    );
+
+    const linkedSystemRecords =
+      systemCandidates.find(
+        (candidate) =>
+          createFloorFramingSystemObjectId(candidate.subjectKey) ===
+          area.parentSystemId,
+      )?.records ?? [];
+
+    area = applySpacingAxisLayoutAuthority(
+      area,
+      areaRecords,
+      linkedSystemRecords,
+    );
+
+    return area;
+  });
 
   return floorFramingPayloadSchema.parse({
     systems: linkSystemAreaIds(systems, areas),

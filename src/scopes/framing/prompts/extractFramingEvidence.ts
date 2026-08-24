@@ -437,19 +437,27 @@ floor-framing extraction rules (this stage):
 - Do not derive joistLayoutLengthFeet from areaSquareFeet, room polygons, or
   diagrams.
 - Do not infer joist spacing, joist size, joist type, or span direction.
+- MAX SPAN / SPAN = X callouts (examples: "MAX. SPAN = 17'-0"") are member-length
+  or span facts: emit joistMemberLengthFeet when the source identifies installed
+  member length; never emit spanDirection from MAX SPAN values.
+- Do not emit parentSystemTag merely because a floor area and floor system appear
+  on the same sheet. Emit parentSystemTag only when the source explicitly states
+  the parent system reference for that area tag.
 - Emit joistLayoutLengthFeet only when the page text explicitly establishes the
   floor bay length along the joist spacing axis (perpendicular to span), in
   feet, for that floor area — including orthogonal bay dimensions when span
   direction is stated and the dimension is clearly the spacing-axis length.
+- In description for joistLayoutLengthFeet evidence, identify spacing-axis
+  authority when the source makes that axis explicit.
 - If the source does not explicitly establish joistLayoutLengthFeet, omit it.
 - Emit joistMemberLengthFeet only when the page text explicitly states the
   installed / common joist member (piece) length for that floor area tag
-  (examples of form: member-length callouts or "joists … long").
+  (examples of form: member-length callouts, MAX SPAN limits, "joists … long").
 - Do not derive joistMemberLengthFeet from areaSquareFeet,
-  joistLayoutLengthFeet, walls, clear span alone, dimensions not identified as
-  joist member length, IRC/span tables, or generic construction practice.
+  joistLayoutLengthFeet, walls, clear span alone without explicit member-length
+  identification, IRC/span tables, or generic construction practice.
 - Do not treat clear span as joistMemberLengthFeet unless the source explicitly
-  identifies that value as the installed/member length.
+  identifies that value as the installed/member length (MAX SPAN callouts qualify).
 - If the source does not explicitly establish joistMemberLengthFeet, omit it.
   Do not default or assume a member length.
 - Do not create review items or resolve competing candidates.

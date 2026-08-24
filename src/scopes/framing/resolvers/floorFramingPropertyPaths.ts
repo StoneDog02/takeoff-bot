@@ -3,6 +3,7 @@ import {
   floorConstructionPhaseSchema,
   type FloorConstructionPhase,
 } from "../schemas/floor-framing.schema.js";
+import { isValidSpanDirectionValue } from "./floorLayoutAuthority.js";
 
 export const FLOOR_SYSTEM_PROPERTY_PATHS = [
   "name",
@@ -151,10 +152,21 @@ export function normalizeFloorAreaCandidate(
       return isPositiveNumber(candidateValue) ? candidateValue : undefined;
     case "layout":
     case "framingDirection":
-    case "spanDirection":
       return typeof candidateValue === "string" && candidateValue.trim().length > 0
         ? candidateValue.trim()
         : undefined;
+    case "spanDirection": {
+      if (typeof candidateValue !== "string") {
+        return undefined;
+      }
+
+      const trimmed = candidateValue.trim();
+      if (!isValidSpanDirectionValue(trimmed)) {
+        return undefined;
+      }
+
+      return trimmed;
+    }
   }
 }
 

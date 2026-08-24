@@ -11,6 +11,7 @@ import type {
   FloorFramingSystem,
 } from "../schemas/floor-framing.schema.js";
 import { isIJoistType } from "../resolvers/floorFramingPropertyPaths.js";
+import { hasJoistCountLayoutAxisAuthority } from "../resolvers/floorLayoutAuthority.js";
 import { FLOOR_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createMaterialLineItemId } from "./ids.js";
@@ -19,14 +20,12 @@ import { isQuantityInputResolved } from "./isQuantityInputResolved.js";
 
 const LAYOUT_LENGTH_PROPERTY_PATH = "joistLayoutLengthFeet";
 const MEMBER_LENGTH_PROPERTY_PATH = "joistMemberLengthFeet";
-const SPAN_DIRECTION_PROPERTY_PATH = "spanDirection";
 const JOIST_SPACING_PROPERTY_PATH = "assembly.joistSpacingInches";
 const JOIST_SIZE_PROPERTY_PATH = "assembly.joistSize";
 const JOIST_TYPE_PROPERTY_PATH = "assembly.joistType";
 
 const COUNT_PROPERTY_PATHS = [
   LAYOUT_LENGTH_PROPERTY_PATH,
-  SPAN_DIRECTION_PROPERTY_PATH,
   JOIST_SPACING_PROPERTY_PATH,
   JOIST_SIZE_PROPERTY_PATH,
   JOIST_TYPE_PROPERTY_PATH,
@@ -103,11 +102,7 @@ function resolveBaselineJoistCount(
       area.resolutionTraces,
       LAYOUT_LENGTH_PROPERTY_PATH,
     ) ||
-    !isQuantityInputResolved(
-      area.spanDirection,
-      area.resolutionTraces,
-      SPAN_DIRECTION_PROPERTY_PATH,
-    ) ||
+    !hasJoistCountLayoutAxisAuthority(area) ||
     !isQuantityInputResolved(
       system.assembly.joistSpacingInches,
       system.resolutionTraces,
