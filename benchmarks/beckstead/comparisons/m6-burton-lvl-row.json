@@ -1,0 +1,34 @@
+{
+  "generatedAt": "2026-08-24T21:06:00.000Z",
+  "category": "opening_headers_lvl",
+  "engine": {
+    "milestone": "B2.2M.6",
+    "materialLineId": "MAT-member-material-object-SM-WB2-11.88LVL",
+    "quantity": 23.5,
+    "unit": "linear-foot",
+    "quantityLayer": "calculated_requirement",
+    "description": "(2)-1.3/4\"x11.7/8\" LVL header"
+  },
+  "burton": {
+    "quantity": 48,
+    "unit": "lf",
+    "quantityLayer": "procurement_convention",
+    "originalDescription": "1 3/4\" X 11 7/8\" BC LVL Beam",
+    "section": "1ST FLOOR WALLS"
+  },
+  "comparison": {
+    "status": "NOT_DIRECTLY_COMPARABLE",
+    "scopeEquivalence": "partial_overlap",
+    "percentDelta": null,
+    "notes": [
+      "Engine emits assembly length for one resolved header (23.5 LF).",
+      "Burton emits procurement stock LF (48).",
+      "2×23.5≈47 is consistent with a future ply procurement conversion — not an M.6 defect.",
+      "Do not tune production to Burton."
+    ]
+  },
+  "sourceArtifacts": [
+    "artifacts/b2.2m.6/metrics/m6-burton-lvl-interpretation.json",
+    "artifacts/b2.2m.6/metrics/m6-lvl-authority-chain.json"
+  ]
+}

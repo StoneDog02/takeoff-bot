@@ -31,6 +31,7 @@ import {
   STRUCTURAL_MEMBER_PROPERTY_PATHS,
   type StructuralMemberPropertyPath,
 } from "./structuralMemberPropertyPaths.js";
+import { applyStructuralMemberAuthority } from "./structuralMemberAuthority.js";
 
 export type ResolveStructuralMembersOptions = {
   userDecisions?: readonly UserDecision[];
@@ -404,13 +405,11 @@ export function resolveStructuralMembers(
     options,
   );
 
-  const structuralMembers = subjectKeys.map((subjectKey) =>
-    resolveOneMember(
-      subjectKey,
-      groups.get(subjectKey) ?? [],
-      userDecisionIndex,
-    ),
-  );
+  const structuralMembers = subjectKeys.map((subjectKey) => {
+    const records = groups.get(subjectKey) ?? [];
+    const resolved = resolveOneMember(subjectKey, records, userDecisionIndex);
+    return applyStructuralMemberAuthority(subjectKey, resolved, records);
+  });
 
   return structuralMembersPayloadSchema.parse({ structuralMembers });
 }

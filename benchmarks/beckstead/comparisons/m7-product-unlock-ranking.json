@@ -1,0 +1,147 @@
+{
+  "generatedAt": "2026-08-24T21:05:00.000Z",
+  "rankingMethod": "post-M.6 re-rank from Stage 16 product state: contractorValue×2 + burtonRelevance×2 + frozenEvidenceReadiness + calculatorReadiness − dependencyDistance×2 − safetyRisk + productDeltaBonus — not inherited from M.4",
+  "productStateContext": {
+    "materialLines": 55,
+    "producedFamilies": ["wall_studs", "wall_plates", "crawl_floor_joists", "lvl_header"],
+    "mainFloorStop": "M6_MAIN_FLOOR_STOP_CONFIRMED"
+  },
+  "top5": [
+    {
+      "rank": 1,
+      "id": "sheathing_area_subjects",
+      "candidateName": "Sheathing area subjects (wall + roof OSB)",
+      "materialsUnlocked": ["wall OSB sheets", "roof OSB sheets", "possibly garage sheathing"],
+      "currentBlockingAuthority": "0 sheathing-area subjects; systems exist (6) with partial panel specs; application/thickness often unresolved",
+      "frozenEvidenceSufficient": false,
+      "targetedProbeRequired": true,
+      "probeTarget": "Plan sheets with wall/roof sheathing callouts + area ownership; confirm extractable sheathing-area subjects",
+      "expectedProductValue": "high — Burton ~190 OSB sheets; new material family",
+      "implementationComplexity": "medium-high (extraction + resolution; calculator ready)",
+      "safetyRisk": "medium — area ownership and opening deductions must fail closed",
+      "scores": {
+        "contractorValue": 9,
+        "burtonRelevance": 9,
+        "frozenEvidenceReadiness": 3,
+        "calculatorReadiness": 10,
+        "dependencyDistance": 4,
+        "safetyRiskPenalty": 2,
+        "productDeltaBonus": 4
+      },
+      "score": 36
+    },
+    {
+      "rank": 2,
+      "id": "p3_additional_floor_bay_layout",
+      "candidateName": "Additional crawl/floor bay layout on p3",
+      "materialsUnlocked": ["additional floor joist count + LF beyond 31/527"],
+      "currentBlockingAuthority": "Only FFA-FLOOR-AREA-CRAWL-SPACE has layout; other areas lack joistLayoutLengthFeet; main-floor p4/p8 STOP stands",
+      "frozenEvidenceSufficient": false,
+      "targetedProbeRequired": true,
+      "probeTarget": "p3 crawl-space/foundation plan for additional spacing-axis bay dimensions / MAX SPAN (not 1621 SF)",
+      "expectedProductValue": "high — closes more of Burton 1,388 LF BCI gap",
+      "implementationComplexity": "medium (reuse M.5 authority if probe finds dims)",
+      "safetyRisk": "medium — may STOP like main floor if no additional layout dims exist",
+      "scores": {
+        "contractorValue": 8,
+        "burtonRelevance": 9,
+        "frozenEvidenceReadiness": 4,
+        "calculatorReadiness": 10,
+        "dependencyDistance": 3,
+        "safetyRiskPenalty": 2,
+        "productDeltaBonus": 3
+      },
+      "score": 34
+    },
+    {
+      "rank": 3,
+      "id": "structural_member_placement_lengths",
+      "candidateName": "Additional structural member placement lengths",
+      "materialsUnlocked": ["WB3-10DF headers", "WB2-14LVL", "other schedule members with explicit LONG callouts"],
+      "currentBlockingAuthority": "lengthFeet and/or quantity missing; category unknown on several; M.6 path ready when LONG placement + schedule size exist",
+      "frozenEvidenceSufficient": false,
+      "targetedProbeRequired": true,
+      "probeTarget": "p1 schedule + p4 placement callouts for WB*/LVL/post marks with explicit lengths",
+      "expectedProductValue": "medium — expands structural package; leverages M.6 authority",
+      "implementationComplexity": "low-medium (mostly extraction + existing authority)",
+      "safetyRisk": "low-medium — same fail-closed guards as M.6",
+      "scores": {
+        "contractorValue": 6,
+        "burtonRelevance": 5,
+        "frozenEvidenceReadiness": 4,
+        "calculatorReadiness": 10,
+        "dependencyDistance": 3,
+        "safetyRiskPenalty": 1,
+        "productDeltaBonus": 2
+      },
+      "score": 28
+    },
+    {
+      "rank": 4,
+      "id": "wall_assembly_height_opening_framing",
+      "candidateName": "Wall assembly height → opening framing",
+      "materialsUnlocked": ["king studs", "jack studs", "cripples", "rough sills"],
+      "currentBlockingAuthority": "assembly.heightFeet null on 0/42 walls; opening calculator blocked",
+      "frozenEvidenceSufficient": false,
+      "targetedProbeRequired": true,
+      "probeTarget": "p2 elevations / wall sections for explicit wall heights",
+      "expectedProductValue": "medium-high — completes wood wall package; reduces opening review burden",
+      "implementationComplexity": "medium (extraction; calculator exists)",
+      "safetyRisk": "medium — height mis-assignment alters cripple counts",
+      "scores": {
+        "contractorValue": 7,
+        "burtonRelevance": 4,
+        "frozenEvidenceReadiness": 2,
+        "calculatorReadiness": 10,
+        "dependencyDistance": 4,
+        "safetyRiskPenalty": 2,
+        "productDeltaBonus": 3
+      },
+      "score": 25
+    },
+    {
+      "rank": 5,
+      "id": "main_floor_joist_layout_revisit",
+      "candidateName": "Main-floor joist layout (revisit)",
+      "materialsUnlocked": ["main-floor joist count + LF"],
+      "currentBlockingAuthority": "M6_MAIN_FLOOR_STOP — p4/p8 lack layout; 1621 SF forbidden",
+      "frozenEvidenceSufficient": false,
+      "targetedProbeRequired": true,
+      "probeTarget": "Only if a new sheet/page with explicit main-floor joist layout is identified — do not re-probe p4/p8 hoping for different outcome",
+      "expectedProductValue": "high if authority appears; currently blocked",
+      "implementationComplexity": "n/a until new authority source",
+      "safetyRisk": "high if forced without layout dims",
+      "scores": {
+        "contractorValue": 8,
+        "burtonRelevance": 9,
+        "frozenEvidenceReadiness": 1,
+        "calculatorReadiness": 10,
+        "dependencyDistance": 5,
+        "safetyRiskPenalty": 4,
+        "productDeltaBonus": 0
+      },
+      "score": 19
+    }
+  ],
+  "selectedM7": {
+    "target": "sheathing_area_subjects",
+    "decision": "CLOSE_M6_AND_START_M7_sheathing_area_subjects",
+    "rationale": [
+      "Highest post-M.6 score (36)",
+      "Adds a new economically large material family (Burton ~190 OSB sheets)",
+      "Calculator already wired; 6 systems already resolved — blocked at area subjects",
+      "Diversifies after floor (M.5) + LVL (M.6) without re-fighting confirmed main-floor STOP",
+      "p3 floor expansion remains strong #2 if sheathing probe STOPs"
+    ]
+  },
+  "m7MilestoneContract": {
+    "targetProductUnlock": "Legitimate wall and/or roof sheathing sheet (or SF coverage) lines in Stage 16 from real Beckstead sheathing-area authority",
+    "whyRank1": "Largest remaining in-scope material family with calculator ready and systems already present",
+    "exactAuthorityMissing": "sheathing-area subjects with areaSquareFeet + parent system + application/panel identity",
+    "firstMandatoryProbe": "Read-only human-path inspection of Beckstead sheets for explicit sheathing specs and measurable/owned sheathing areas (not inventing from wall length × height without height authority)",
+    "stopCondition": "If probe cannot establish explicit or safely corroborated sheathing-area authority for at least one application, emit M7_SHEATHING_STOP and pivot to #2 p3_additional_floor_bay_layout",
+    "likelyImplementationPathIfGreen": "Extraction enhancement for sheathing-area subjects → resolveSheathing parent links → existing calculateSheathing",
+    "expectedStage16Delta": "New structural-panel material lines (sheet count or SF); walls/crawl/LVL unchanged",
+    "sop": "rank → probe → GREEN build OR STOP and pivot → frozen/live proof → close-out"
+  }
+}
