@@ -37,6 +37,7 @@ import { buildingWallSchema, wallSegmentSchema } from "./wall.schema.js";
 import { classifiedPlanPageSchema } from "../../../plans/pageClassification.js";
 import { compiledDrawingPageSchema } from "../../../drawing-compiler/schemas/compiledDrawingPage.schema.js";
 import { governedProjectDictionarySchema } from "../../../project-interpreter/schemas/projectDictionary.schema.js";
+import { extractionBudgetAuditSchema } from "../extraction/extractionBudgetAudit.schema.js";
 
 export const verifiedPlanSetPayloadSchema = z.object({
   pdfPath: z.string().trim().min(1),
@@ -224,6 +225,11 @@ export const extractedFramingEvidenceArtifactSchema =
   createTypedArtifactEnvelopeSchema(
     "extracted-framing-evidence",
     extractedFramingEvidencePayloadSchema,
+  );
+export const extractionBudgetAuditArtifactSchema =
+  createTypedArtifactEnvelopeSchema(
+    "extraction-budget-audit",
+    extractionBudgetAuditSchema,
   );
 export const compiledDrawingPagesArtifactSchema =
   createTypedArtifactEnvelopeSchema(

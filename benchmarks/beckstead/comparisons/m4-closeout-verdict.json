@@ -1,0 +1,36 @@
+{
+  "verdict": "CLOSE_M4",
+  "lean": "CLOSE_M4",
+  "conditions": {
+    "modeBCompletesToReport": true,
+    "plusNineWallsUnderstood": true,
+    "burtonComparisonPathDefined": true,
+    "domainMaterialGapsTraced": true,
+    "fiftyTwoUnchangedExplained": true,
+    "amendment3RegressionsZero": true,
+    "m5SelectableWithEvidence": true
+  },
+  "contractorDeliverable": "LIMITED_REAL_WORLD_VALUE",
+  "contractorRationale": "End-to-end pipeline works and wall BOM is inspectable, but contractor cannot purchase floor/sheathing/roof/header package from this takeoff. Burton comparison confirms major categories missing or not comparable at procurement layer.",
+  "recommendedM5": {
+    "target": "floor_area_layout_authority",
+    "label": "area.joistLayoutLengthFeet + spanDirection on floor areas",
+    "rationale": [
+      "Rank #1 by audit score (42.0)",
+      "high — 1ST FLOOR PACKAGE $7,180 largest framing-dollar section",
+      "3 systems, 8 areas already resolved",
+      "Unlocks multiple material categories in one milestone",
+      "Does not require tuning stud counts to Burton"
+    ],
+    "alternativesConsidered": [
+      {
+        "id": "sheathing_area_subjects",
+        "whyLower": "medium-high — zero areas today; extraction + resolution path unclear"
+      },
+      {
+        "id": "wall_assembly_height",
+        "whyLower": "low-medium — property exists on contract, needs producer"
+      }
+    ]
+  }
+}

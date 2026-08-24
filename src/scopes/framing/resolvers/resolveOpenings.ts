@@ -22,9 +22,11 @@ import {
 } from "../schemas/framing-artifacts.schema.js";
 import type { Opening } from "../schemas/opening.schema.js";
 import {
+  createDisambiguatedOpeningObjectId,
   createOpeningObjectId,
   createWallObjectId,
   createWallSegmentObjectId,
+  sanitizeSubjectKey,
 } from "./ids.js";
 import {
   isResolvedOpeningPropertyValue,
@@ -423,6 +425,378 @@ function groupBySubjectKey(evidence: readonly Evidence[]): Map<string, Evidence[
   return groups;
 }
 
+type SourceRegion = NonNullable<Evidence["source"]["region"]>;
+
+function isGeometryOpeningKey(subjectKey: string): boolean {
+  return subjectKey.startsWith("opening:p");
+}
+
+function regionsOverlap(left: SourceRegion, right: SourceRegion): boolean {
+  if (left.coordinateSpace !== right.coordinateSpace) {
+    return false;
+  }
+
+  const leftRight = left.x + left.width;
+  const leftBottom = left.y + left.height;
+  const rightRight = right.x + right.width;
+  const rightBottom = right.y + right.height;
+
+  return (
+    left.x < rightRight &&
+    right.x < leftRight &&
+    left.y < rightBottom &&
+    right.y < leftBottom
+  );
+}
+
+function regionsFromRecords(records: readonly Evidence[]): SourceRegion[] {
+  return records
+    .map((record) => record.source.region)
+    .filter((region): region is SourceRegion => region != null);
+}
+
+function parentPhysicalRunKeyFromRecords(records: readonly Evidence[]): string | null {
+  for (const record of records) {
+    if (
+      record.propertyPath === "parentPhysicalRunKey" &&
+      typeof record.candidateValue === "string" &&
+      record.candidateValue.length > 0
+    ) {
+      return record.candidateValue;
+    }
+  }
+
+  return null;
+}
+
+function groupsPhysicallyCorroborate(
+  leftRecords: readonly Evidence[],
+  rightRecords: readonly Evidence[],
+): boolean {
+  const leftRegions = regionsFromRecords(leftRecords);
+  const rightRegions = regionsFromRecords(rightRecords);
+
+  for (const leftRegion of leftRegions) {
+    for (const rightRegion of rightRegions) {
+      if (regionsOverlap(leftRegion, rightRegion)) {
+        return true;
+      }
+    }
+  }
+
+  const leftRun = parentPhysicalRunKeyFromRecords(leftRecords);
+  const rightRun = parentPhysicalRunKeyFromRecords(rightRecords);
+  if (leftRun != null && rightRun != null && leftRun === rightRun) {
+    const leftOffsets = leftRecords
+      .filter((record) => record.propertyPath === "positionOffsetFeetFromSegmentStart")
+      .map((record) => record.candidateValue);
+    const rightOffsets = rightRecords
+      .filter((record) => record.propertyPath === "positionOffsetFeetFromSegmentStart")
+      .map((record) => record.candidateValue);
+
+    if (leftOffsets.length === 0 || rightOffsets.length === 0) {
+      return true;
+    }
+
+    return leftOffsets.some((leftOffset) => rightOffsets.includes(leftOffset));
+  }
+
+  for (const leftRecord of leftRecords) {
+    for (const rightRecord of rightRecords) {
+      const leftLabel = leftRecord.source.elementLabel;
+      const rightLabel = rightRecord.source.elementLabel;
+      if (
+        leftLabel &&
+        rightLabel &&
+        leftLabel === rightLabel &&
+        leftRecord.source.region &&
+        rightRecord.source.region &&
+        regionsOverlap(leftRecord.source.region, rightRecord.source.region)
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function groupsHaveDistinguishingGeometry(
+  leftRecords: readonly Evidence[],
+  rightRecords: readonly Evidence[],
+): boolean {
+  const leftRegions = regionsFromRecords(leftRecords);
+  const rightRegions = regionsFromRecords(rightRecords);
+
+  if (leftRegions.length === 0 || rightRegions.length === 0) {
+    return false;
+  }
+
+  for (const leftRegion of leftRegions) {
+    for (const rightRegion of rightRegions) {
+      if (!regionsOverlap(leftRegion, rightRegion)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function locationBucketKey(records: readonly Evidence[]): string {
+  const pageNumber = records[0]?.source.page.pageNumber ?? 0;
+  const tileId = records[0]?.source.tileId ?? "";
+  return `${pageNumber}|${tileId}`;
+}
+
+function locationFingerprint(records: readonly Evidence[]): string {
+  const regions = regionsFromRecords(records).sort((left, right) => {
+    const leftKey = `${left.x}:${left.y}:${left.width}:${left.height}`;
+    const rightKey = `${right.x}:${right.y}:${right.width}:${right.height}`;
+    return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+  });
+
+  if (regions.length > 0) {
+    const region = regions[0]!;
+    const x = Math.round(region.x * 10_000);
+    const y = Math.round(region.y * 10_000);
+    const width = Math.round(region.width * 10_000);
+    const height = Math.round(region.height * 10_000);
+    return `p${records[0]?.source.page.pageNumber}-r${x}-${y}-${width}-${height}`;
+  }
+
+  const pageNumber = records[0]?.source.page.pageNumber ?? 0;
+  const tileId = records[0]?.source.tileId;
+  if (tileId) {
+    return `p${pageNumber}-t${tileId}`;
+  }
+
+  return `p${pageNumber}`;
+}
+
+type OpeningResolveCluster = {
+  canonicalSubjectKey: string;
+  openingId: ObjectId;
+  records: Evidence[];
+  rawSubjectKeys: string[];
+  identityMode:
+    | "geometry"
+    | "semantic"
+    | "confirmed-physical"
+    | "semantic-pending"
+    | "disambiguated";
+};
+
+function mergeRecords(groups: Array<{ subjectKey: string; records: Evidence[] }>): Evidence[] {
+  return groups.flatMap((group) => group.records);
+}
+
+function clusterWithinLocationBucket(
+  subjectKeyGroups: Array<{ subjectKey: string; records: Evidence[] }>,
+  sanitizedKey: string,
+): OpeningResolveCluster[] {
+  if (subjectKeyGroups.length === 1) {
+    const only = subjectKeyGroups[0]!;
+    return [
+      {
+        canonicalSubjectKey: only.subjectKey,
+        openingId: createOpeningObjectId(only.subjectKey),
+        records: only.records,
+        rawSubjectKeys: [only.subjectKey],
+        identityMode: "semantic",
+      },
+    ];
+  }
+
+  const geometryDistinctPairs = subjectKeyGroups.some((left, leftIndex) =>
+    subjectKeyGroups.some(
+      (right, rightIndex) =>
+        leftIndex < rightIndex &&
+        groupsHaveDistinguishingGeometry(left.records, right.records),
+    ),
+  );
+
+  if (geometryDistinctPairs) {
+    return subjectKeyGroups.map((group) => ({
+      canonicalSubjectKey: group.subjectKey,
+      openingId: createDisambiguatedOpeningObjectId(
+        sanitizedKey,
+        locationFingerprint(group.records),
+      ),
+      records: group.records,
+      rawSubjectKeys: [group.subjectKey],
+      identityMode: "disambiguated" as const,
+    }));
+  }
+
+  const hasPhysicalCorroboration = subjectKeyGroups.some((left, leftIndex) =>
+    subjectKeyGroups.some(
+      (right, rightIndex) =>
+        leftIndex < rightIndex &&
+        groupsPhysicallyCorroborate(left.records, right.records),
+    ),
+  );
+
+  if (hasPhysicalCorroboration) {
+    const mergedRecords = mergeRecords(subjectKeyGroups);
+    return [
+      {
+        canonicalSubjectKey: sanitizedKey,
+        openingId: createOpeningObjectId(sanitizedKey),
+        records: mergedRecords,
+        rawSubjectKeys: subjectKeyGroups.map((group) => group.subjectKey).sort(compareIds),
+        identityMode: "confirmed-physical",
+      },
+    ];
+  }
+
+  const mergedRecords = mergeRecords(subjectKeyGroups);
+  return [
+    {
+      canonicalSubjectKey: sanitizedKey,
+      openingId: createOpeningObjectId(sanitizedKey),
+      records: mergedRecords,
+      rawSubjectKeys: subjectKeyGroups.map((group) => group.subjectKey).sort(compareIds),
+      identityMode: "semantic-pending",
+    },
+  ];
+}
+
+function clusterSemanticOpeningGroups(
+  groups: Map<string, Evidence[]>,
+): OpeningResolveCluster[] {
+  const semanticGroups = [...groups.entries()]
+    .filter(([subjectKey]) => !isGeometryOpeningKey(subjectKey))
+    .map(([subjectKey, records]) => ({ subjectKey, records }));
+
+  const sanitizeBuckets = new Map<string, Array<{ subjectKey: string; records: Evidence[] }>>();
+  for (const group of semanticGroups) {
+    const bucketKey = sanitizeSubjectKey(group.subjectKey);
+    const bucket = sanitizeBuckets.get(bucketKey);
+    if (bucket) {
+      bucket.push(group);
+    } else {
+      sanitizeBuckets.set(bucketKey, [group]);
+    }
+  }
+
+  const clusters: OpeningResolveCluster[] = [];
+
+  for (const [sanitizedKey, bucketGroups] of sanitizeBuckets) {
+    if (bucketGroups.length === 1) {
+      const only = bucketGroups[0]!;
+      clusters.push({
+        canonicalSubjectKey: only.subjectKey,
+        openingId: createOpeningObjectId(only.subjectKey),
+        records: only.records,
+        rawSubjectKeys: [only.subjectKey],
+        identityMode: "semantic",
+      });
+      continue;
+    }
+
+    const locationBuckets = new Map<
+      string,
+      Array<{ subjectKey: string; records: Evidence[] }>
+    >();
+    for (const group of bucketGroups) {
+      const key = locationBucketKey(group.records);
+      const bucket = locationBuckets.get(key);
+      if (bucket) {
+        bucket.push(group);
+      } else {
+        locationBuckets.set(key, [group]);
+      }
+    }
+
+    if (locationBuckets.size > 1) {
+      for (const locationGroups of locationBuckets.values()) {
+        clusters.push(
+          ...clusterWithinLocationBucket(locationGroups, sanitizedKey).map((cluster) => ({
+            ...cluster,
+            openingId:
+              locationGroups.length === 1 && cluster.identityMode !== "disambiguated"
+                ? createDisambiguatedOpeningObjectId(
+                    sanitizedKey,
+                    locationFingerprint(locationGroups[0]!.records),
+                  )
+                : cluster.openingId,
+            identityMode:
+              locationGroups.length === 1 && cluster.identityMode !== "disambiguated"
+                ? ("disambiguated" as const)
+                : cluster.identityMode,
+          })),
+        );
+      }
+      continue;
+    }
+
+    clusters.push(
+      ...clusterWithinLocationBucket([...locationBuckets.values()][0]!, sanitizedKey),
+    );
+  }
+
+  return clusters;
+}
+
+function buildOpeningResolveClusters(
+  groups: Map<string, Evidence[]>,
+): OpeningResolveCluster[] {
+  const geometryClusters = [...groups.entries()]
+    .filter(([subjectKey]) => isGeometryOpeningKey(subjectKey))
+    .sort(([left], [right]) => compareIds(left, right))
+    .map(([subjectKey, records]) => ({
+      canonicalSubjectKey: subjectKey,
+      openingId: createOpeningObjectId(subjectKey),
+      records,
+      rawSubjectKeys: [subjectKey],
+      identityMode: "geometry" as const,
+    }));
+
+  const semanticClusters = clusterSemanticOpeningGroups(groups).sort((left, right) =>
+    compareIds(left.openingId, right.openingId),
+  );
+
+  return [...geometryClusters, ...semanticClusters];
+}
+
+function identityTracesForCluster(cluster: OpeningResolveCluster): PropertyResolutionTrace[] {
+  if (cluster.identityMode === "semantic-pending") {
+    return [
+      createTrace(
+        "physicalIdentity",
+        "semantic-cluster-pending-physical-link",
+        `Semantic subjectKeys ${cluster.rawSubjectKeys.map((key) => `"${key}"`).join(", ")} sanitize to the same label without sufficient physical-location authority to confirm one physical opening.`,
+        cluster.records.map((record) => record.id),
+      ),
+    ];
+  }
+
+  if (cluster.identityMode === "confirmed-physical") {
+    return [
+      createTrace(
+        "physicalIdentity",
+        "deterministic-calculation",
+        `Corroborating physical signals merge semantic subjectKeys ${cluster.rawSubjectKeys.map((key) => `"${key}"`).join(", ")} into one opening.`,
+        cluster.records.map((record) => record.id),
+      ),
+    ];
+  }
+
+  if (cluster.identityMode === "disambiguated") {
+    return [
+      createTrace(
+        "physicalIdentity",
+        "deterministic-calculation",
+        `Distinct physical geometry or location disambiguates semantic label "${cluster.canonicalSubjectKey}" at ${locationFingerprint(cluster.records)}.`,
+        cluster.records.map((record) => record.id),
+      ),
+    ];
+  }
+
+  return [];
+}
+
 function resolveOpeningPropertyAuthority(
   propertyPath: OpeningPropertyPath,
   records: readonly Evidence[],
@@ -463,13 +837,13 @@ function buildEvidenceById(
 }
 
 function buildOpeningSubjectBindingByObjectId(
-  subjectKeys: readonly string[],
+  clusters: readonly OpeningResolveCluster[],
 ): Map<ObjectId, SubjectBinding> {
   const subjectBindingByObjectId = new Map<ObjectId, SubjectBinding>();
 
-  for (const subjectKey of subjectKeys) {
-    subjectBindingByObjectId.set(createOpeningObjectId(subjectKey), {
-      subjectKey,
+  for (const cluster of clusters) {
+    subjectBindingByObjectId.set(cluster.openingId, {
+      subjectKey: cluster.canonicalSubjectKey,
       subjectKind: "opening",
     });
   }
@@ -479,7 +853,7 @@ function buildOpeningSubjectBindingByObjectId(
 
 function buildUserDecisionContext(
   evidence: readonly Evidence[],
-  subjectKeys: readonly string[],
+  clusters: readonly OpeningResolveCluster[],
   options?: ResolveOpeningsOptions,
 ): UserDecisionIndex {
   const userDecisions = options?.userDecisions ?? [];
@@ -501,19 +875,18 @@ function buildUserDecisionContext(
         evidenceById: buildEvidenceById(evidence),
       },
       isOpeningPropertyPath,
-      new Set(buildOpeningSubjectBindingByObjectId(subjectKeys).keys()),
+      new Set(buildOpeningSubjectBindingByObjectId(clusters).keys()),
     ),
-    buildOpeningSubjectBindingByObjectId(subjectKeys),
+    buildOpeningSubjectBindingByObjectId(clusters),
   );
 }
 
 function resolveOneOpening(
-  subjectKey: string,
-  records: readonly Evidence[],
+  cluster: OpeningResolveCluster,
   wallFraming: WallFramingPayload | undefined,
   userDecisionIndex: UserDecisionIndex,
 ): Opening {
-  const openingId = createOpeningObjectId(subjectKey);
+  const { canonicalSubjectKey: subjectKey, records, openingId } = cluster;
   const propertyResults = Object.fromEntries(
     OPENING_PROPERTY_PATHS.map((propertyPath) => [
       propertyPath,
@@ -567,6 +940,7 @@ function resolveOneOpening(
   );
 
   const resolutionTraces = [
+    ...identityTracesForCluster(cluster),
     ...OPENING_PROPERTY_PATHS.flatMap(
       (propertyPath) => propertyResults[propertyPath]!.traces,
     ),
@@ -656,31 +1030,25 @@ function resolveOneOpening(
   };
 }
 
-type ResolvedSubjectIdentity = {
-  subjectKey: string;
-  openingId: ObjectId;
-};
+function assertUniqueOpeningIds(clusters: readonly OpeningResolveCluster[]): void {
+  const seen = new Map<ObjectId, string[]>();
 
-function assertNoObjectIdCollisions(identities: readonly ResolvedSubjectIdentity[]): void {
-  const owners = new Map<string, string[]>();
-
-  for (const identity of identities) {
-    const existing = owners.get(identity.openingId);
+  for (const cluster of clusters) {
+    const existing = seen.get(cluster.openingId);
     if (existing) {
-      existing.push(identity.subjectKey);
+      existing.push(cluster.canonicalSubjectKey);
     } else {
-      owners.set(identity.openingId, [identity.subjectKey]);
+      seen.set(cluster.openingId, [cluster.canonicalSubjectKey]);
     }
   }
 
-  for (const [openingId, subjectKeys] of owners) {
+  for (const [openingId, subjectKeys] of seen) {
     if (subjectKeys.length <= 1) {
       continue;
     }
 
-    const sortedSubjectKeys = [...subjectKeys].sort(compareIds);
     throw new Error(
-      `subjectKeys ${sortedSubjectKeys.map((key) => `"${key}"`).join(" and ")} both resolve to Opening ObjectId ${openingId}.`,
+      `Opening resolve clusters ${subjectKeys.map((key) => `"${key}"`).join(" and ")} both resolve to Opening ObjectId ${openingId}.`,
     );
   }
 }
@@ -688,36 +1056,28 @@ function assertNoObjectIdCollisions(identities: readonly ResolvedSubjectIdentity
 /**
  * Deterministic Openings resolver.
  *
- * Groups Evidence by exact subjectKind + subjectKey, resolves scalar opening
- * facts, and when wallFraming is supplied maps explicit parentWallTag Evidence
- * to parentWallId / parentObjectId against resolved Wall objects.
+ * Groups Evidence by exact subjectKind + subjectKey, clusters semantic
+ * observations with corroboration-gated physical identity, resolves scalar
+ * opening facts, and when wallFraming is supplied maps explicit parentWallTag
+ * Evidence to parentWallId / parentObjectId against resolved Wall objects.
  */
 export function resolveOpenings(
   evidence: readonly Evidence[],
   options: ResolveOpeningsOptions = {},
 ): OpeningsPayload {
   const groups = groupBySubjectKey(evidence);
-  const subjectKeys = [...groups.keys()].sort(compareIds);
+  const clusters = buildOpeningResolveClusters(groups);
 
-  if (subjectKeys.length === 0) {
+  if (clusters.length === 0) {
     return openingsPayloadSchema.parse({ openings: [] });
   }
 
-  const identities: ResolvedSubjectIdentity[] = subjectKeys.map((subjectKey) => ({
-    subjectKey,
-    openingId: createOpeningObjectId(subjectKey),
-  }));
-  assertNoObjectIdCollisions(identities);
+  assertUniqueOpeningIds(clusters);
 
-  const userDecisionIndex = buildUserDecisionContext(evidence, subjectKeys, options);
+  const userDecisionIndex = buildUserDecisionContext(evidence, clusters, options);
 
-  const openings = subjectKeys.map((subjectKey) =>
-    resolveOneOpening(
-      subjectKey,
-      groups.get(subjectKey) ?? [],
-      options.wallFraming,
-      userDecisionIndex,
-    ),
+  const openings = clusters.map((cluster) =>
+    resolveOneOpening(cluster, options.wallFraming, userDecisionIndex),
   );
 
   return openingsPayloadSchema.parse({ openings });

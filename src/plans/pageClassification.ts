@@ -156,6 +156,51 @@ export function defaultContentRolesFromPageKind(
   }
 }
 
+/**
+ * When live visual classification omits contentRoles on mixed pages, infer roles
+ * from title/evidence text so extraction routing can attach global schedules/notes
+ * and recognize embedded plan layouts (e.g. roof layout on a mixed sheet).
+ */
+export function inferContentRolesFromVisualEvidence(input: {
+  pageKind: PageKind;
+  contentRoles: readonly PageContentRole[];
+  titleOrLabel: string | null;
+  evidenceText: string;
+}): PageContentRole[] {
+  if (input.contentRoles.length > 0) {
+    return [...input.contentRoles];
+  }
+  const defaults = defaultContentRolesFromPageKind(input.pageKind);
+  if (input.pageKind !== "mixed" || defaults.length > 0) {
+    return defaults;
+  }
+
+  const text = `${input.titleOrLabel ?? ""}\n${input.evidenceText}`.toUpperCase();
+  const roles = new Set<PageContentRole>();
+
+  if (
+    /\b(PLAN|LAYOUT|FLOOR PLAN|FRAMING PLAN|FOUNDATION PLAN|CRAWL SPACE)\b/.test(
+      text,
+    )
+  ) {
+    roles.add("plan-layout");
+  }
+  if (/\b(SCHEDULE|SCHEDULES)\b/.test(text)) {
+    roles.add("schedule");
+  }
+  if (/\b(NOTES|GENERAL STRUCTURAL)\b/.test(text)) {
+    roles.add("notes");
+  }
+  if (/\bINDEX\b/.test(text)) {
+    roles.add("index");
+  }
+  if (/\bDETAIL\b/.test(text) && !roles.has("plan-layout")) {
+    roles.add("detail");
+  }
+
+  return [...roles];
+}
+
 export function legacyPageTypeFromPageKind(pageKind: PageKind): LegacyPageType {
   switch (pageKind) {
     case "cover":

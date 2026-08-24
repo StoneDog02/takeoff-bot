@@ -27,6 +27,7 @@ export const resolutionMethodSchema = z.enum([
   "approved-default",
   "user-override",
   "supported-inference",
+  "semantic-cluster-pending-physical-link",
   "unresolved",
 ]);
 

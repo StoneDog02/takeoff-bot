@@ -1,0 +1,203 @@
+{
+  "generatedAt": "2026-08-24T18:13:02.590Z",
+  "quantityLayerModel": [
+    "plan_geometry",
+    "calculated_requirement",
+    "waste_rounding_estimator_convention",
+    "purchasable_stock_package_bom"
+  ],
+  "engineMaterialScope": {
+    "physicalCoverage": "26 compiler-backed physical-run wall segments on plan pages 3–4 (floor-plan wall runs)",
+    "quantityLayer": "calculated_requirement",
+    "studNote": "Engine emits 2x4 stud each-counts only; no 2x6 wall-type split; no opening deductions in stud count",
+    "plateNote": "Engine emits aggregate LF plates per segment; Burton emits 16' purchasing piece counts"
+  },
+  "burtonFramingLineCount": 20,
+  "burtonStudLinesAllSections": [
+    {
+      "section": "1ST FLOOR WALLS",
+      "dimensions": "2x4",
+      "quantity": 244,
+      "layer": "procurement_convention"
+    },
+    {
+      "section": "1ST FLOOR WALLS",
+      "dimensions": "2x6",
+      "quantity": 234,
+      "layer": "procurement_convention"
+    }
+  ],
+  "modeAEqualsModeBMaterials": true,
+  "rows": [
+    {
+      "category": "wall_studs_2x4",
+      "burtonSections": [
+        "1ST FLOOR WALLS"
+      ],
+      "burtonQuantity": 244,
+      "burtonLayer": "procurement_convention",
+      "modeA": 284,
+      "modeB": 284,
+      "modeLayer": "calculated_requirement",
+      "scopeEquivalence": "partial_overlap",
+      "engineScope": "26 compiler-backed physical-run wall segments on plan pages 3–4 (floor-plan wall runs)",
+      "burtonScope": "1ST FLOOR WALLS purchasing section only (excludes basement/garage/roof stick)",
+      "status": "NOT_DIRECTLY_COMPARABLE",
+      "percentDelta": null,
+      "explanation": "Engine 284 studs cover pages 3–4 physical runs (calculated 2x4 @ 16 OC). Burton 244 ea is 1ST FLOOR WALLS 2x4 purchasing count — different scope boundary, dimension split, and quantity layer. No % delta computed."
+    },
+    {
+      "category": "wall_studs_2x6",
+      "burtonSections": [
+        "1ST FLOOR WALLS"
+      ],
+      "burtonQuantity": 234,
+      "burtonLayer": "procurement_convention",
+      "modeA": 0,
+      "modeB": 0,
+      "modeLayer": "calculated_requirement",
+      "scopeEquivalence": "engine_subset_missing_capability",
+      "status": "MISSING_ENGINE_CAPABILITY",
+      "percentDelta": null,
+      "explanation": "Burton splits studs by wall type (2x6 exterior/bearing). Engine calculator emits 2x4 only from resolved assembly.studSize on compiler segments."
+    },
+    {
+      "category": "wall_plates",
+      "burtonSections": [
+        "1ST FLOOR WALLS",
+        "BASEMENT WALLS",
+        "GARAGE WALLS",
+        "1ST FLOOR PACKAGE"
+      ],
+      "burtonQuantity": "piece counts (ea) by stock length",
+      "modeA": 985.9595999999999,
+      "modeB": 985.9595999999999,
+      "modeLayer": "calculated_requirement",
+      "scopeEquivalence": "partial_overlap",
+      "status": "UNIT_OR_AGGREGATION_MISMATCH",
+      "percentDelta": null,
+      "explanation": "Engine ~986 LF aggregate plates (pages 3–4 segments). Burton plate lines are 16' purchasing pieces across multiple sections. Procurement conversion layer required for numeric comparison."
+    },
+    {
+      "category": "floor_joists_bci",
+      "burtonSections": [
+        "1ST FLOOR PACKAGE"
+      ],
+      "burtonQuantity": 1388,
+      "burtonUnit": "lf",
+      "modeA": 0,
+      "modeB": 0,
+      "scopeEquivalence": "burton_has_engine_missing",
+      "status": "CALCULATOR_INPUT_INCOMPLETE",
+      "percentDelta": null,
+      "explanation": "Mode B resolves 8 floor areas but only 1/8 have joistLayoutLengthFeet."
+    },
+    {
+      "category": "floor_rimboard",
+      "burtonSections": [
+        "1ST FLOOR PACKAGE"
+      ],
+      "burtonQuantity": 571,
+      "burtonUnit": "lf",
+      "modeA": 0,
+      "modeB": 0,
+      "status": "CALCULATOR_INPUT_INCOMPLETE",
+      "scopeEquivalence": "burton_has_engine_missing",
+      "percentDelta": null,
+      "explanation": "Blocked by same floor area layout authority as BCI joists."
+    },
+    {
+      "category": "floor_sheathing_tg",
+      "burtonSections": [
+        "1ST FLOOR PACKAGE"
+      ],
+      "burtonQuantity": 57,
+      "burtonUnit": "sheets",
+      "modeA": 0,
+      "modeB": 0,
+      "status": "CALCULATOR_INPUT_INCOMPLETE",
+      "scopeEquivalence": "burton_has_engine_missing",
+      "percentDelta": null,
+      "explanation": "Floor calculator blocked; Burton T&G is procurement sheet count."
+    },
+    {
+      "category": "wall_sheathing_osb",
+      "burtonSections": [
+        "1ST FLOOR WALLS",
+        "GARAGE WALLS"
+      ],
+      "burtonQuantity": 80,
+      "burtonUnit": "sheets",
+      "modeA": 0,
+      "modeB": 0,
+      "status": "EVIDENCE_MISSING",
+      "scopeEquivalence": "burton_has_engine_missing",
+      "percentDelta": null,
+      "explanation": "Mode B has 6 sheathing systems but 0 sheathing-area subjects."
+    },
+    {
+      "category": "roof_sheathing_osb",
+      "burtonSections": [
+        "ROOF"
+      ],
+      "burtonQuantity": 110,
+      "burtonUnit": "sheets",
+      "modeA": 0,
+      "modeB": 0,
+      "status": "CALCULATOR_INPUT_INCOMPLETE",
+      "scopeEquivalence": "burton_has_engine_missing",
+      "percentDelta": null,
+      "explanation": "Roof framing inputs incomplete; sheathing areas absent."
+    },
+    {
+      "category": "opening_headers_lvl",
+      "burtonSections": [
+        "1ST FLOOR WALLS"
+      ],
+      "burtonQuantity": "18 header pcs + 48 LF LVL",
+      "modeA": 0,
+      "modeB": 0,
+      "status": "CALCULATOR_INPUT_INCOMPLETE",
+      "scopeEquivalence": "partial_overlap",
+      "percentDelta": null,
+      "explanation": "Opening calculator blocked: 42/42 walls missing assembly.heightFeet."
+    },
+    {
+      "category": "roof_truss_package",
+      "burtonSections": [
+        "ROOF"
+      ],
+      "burtonQuantity": 8953.43,
+      "burtonUnit": "usd_quote",
+      "modeA": 0,
+      "modeB": 0,
+      "status": "SCOPE_DIFFERENCE",
+      "scopeEquivalence": "method_difference",
+      "percentDelta": null,
+      "explanation": "Burton uses prefab truss supplier quote; engine resolves prefab-truss labels without stick/truss BOM."
+    },
+    {
+      "category": "doors_finish_foundation",
+      "burtonSections": [
+        "EXTERIOR DOORS",
+        "INTERIOR DOORS",
+        "FINISH MATERIAL",
+        "FOUNDATION"
+      ],
+      "modeA": 0,
+      "modeB": 0,
+      "status": "SCOPE_DIFFERENCE",
+      "scopeEquivalence": "out_of_engine_scope",
+      "percentDelta": null,
+      "explanation": "Explicitly outside framing engine scope — excluded from capability metrics."
+    }
+  ],
+  "coverageSummary": {
+    "comparableWithScopeProof": 0,
+    "notDirectlyComparable": 1,
+    "missingEngineCapability": 1,
+    "calculatorInputIncomplete": 5,
+    "scopeDifference": 2,
+    "unitOrAggregationMismatch": 1
+  }
+}

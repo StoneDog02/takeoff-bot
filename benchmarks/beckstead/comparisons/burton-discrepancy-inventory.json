@@ -1,0 +1,82 @@
+{
+  "generatedAt": "2026-08-24T18:13:02.599Z",
+  "buckets": [
+    {
+      "category": "wall_studs_2x4",
+      "status": "NOT_DIRECTLY_COMPARABLE",
+      "scopeEquivalence": "partial_overlap",
+      "explanation": "Engine 284 studs cover pages 3–4 physical runs (calculated 2x4 @ 16 OC). Burton 244 ea is 1ST FLOOR WALLS 2x4 purchasing count — different scope boundary, dimension split, and quantity layer. No % delta computed.",
+      "percentDelta": null
+    },
+    {
+      "category": "wall_studs_2x6",
+      "status": "MISSING_ENGINE_CAPABILITY",
+      "scopeEquivalence": "engine_subset_missing_capability",
+      "explanation": "Burton splits studs by wall type (2x6 exterior/bearing). Engine calculator emits 2x4 only from resolved assembly.studSize on compiler segments.",
+      "percentDelta": null
+    },
+    {
+      "category": "wall_plates",
+      "status": "UNIT_OR_AGGREGATION_MISMATCH",
+      "scopeEquivalence": "partial_overlap",
+      "explanation": "Engine ~986 LF aggregate plates (pages 3–4 segments). Burton plate lines are 16' purchasing pieces across multiple sections. Procurement conversion layer required for numeric comparison.",
+      "percentDelta": null
+    },
+    {
+      "category": "floor_joists_bci",
+      "status": "CALCULATOR_INPUT_INCOMPLETE",
+      "scopeEquivalence": "burton_has_engine_missing",
+      "explanation": "Mode B resolves 8 floor areas but only 1/8 have joistLayoutLengthFeet.",
+      "percentDelta": null
+    },
+    {
+      "category": "floor_rimboard",
+      "status": "CALCULATOR_INPUT_INCOMPLETE",
+      "scopeEquivalence": "burton_has_engine_missing",
+      "explanation": "Blocked by same floor area layout authority as BCI joists.",
+      "percentDelta": null
+    },
+    {
+      "category": "floor_sheathing_tg",
+      "status": "CALCULATOR_INPUT_INCOMPLETE",
+      "scopeEquivalence": "burton_has_engine_missing",
+      "explanation": "Floor calculator blocked; Burton T&G is procurement sheet count.",
+      "percentDelta": null
+    },
+    {
+      "category": "wall_sheathing_osb",
+      "status": "EVIDENCE_MISSING",
+      "scopeEquivalence": "burton_has_engine_missing",
+      "explanation": "Mode B has 6 sheathing systems but 0 sheathing-area subjects.",
+      "percentDelta": null
+    },
+    {
+      "category": "roof_sheathing_osb",
+      "status": "CALCULATOR_INPUT_INCOMPLETE",
+      "scopeEquivalence": "burton_has_engine_missing",
+      "explanation": "Roof framing inputs incomplete; sheathing areas absent.",
+      "percentDelta": null
+    },
+    {
+      "category": "opening_headers_lvl",
+      "status": "CALCULATOR_INPUT_INCOMPLETE",
+      "scopeEquivalence": "partial_overlap",
+      "explanation": "Opening calculator blocked: 42/42 walls missing assembly.heightFeet.",
+      "percentDelta": null
+    },
+    {
+      "category": "roof_truss_package",
+      "status": "SCOPE_DIFFERENCE",
+      "scopeEquivalence": "method_difference",
+      "explanation": "Burton uses prefab truss supplier quote; engine resolves prefab-truss labels without stick/truss BOM.",
+      "percentDelta": null
+    },
+    {
+      "category": "doors_finish_foundation",
+      "status": "SCOPE_DIFFERENCE",
+      "scopeEquivalence": "out_of_engine_scope",
+      "explanation": "Explicitly outside framing engine scope — excluded from capability metrics.",
+      "percentDelta": null
+    }
+  ]
+}

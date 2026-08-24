@@ -1,0 +1,134 @@
+{
+  "walls": [
+    {
+      "wallId": "2x4-BEARING-WALL",
+      "inModeA": false,
+      "inModeBOnly": true,
+      "evidenceCount": 5,
+      "contributesToMaterialLines": false,
+      "segmentIds": [
+        "WS-2x4-BEARING-WALL"
+      ],
+      "assemblyStudSize": "2x4",
+      "assemblyHeightFeet": null,
+      "verdict": "SEMANTIC_ONLY",
+      "rationale": "General note/spec wall type — assembly partial, no segment length, no material output"
+    },
+    {
+      "wallId": "2x4-BEARING-WALL-ON-CONC.-FOOTINGS",
+      "inModeA": false,
+      "inModeBOnly": true,
+      "evidenceCount": 2,
+      "contributesToMaterialLines": false,
+      "segmentIds": [
+        "WS-2x4-BEARING-WALL-ON-CONC.-FOOTINGS"
+      ],
+      "assemblyStudSize": "2x4",
+      "assemblyHeightFeet": null,
+      "verdict": "SEMANTIC_ONLY",
+      "rationale": "General note/spec wall type — assembly partial, no segment length, no material output"
+    },
+    {
+      "wallId": "CONC.-FDTN.-WALL",
+      "inModeA": false,
+      "inModeBOnly": true,
+      "evidenceCount": 2,
+      "contributesToMaterialLines": false,
+      "segmentIds": [
+        "WS-CONC.-FDTN.-WALL"
+      ],
+      "assemblyStudSize": null,
+      "assemblyHeightFeet": null,
+      "verdict": "FALSE_POSITIVE",
+      "rationale": "Foundation/concrete wall schedule label — not wood wall framing procurement scope"
+    },
+    {
+      "wallId": "EXTERIOR-WALLS",
+      "inModeA": false,
+      "inModeBOnly": true,
+      "evidenceCount": 2,
+      "contributesToMaterialLines": false,
+      "segmentIds": [
+        "WS-EXTERIOR-WALLS"
+      ],
+      "assemblyStudSize": null,
+      "assemblyHeightFeet": null,
+      "verdict": "SEMANTIC_ONLY",
+      "rationale": "Global plan label / outline note — not a locatable physical wall run"
+    },
+    {
+      "wallId": "OUTLINE-OF-WALL-ABOVE",
+      "inModeA": false,
+      "inModeBOnly": true,
+      "evidenceCount": 1,
+      "contributesToMaterialLines": false,
+      "segmentIds": [
+        "WS-OUTLINE-OF-WALL-ABOVE"
+      ],
+      "assemblyStudSize": null,
+      "assemblyHeightFeet": null,
+      "verdict": "SEMANTIC_ONLY",
+      "rationale": "Global plan label / outline note — not a locatable physical wall run"
+    },
+    {
+      "wallId": "SW1",
+      "inModeA": false,
+      "inModeBOnly": true,
+      "evidenceCount": 2,
+      "contributesToMaterialLines": false,
+      "segmentIds": [
+        "WS-SW1"
+      ],
+      "assemblyStudSize": null,
+      "assemblyHeightFeet": null,
+      "verdict": "SEMANTIC_ONLY",
+      "rationale": "Shear wall schedule type key (SW#) — semantic binding without physical-run geometry segment"
+    },
+    {
+      "wallId": "SW2",
+      "inModeA": false,
+      "inModeBOnly": true,
+      "evidenceCount": 7,
+      "contributesToMaterialLines": false,
+      "segmentIds": [
+        "WS-SW2"
+      ],
+      "assemblyStudSize": null,
+      "assemblyHeightFeet": null,
+      "verdict": "SEMANTIC_ONLY",
+      "rationale": "Shear wall schedule type key (SW#) — semantic binding without physical-run geometry segment"
+    },
+    {
+      "wallId": "SW3",
+      "inModeA": false,
+      "inModeBOnly": true,
+      "evidenceCount": 1,
+      "contributesToMaterialLines": false,
+      "segmentIds": [
+        "WS-SW3"
+      ],
+      "assemblyStudSize": null,
+      "assemblyHeightFeet": null,
+      "verdict": "SEMANTIC_ONLY",
+      "rationale": "Shear wall schedule type key (SW#) — semantic binding without physical-run geometry segment"
+    },
+    {
+      "wallId": "SW5",
+      "inModeA": false,
+      "inModeBOnly": true,
+      "evidenceCount": 3,
+      "contributesToMaterialLines": false,
+      "segmentIds": [
+        "WS-SW5"
+      ],
+      "assemblyStudSize": null,
+      "assemblyHeightFeet": null,
+      "verdict": "SEMANTIC_ONLY",
+      "rationale": "Shear wall schedule type key (SW#) — semantic binding without physical-run geometry segment"
+    }
+  ],
+  "summary": {
+    "modeBOnlyCount": 9,
+    "contributeMaterial": 0
+  }
+}

@@ -19,11 +19,16 @@ const openingSource = {
 
 function openingEvidence(
   id: string,
-  type: "note" | "dimension" | "schedule" | "detail",
+  type: "note" | "dimension" | "schedule" | "detail" | "geometry" | "callout",
   description: string,
   propertyPath: string,
   candidateValue: string | number | boolean | null,
   subjectKey = "O-001",
+  sourceOverrides: {
+    pageNumber?: number;
+    tileId?: string;
+    region?: Evidence["source"]["region"];
+  } = {},
 ): Evidence {
   return evidenceSchema.parse({
     id,
@@ -32,6 +37,12 @@ function openingEvidence(
     description,
     source: {
       ...openingSource,
+      page: {
+        ...openingSource.page,
+        pageNumber: sourceOverrides.pageNumber ?? openingSource.page.pageNumber,
+      },
+      tileId: sourceOverrides.tileId ?? undefined,
+      region: sourceOverrides.region ?? openingSource.region,
       elementLabel: subjectKey,
     },
     originalText: `${subjectKey} fixture line`,

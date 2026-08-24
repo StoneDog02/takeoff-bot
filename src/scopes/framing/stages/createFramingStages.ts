@@ -9,9 +9,9 @@ import type { ArtifactId } from "../../../core/schemas/identity.schema.js";
 import { evidenceIdSchema, type PipelineRunId } from "../../../core/schemas/identity.schema.js";
 import { generateArtifactId } from "../../../core/utils/ids.js";
 import { computePlanSourceFingerprint } from "../../../plans/computePlanSourceFingerprint.js";
-import { classifyPlanPagesDeterministically } from "../../../plans/classifyPlanPages.js";
 import { buildPlanReadingOrderFromClassification } from "../../../plans/buildPlanReadingOrder.js";
-import { extractFramingEvidenceViaClaude } from "../prompts/extractFramingEvidence.js";
+import { resolvePageClassificationForPipeline } from "../../../plans/resolvePageClassificationForPipeline.js";
+import { runFramingExtractionPasses } from "../extraction/runFramingExtractionPasses.js";
 import { compileDrawingPage } from "../../../drawing-compiler/compileDrawingPage.js";
 import { buildCompilerAutomationAudit } from "../compiler/buildCompilerAutomationAudit.js";
 import { buildSemanticBindingAudit } from "../compiler/buildSemanticBindingAudit.js";
@@ -40,6 +40,7 @@ import {
   confidenceArtifactSchema,
   extractedFramingEvidenceArtifactSchema,
   extractedFramingEvidencePayloadSchema,
+  extractionBudgetAuditArtifactSchema,
   finalFramingTakeoffArtifactSchema,
   framingCalculationsArtifactSchema,
   openingsArtifactSchema,
@@ -163,6 +164,7 @@ export function createFramingStageArtifact<TSchema extends z.ZodTypeAny>(
 const COMPILER_AUTOMATION_AUDIT_COMPANION_SUFFIX = "compiler-automation-audit";
 const PROJECT_DICTIONARY_COMPANION_SUFFIX = "project-dictionary";
 const SEMANTIC_BINDING_AUDIT_COMPANION_SUFFIX = "semantic-binding-audit";
+const EXTRACTION_WORK_UNITS_COMPANION_SUFFIX = "extraction-work-units";
 const WALL_FRAMING_OPENING_LINKS_COMPANION_SUFFIX = "wall-framing-links";
 const OPENINGS_HEADER_LINKS_COMPANION_SUFFIX = "openings-header-links";
 const STRUCTURAL_MEMBERS_OPENING_LINKS_COMPANION_SUFFIX =
@@ -430,13 +432,16 @@ const stages: PipelineStage[] = [
     order: 2,
     name: "pageClassification",
     async run(context) {
-      const pages = classifyPlanPagesDeterministically(context.planIndex);
+      const resolved = await resolvePageClassificationForPipeline({
+        planIndex: context.planIndex,
+        useMockAi: context.useMockAi,
+      });
       return createFramingStageArtifact(
         context,
         2,
         pageClassificationArtifactSchema,
         "page-classification",
-        { pages },
+        { pages: resolved.pages },
       );
     },
   },
@@ -444,8 +449,13 @@ const stages: PipelineStage[] = [
     order: 3,
     name: "planReadingOrder",
     async run(context) {
-      const classified = classifyPlanPagesDeterministically(context.planIndex);
-      const readingOrder = buildPlanReadingOrderFromClassification(classified);
+      const pageClassification = getPayload<PageClassificationPayload>(
+        context,
+        "pageClassification",
+      );
+      const readingOrder = buildPlanReadingOrderFromClassification(
+        pageClassification.pages,
+      );
       return createFramingStageArtifact(
         context,
         3,
@@ -627,23 +637,44 @@ const stages: PipelineStage[] = [
         );
       }
 
-      const claudePayload = context.useMockAi
-        ? buildMockExtractedEvidence(context)
-        : await extractFramingEvidenceViaClaude({
-            planIndex: context.planIndex,
-            pageClassification: getPayload<PageClassificationPayload>(
-              context,
-              "pageClassification",
-            ),
-            planReadingOrder: getPayload<PlanReadingOrderPayload>(
-              context,
-              "planReadingOrder",
-            ),
-            buildingAssemblies: getPayload<BuildingAssembliesPayload>(
-              context,
-              "buildingAssemblies",
-            ),
-          });
+      const pageClassification = getPayload<PageClassificationPayload>(
+        context,
+        "pageClassification",
+      );
+      const planReadingOrder = getPayload<PlanReadingOrderPayload>(
+        context,
+        "planReadingOrder",
+      );
+      const buildingAssemblies = getPayload<BuildingAssembliesPayload>(
+        context,
+        "buildingAssemblies",
+      );
+
+      let claudePayload: ExtractedFramingEvidencePayload;
+      if (context.useMockAi) {
+        claudePayload = buildMockExtractedEvidence(context);
+      } else {
+        const extractionResult = await runFramingExtractionPasses({
+          planIndex: context.planIndex,
+          pages: pageClassification.pages,
+          pageClassification,
+          planReadingOrder,
+          buildingAssemblies,
+          scopeName: context.scopeName,
+        });
+        claudePayload = extractionResult.payload;
+        context.stageSideEffects.publishCompanionArtifact(
+          EXTRACTION_WORK_UNITS_COMPANION_SUFFIX,
+          createFramingStageArtifact(
+            context,
+            6,
+            extractionBudgetAuditArtifactSchema,
+            "extraction-budget-audit",
+            extractionResult.audit,
+            { type: "system", identifier: "extractedEvidence-routing" },
+          ),
+        );
+      }
 
       const compiledPages = getPayload<CompiledDrawingPagesPayload>(
         context,
@@ -665,7 +696,9 @@ const stages: PipelineStage[] = [
         : null;
       const wallAssemblyNoteTexts = await collectWallAssemblyNoteTexts({
         pdfPath: context.planIndex.pdfPath,
-        pageNumbers: [1, 3, 4],
+        pageNumbers: [1, 3, 4].filter(
+          (pageNumber) => pageNumber <= context.planIndex.totalPages,
+        ),
         ocrCacheDir: process.env.TAKEOFF_WALL_ASSEMBLY_OCR_CACHE_DIR ?? null,
       });
       const semanticCompilerEvidence = buildGovernedSemanticCompilerEvidence(

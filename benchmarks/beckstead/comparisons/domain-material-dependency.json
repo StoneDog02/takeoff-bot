@@ -1,0 +1,56 @@
+{
+  "generatedAt": "2026-08-24T18:13:02.592Z",
+  "source": "frozen Mode B artifacts (read-only probe derivation)",
+  "why52LinesUnchanged": "Mode B adds 9 semantic wall objects and richer domain resolution, but only the same 26 compiler physical-run segments satisfy calculateWallFraming inputs. All non-wall calculators return empty.",
+  "domains": [
+    {
+      "domain": "wall_framing",
+      "resolvedObjects": 32,
+      "calculableSegments": 26,
+      "materialLines": 52,
+      "firstBlocker": null,
+      "classification": "CALCULABLE_NOW",
+      "burtonRelevance": "studs, plates in 1ST FLOOR / BASEMENT / GARAGE sections"
+    },
+    {
+      "domain": "openings",
+      "resolvedObjects": 57,
+      "materialLines": 0,
+      "firstBlocker": "wall.assembly.heightFeet null on all walls",
+      "classification": "CALCULATOR_INPUT_INCOMPLETE",
+      "burtonRelevance": "2x10 headers, LVL beam LF in 1ST FLOOR WALLS"
+    },
+    {
+      "domain": "floor_framing",
+      "resolvedObjects": "3 systems / 8 areas",
+      "materialLines": 0,
+      "firstBlocker": "joistLayoutLengthFeet missing on 7/8 areas",
+      "classification": "CALCULATOR_INPUT_INCOMPLETE",
+      "burtonRelevance": "1ST FLOOR PACKAGE $7,180 — BCI 1388 LF, rimboard 571 LF, T&G 57 sheets"
+    },
+    {
+      "domain": "sheathing",
+      "resolvedObjects": "6 systems / 0 areas",
+      "materialLines": 0,
+      "firstBlocker": "0 sheathing-area subjects resolved",
+      "classification": "EVIDENCE_MISSING",
+      "burtonRelevance": "190 OSB sheets (61 wall + 19 garage + 110 roof)"
+    },
+    {
+      "domain": "roof_framing",
+      "resolvedObjects": 5,
+      "materialLines": 0,
+      "firstBlocker": "framingType/memberSize null; prefab-truss labels; no layout lengths",
+      "classification": "CALCULATOR_INPUT_INCOMPLETE",
+      "burtonRelevance": "truss quote + stick lumber + 110 OSB"
+    },
+    {
+      "domain": "structural_members",
+      "resolvedObjects": 11,
+      "materialLines": 0,
+      "firstBlocker": "lengthFeet, quantity, materialType null on members",
+      "classification": "CALCULATOR_INPUT_INCOMPLETE",
+      "burtonRelevance": "6x6 post, LVL beam"
+    }
+  ]
+}

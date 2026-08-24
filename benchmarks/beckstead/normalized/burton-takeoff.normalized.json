@@ -1,0 +1,469 @@
+{
+  "sourceFile": "benchmarks/beckstead/source/burton-takeoff.pdf",
+  "quoteNumber": "1343851",
+  "quoteDate": "2025-07-21",
+  "customer": "Jeff Beckstead / Grit Const. LLC",
+  "disclaimer": "Budget purposes only — not guaranteed sufficient quantities",
+  "lines": [
+    {
+      "lineNumber": 2,
+      "section": "FOUNDATION",
+      "originalDescription": "30' Copper Ground Wire With Clamp",
+      "originalQuantity": 1,
+      "originalUnit": "ea",
+      "productCode": "30CGW",
+      "normalizedCategory": "foundation",
+      "normalizedFamily": "foundation",
+      "normalizedDimensions": null,
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 1,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": false,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 3,
+      "section": "FOUNDATION",
+      "originalDescription": "1/2\" X20' Rebar #4",
+      "originalQuantity": 97,
+      "originalUnit": "ea",
+      "productCode": "4REBAR",
+      "normalizedCategory": "foundation",
+      "normalizedFamily": "foundation",
+      "normalizedDimensions": null,
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 97,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": false,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 27,
+      "section": "BASEMENT WALLS",
+      "originalDescription": "2X4-16 Borate Treated Plate .17",
+      "originalQuantity": 7,
+      "originalUnit": "ea",
+      "productCode": "2416T",
+      "normalizedCategory": "wall-framing",
+      "normalizedFamily": "plate",
+      "normalizedDimensions": "2x4",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 7,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 29,
+      "section": "BASEMENT WALLS",
+      "originalDescription": "2X4-96\" STD&BTR Fir",
+      "originalQuantity": 54,
+      "originalUnit": "ea",
+      "productCode": "2496",
+      "normalizedCategory": "framing-misc",
+      "normalizedFamily": "lumber_misc",
+      "normalizedDimensions": "2X4",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 54,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 34,
+      "section": "1ST FLOOR PACKAGE",
+      "originalDescription": "2X6-16 Borate Treated Plate .17",
+      "originalQuantity": 14,
+      "originalUnit": "ea",
+      "productCode": "2616T",
+      "normalizedCategory": "wall-framing",
+      "normalizedFamily": "plate",
+      "normalizedDimensions": "2x6",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 14,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 35,
+      "section": "1ST FLOOR PACKAGE",
+      "originalDescription": "4X8 3/4 T&G OSB Flooring",
+      "originalQuantity": 57,
+      "originalUnit": "ea",
+      "productCode": "834WBTG",
+      "normalizedCategory": "floor-sheathing",
+      "normalizedFamily": "floor_sheathing",
+      "normalizedDimensions": null,
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 57,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 36,
+      "section": "1ST FLOOR PACKAGE",
+      "originalDescription": "1-1/8\" x 11-7/8\" - 24' OSB Rimboard",
+      "originalQuantity": 571,
+      "originalUnit": "lf",
+      "productCode": "11PLUS",
+      "normalizedCategory": "sheathing",
+      "normalizedFamily": "wall_roof_sheathing",
+      "normalizedDimensions": null,
+      "normalizedUnit": "lf",
+      "normalizedQuantity": 571,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 37,
+      "section": "1ST FLOOR PACKAGE",
+      "originalDescription": "2-5/16\" X 11-7/8\" BCI 6000",
+      "originalQuantity": 1388,
+      "originalUnit": "lf",
+      "productCode": "1178BCI6000",
+      "normalizedCategory": "floor-framing",
+      "normalizedFamily": "floor_joist",
+      "normalizedDimensions": "11-7/8 BCI",
+      "normalizedUnit": "lf",
+      "normalizedQuantity": 1388,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 41,
+      "section": "1ST FLOOR WALLS",
+      "originalDescription": "2X4-16' STD&BTR Fir",
+      "originalQuantity": 43,
+      "originalUnit": "ea",
+      "productCode": "2416",
+      "normalizedCategory": "framing-misc",
+      "normalizedFamily": "lumber_misc",
+      "normalizedDimensions": "2X4",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 43,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 42,
+      "section": "1ST FLOOR WALLS",
+      "originalDescription": "2X6-16' #2 & BTR Fir",
+      "originalQuantity": 43,
+      "originalUnit": "ea",
+      "productCode": "2616",
+      "normalizedCategory": "framing-misc",
+      "normalizedFamily": "lumber_misc",
+      "normalizedDimensions": "2X6",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 43,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 43,
+      "section": "1ST FLOOR WALLS",
+      "originalDescription": "2X10-10' #2 & BTR Fir",
+      "originalQuantity": 9,
+      "originalUnit": "ea",
+      "productCode": "21010",
+      "normalizedCategory": "opening-framing",
+      "normalizedFamily": "header",
+      "normalizedDimensions": "2X10",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 9,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 44,
+      "section": "1ST FLOOR WALLS",
+      "originalDescription": "2X10-12' #2 & BTR Fir",
+      "originalQuantity": 9,
+      "originalUnit": "ea",
+      "productCode": "21012",
+      "normalizedCategory": "opening-framing",
+      "normalizedFamily": "header",
+      "normalizedDimensions": "2X10",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 9,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 45,
+      "section": "1ST FLOOR WALLS",
+      "originalDescription": "2X4-92 5/8\" Stud",
+      "originalQuantity": 244,
+      "originalUnit": "ea",
+      "productCode": "2492",
+      "normalizedCategory": "wall-framing",
+      "normalizedFamily": "stud",
+      "normalizedDimensions": "2x4",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 244,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 46,
+      "section": "1ST FLOOR WALLS",
+      "originalDescription": "2X6-92 5/8\" Stud",
+      "originalQuantity": 234,
+      "originalUnit": "ea",
+      "productCode": "2692",
+      "normalizedCategory": "wall-framing",
+      "normalizedFamily": "stud",
+      "normalizedDimensions": "2x6",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 234,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 47,
+      "section": "1ST FLOOR WALLS",
+      "originalDescription": "6X6-10' S4S Doug Fir #2",
+      "originalQuantity": 1,
+      "originalUnit": "ea",
+      "productCode": "6610DF",
+      "normalizedCategory": "structural-member",
+      "normalizedFamily": "post",
+      "normalizedDimensions": "6x6",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 1,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 48,
+      "section": "1ST FLOOR WALLS",
+      "originalDescription": "4X8 7/16\"OSB Sheathing Exposure 1",
+      "originalQuantity": 61,
+      "originalUnit": "ea",
+      "productCode": "8716WB",
+      "normalizedCategory": "sheathing",
+      "normalizedFamily": "wall_roof_sheathing",
+      "normalizedDimensions": null,
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 61,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 49,
+      "section": "1ST FLOOR WALLS",
+      "originalDescription": "1 3/4\" X 11 7/8\" BC LVL Beam",
+      "originalQuantity": 48,
+      "originalUnit": "lf",
+      "productCode": "1178ML",
+      "normalizedCategory": "structural-member",
+      "normalizedFamily": "beam",
+      "normalizedDimensions": null,
+      "normalizedUnit": "lf",
+      "normalizedQuantity": 48,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 53,
+      "section": "GARAGE WALLS",
+      "originalDescription": "2X4-16 Borate Treated Plate .17",
+      "originalQuantity": 4,
+      "originalUnit": "ea",
+      "productCode": "2416T",
+      "normalizedCategory": "wall-framing",
+      "normalizedFamily": "plate",
+      "normalizedDimensions": "2x4",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 4,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 54,
+      "section": "GARAGE WALLS",
+      "originalDescription": "2X4-10' STD&BTR Fir",
+      "originalQuantity": 66,
+      "originalUnit": "ea",
+      "productCode": "2410",
+      "normalizedCategory": "framing-misc",
+      "normalizedFamily": "lumber_misc",
+      "normalizedDimensions": "2X4",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 66,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 56,
+      "section": "GARAGE WALLS",
+      "originalDescription": "4X8 7/16\"OSB Sheathing Exposure 1",
+      "originalQuantity": 19,
+      "originalUnit": "ea",
+      "productCode": "8716WB",
+      "normalizedCategory": "sheathing",
+      "normalizedFamily": "wall_roof_sheathing",
+      "normalizedDimensions": null,
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 19,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 60,
+      "section": "ROOF",
+      "originalDescription": "2X4-14' STD&BTR Fir",
+      "originalQuantity": 20,
+      "originalUnit": "ea",
+      "productCode": "2414",
+      "normalizedCategory": "framing-misc",
+      "normalizedFamily": "lumber_misc",
+      "normalizedDimensions": "2X4",
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 20,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 67,
+      "section": "ROOF",
+      "originalDescription": "4X8-5/8\" OSB Square Edge Exposure 1",
+      "originalQuantity": 110,
+      "originalUnit": "ea",
+      "productCode": "858WB",
+      "normalizedCategory": "sheathing",
+      "normalizedFamily": "wall_roof_sheathing",
+      "normalizedDimensions": null,
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 110,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": true,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    },
+    {
+      "lineNumber": 70,
+      "section": "ROOF",
+      "originalDescription": "Burton Truss Quote #__________",
+      "originalQuantity": 1,
+      "originalUnit": "ea",
+      "productCode": "zz_SOTR_48261",
+      "normalizedCategory": "roof-truss",
+      "normalizedFamily": "truss_package",
+      "normalizedDimensions": null,
+      "normalizedUnit": "ea",
+      "normalizedQuantity": 1,
+      "mappingConfidence": "high",
+      "inFramingEngineScope": false,
+      "quantityLayer": "procurement_convention",
+      "assumptions": [
+        "Burton line is purchasing quotation row, not plan-traceable calculated requirement"
+      ],
+      "notes": null
+    }
+  ]
+}

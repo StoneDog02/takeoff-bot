@@ -5,6 +5,7 @@ import type { PlanPageVisual } from "./PlanPageVisual.js";
 import {
   classifiedPlanPageSchema,
   defaultContentRolesFromPageKind,
+  inferContentRolesFromVisualEvidence,
   pageKindSchema,
   pageScopeHintSchema,
   pageContentRoleSchema,
@@ -104,10 +105,12 @@ export function mergeVisualPageClassifications(input: {
 
     const pageKind = visual.pageKind;
     const scopeHints = visual.scopeHints;
-    const contentRoles =
-      visual.contentRoles.length > 0
-        ? visual.contentRoles
-        : defaultContentRolesFromPageKind(pageKind);
+    const contentRoles = inferContentRolesFromVisualEvidence({
+      pageKind,
+      contentRoles: visual.contentRoles,
+      titleOrLabel: visual.titleOrLabel,
+      evidenceText: visual.evidenceText,
+    });
     return classifiedPlanPageSchema.parse({
       pageNumber: page.pageNumber,
       sheetId: page.sheetId,

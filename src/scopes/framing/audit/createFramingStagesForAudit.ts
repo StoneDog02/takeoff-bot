@@ -5,10 +5,11 @@ import { buildGeometryEvidenceFromCompiledPages } from "../geometry/buildGeometr
 import { buildSemanticBindingEvidenceFromCompiledPages } from "../geometry/buildSemanticBindingEvidenceFromCompiledPages.js";
 import { collectWallAssemblyNoteTexts } from "../geometry/collectWallAssemblyNoteTexts.js";
 import { mergeExtractedAndGeometryEvidence } from "../geometry/mergeExtractedAndGeometryEvidence.js";
-import { extractFramingEvidenceViaClaude } from "../prompts/extractFramingEvidence.js";
+import { runFramingExtractionPasses } from "../extraction/runFramingExtractionPasses.js";
 import {
   compiledDrawingPagesArtifactSchema,
   extractedFramingEvidenceArtifactSchema,
+  extractionBudgetAuditArtifactSchema,
   projectDictionaryArtifactSchema,
   type BuildingAssembliesPayload,
   type CompiledDrawingPagesPayload,
@@ -108,20 +109,26 @@ export function createFramingStagesForAudit(
 
   if (variant === "live_claude") {
     return replaceStage(createFramingStages(), "extractedEvidence", async (context) => {
-      const claudePayload = await extractFramingEvidenceViaClaude({
+      const pageClassification = getPayload<PageClassificationPayload>(
+        context,
+        "pageClassification",
+      );
+      const planReadingOrder = getPayload<PlanReadingOrderPayload>(
+        context,
+        "planReadingOrder",
+      );
+      const buildingAssemblies = getPayload<BuildingAssembliesPayload>(
+        context,
+        "buildingAssemblies",
+      );
+
+      const extractionResult = await runFramingExtractionPasses({
         planIndex: context.planIndex,
-        pageClassification: getPayload<PageClassificationPayload>(
-          context,
-          "pageClassification",
-        ),
-        planReadingOrder: getPayload<PlanReadingOrderPayload>(
-          context,
-          "planReadingOrder",
-        ),
-        buildingAssemblies: getPayload<BuildingAssembliesPayload>(
-          context,
-          "buildingAssemblies",
-        ),
+        pages: pageClassification.pages,
+        pageClassification,
+        planReadingOrder,
+        buildingAssemblies,
+        scopeName: context.scopeName,
         onApiCall: () => {
           if (claudeUsage) claudeUsage.calls += 1;
         },
@@ -132,6 +139,19 @@ export function createFramingStagesForAudit(
           }
         },
       });
+      const claudePayload = extractionResult.payload;
+
+      context.stageSideEffects.publishCompanionArtifact(
+        "extraction-work-units",
+        createFramingStageArtifact(
+          context,
+          6,
+          extractionBudgetAuditArtifactSchema,
+          "extraction-budget-audit",
+          extractionResult.audit,
+          { type: "system", identifier: "extractedEvidence-routing" },
+        ),
+      );
 
       const compiledPages = getPayload<CompiledDrawingPagesPayload>(
         context,

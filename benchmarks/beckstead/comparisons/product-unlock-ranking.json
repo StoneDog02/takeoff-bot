@@ -1,0 +1,105 @@
+{
+  "generatedAt": "2026-08-24T18:13:02.592Z",
+  "rankingMethod": "contractorUsefulness × BurtonCoverage × modeBActivation × risk — not implementation ease",
+  "top5": [
+    {
+      "rank": 1,
+      "id": "floor_area_layout_authority",
+      "blocker": "area.joistLayoutLengthFeet + spanDirection on floor areas",
+      "materialsUnlocked": [
+        "BCI joists LF",
+        "rimboard LF",
+        "T&G floor sheathing sheets"
+      ],
+      "burtonRelevance": "high — 1ST FLOOR PACKAGE $7,180 largest framing-dollar section",
+      "modeBActivation": "3 systems, 8 areas already resolved",
+      "risk": "medium — requires layout authority wiring, not just extraction",
+      "contractorUsefulness": 10,
+      "existingUnderstanding": 8,
+      "score": 42
+    },
+    {
+      "rank": 2,
+      "id": "sheathing_area_subjects",
+      "blocker": "sheathing-area subjects + application/thickness",
+      "materialsUnlocked": [
+        "wall OSB 80 sheets",
+        "roof OSB 110 sheets"
+      ],
+      "burtonRelevance": "high — 190 sheets explicit in Burton",
+      "modeBActivation": "6 systems, 0 areas",
+      "risk": "medium-high — zero areas today; extraction + resolution path unclear",
+      "contractorUsefulness": 9,
+      "existingUnderstanding": 4,
+      "score": 34
+    },
+    {
+      "rank": 3,
+      "id": "wall_assembly_height",
+      "blocker": "wall.assembly.heightFeet for all walls",
+      "materialsUnlocked": [
+        "opening headers",
+        "kings",
+        "jacks",
+        "cripples"
+      ],
+      "burtonRelevance": "medium — headers/LVL present but not primary dollar block",
+      "modeBActivation": "57 openings resolved; 0/42 walls with height",
+      "risk": "low-medium — property exists on contract, needs producer",
+      "contractorUsefulness": 7,
+      "existingUnderstanding": 6,
+      "score": 28
+    },
+    {
+      "rank": 4,
+      "id": "structural_member_dimensions",
+      "blocker": "lengthFeet, quantity, materialType on structural members",
+      "materialsUnlocked": [
+        "6x6 posts",
+        "LVL beams"
+      ],
+      "burtonRelevance": "medium — few lines in Burton",
+      "modeBActivation": "11 members partial",
+      "risk": "medium",
+      "contractorUsefulness": 6,
+      "existingUnderstanding": 5,
+      "score": 24.5
+    },
+    {
+      "rank": 5,
+      "id": "roof_framing_type_routing",
+      "blocker": "stick vs truss routing + layout lengths",
+      "materialsUnlocked": [
+        "rafters OR truss BOM",
+        "roof sheathing"
+      ],
+      "burtonRelevance": "medium — Burton uses truss package quote",
+      "modeBActivation": "5 roof systems",
+      "risk": "high — method difference (prefab truss vs stick)",
+      "contractorUsefulness": 7,
+      "existingUnderstanding": 3,
+      "score": 23.5
+    }
+  ],
+  "selectedM5": {
+    "target": "floor_area_layout_authority",
+    "label": "area.joistLayoutLengthFeet + spanDirection on floor areas",
+    "rationale": [
+      "Rank #1 by audit score (42.0)",
+      "high — 1ST FLOOR PACKAGE $7,180 largest framing-dollar section",
+      "3 systems, 8 areas already resolved",
+      "Unlocks multiple material categories in one milestone",
+      "Does not require tuning stud counts to Burton"
+    ],
+    "alternativesConsidered": [
+      {
+        "id": "sheathing_area_subjects",
+        "whyLower": "medium-high — zero areas today; extraction + resolution path unclear"
+      },
+      {
+        "id": "wall_assembly_height",
+        "whyLower": "low-medium — property exists on contract, needs producer"
+      }
+    ]
+  }
+}

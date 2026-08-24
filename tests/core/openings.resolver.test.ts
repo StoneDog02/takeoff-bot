@@ -189,15 +189,93 @@ describe("resolveOpenings", () => {
     );
   });
 
-  it("throws when distinct subjectKeys sanitize to the same Opening ObjectId", () => {
-    assert.throws(
-      () =>
-        resolveOpenings([
-          ...buildCompleteOpeningEvidence("O 001", "E-O-A"),
-          ...buildCompleteOpeningEvidence("O-001", "E-O-B"),
-        ]),
-      /both resolve to Opening ObjectId O-001/,
+  it("collapses sanitize-colliding semantic keys without physical authority into one semantic-pending opening", () => {
+    const payload = resolveOpenings([
+      ...buildCompleteOpeningEvidence("O 001", "E-O-A"),
+      ...buildCompleteOpeningEvidence("O-001", "E-O-B"),
+    ]);
+    const opening = payload.openings[0];
+
+    assert.equal(payload.openings.length, 1);
+    assert.equal(opening?.id, "O-001");
+    assert.ok(opening?.evidenceIds.includes("E-O-A-CATEGORY"));
+    assert.ok(opening?.evidenceIds.includes("E-O-B-CATEGORY"));
+    const identityTrace = opening?.resolutionTraces.find(
+      (entry) => entry.propertyPath === "physicalIdentity",
     );
+    assert.equal(identityTrace?.method, "semantic-cluster-pending-physical-link");
+  });
+
+  it("merges sanitize-colliding semantic keys when overlapping bbox corroborates one physical opening", () => {
+    const region = {
+      coordinateSpace: "normalized" as const,
+      x: 0.1,
+      y: 0.2,
+      width: 0.05,
+      height: 0.05,
+    };
+    const payload = resolveOpenings([
+      openingEvidence("E-A-CAT", "note", "Door A", "category", "door", "3068 DINING", {
+        region,
+      }),
+      openingEvidence("E-B-CAT", "note", "Door B", "category", "door", "3068-DINING", {
+        region: { ...region, x: 0.11 },
+      }),
+    ]);
+
+    assert.equal(payload.openings.length, 1);
+    assert.equal(payload.openings[0]?.id, "O-3068-DINING");
+    assert.equal(
+      payload.openings[0]?.resolutionTraces.find((entry) => entry.propertyPath === "physicalIdentity")
+        ?.method,
+      "deterministic-calculation",
+    );
+  });
+
+  it("does not merge same-label openings when non-overlapping bbox distinguishes them on the same tile", () => {
+    const payload = resolveOpenings([
+      openingEvidence("E-DOOR-A", "geometry", "Door A", "category", "door", "3068 DINING", {
+        pageNumber: 4,
+        tileId: "t-r0-c2",
+        region: {
+          coordinateSpace: "normalized",
+          x: 0.1,
+          y: 0.2,
+          width: 0.03,
+          height: 0.03,
+        },
+      }),
+      openingEvidence("E-DOOR-B", "geometry", "Door B", "category", "door", "3068-DINING", {
+        pageNumber: 4,
+        tileId: "t-r0-c2",
+        region: {
+          coordinateSpace: "normalized",
+          x: 0.8,
+          y: 0.2,
+          width: 0.03,
+          height: 0.03,
+        },
+      }),
+    ]);
+
+    assert.equal(payload.openings.length, 2);
+    assert.notEqual(payload.openings[0]?.id, payload.openings[1]?.id);
+    assert.match(payload.openings[0]?.id ?? "", /-loc-/);
+    assert.match(payload.openings[1]?.id ?? "", /-loc-/);
+  });
+
+  it("disambiguates sanitize-colliding semantic keys on different pages", () => {
+    const payload = resolveOpenings([
+      openingEvidence("E-P3", "note", "Door p3", "category", "door", "3068 DINING", {
+        pageNumber: 3,
+      }),
+      openingEvidence("E-P4", "note", "Door p4", "category", "door", "3068-DINING", {
+        pageNumber: 4,
+      }),
+    ]);
+
+    assert.equal(payload.openings.length, 2);
+    assert.notEqual(payload.openings[0]?.id, payload.openings[1]?.id);
   });
 
   it("does not mutate input Evidence", () => {

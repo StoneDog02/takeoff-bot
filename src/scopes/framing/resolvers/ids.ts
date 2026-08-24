@@ -102,6 +102,26 @@ export function createOpeningObjectId(subjectKey: string): ObjectId {
 }
 
 /**
+ * Location-disambiguated Opening ObjectId when semantic subjectKeys sanitize
+ * to the same base id but physical geometry distinguishes multiple openings.
+ */
+export function createDisambiguatedOpeningObjectId(
+  subjectKey: string,
+  locationFingerprint: string,
+): ObjectId {
+  const base = createOpeningObjectId(subjectKey);
+  const safeFingerprint = locationFingerprint.replace(/[^A-Za-z0-9._:-]/g, "-");
+  if (safeFingerprint.length === 0) {
+    throw new Error(
+      `Cannot derive a disambiguated Opening ObjectId from subjectKey "${subjectKey}".`,
+    );
+  }
+
+  const candidate = `${base}-loc-${safeFingerprint}`;
+  return objectIdSchema.parse(candidate);
+}
+
+/**
  * Deterministic Sheathing System identity for the Sheathing resolver.
  *
  * Example: subjectKey `SHS-001` → ObjectId `SHS-001`.
