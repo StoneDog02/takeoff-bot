@@ -1,0 +1,151 @@
+{
+  "generatedAt": "2026-08-24T21:48:00.000Z",
+  "rankingMethod": "post-M.7 dual-STOP re-rank: score = contractorTimeSaved×2 + materialCoverageGained×2 + downstreamObjectsAffected + evidenceReadiness + implementationLeverage − complexity×2 − safetyRiskPenalty + usableTakeoffProgress — material AND decision-burden candidates compete; not inherited from M.6",
+  "productStateContext": {
+    "materialLines": 55,
+    "sheathingStop": "M7_SHEATHING_STOP",
+    "floorBayStop": "M7_FLOOR_BAY_STOP",
+    "mainFloorStop": "M6_MAIN_FLOOR_STOP_CONFIRMED",
+    "rawReviewItems": 476,
+    "estimatedGoverningDecisionsWorking": 45,
+    "activeAssumptions": 0
+  },
+  "top5": [
+    {
+      "rank": 1,
+      "id": "project_typical_wall_height_assumption",
+      "kind": "decision_burden",
+      "candidateName": "Project-level typical wall height assumption + consolidated decision",
+      "unlocks": [
+        "unblocks wall.height on up to 42 walls",
+        "enables opening framing path toward kings/cripples/sills",
+        "reduces raw RI flood toward governing decisions"
+      ],
+      "currentBlockingAuthority": "assembly.heightFeet null on 0/42 walls; Brain allows height assumption with review; schema today is per-object only",
+      "evidenceReadinessNote": "elevations show plate/ceiling dims (~8'-1\") — mandatory probe before wiring",
+      "scores": {
+        "contractorTimeSaved": 9,
+        "materialCoverageGained": 6,
+        "downstreamObjectsAffected": 9,
+        "evidenceReadiness": 5,
+        "implementationLeverage": 8,
+        "complexity": 5,
+        "safetyRiskPenalty": 3,
+        "usableTakeoffProgress": 8
+      },
+      "score": 47
+    },
+    {
+      "rank": 2,
+      "id": "structural_member_placement_lengths",
+      "kind": "material_coverage",
+      "candidateName": "Additional structural member placement lengths (WB*/LVL LONG)",
+      "unlocks": ["additional SM LF beyond 23.5 LVL"],
+      "currentBlockingAuthority": "lengthFeet and/or qty/category missing on several SMs; M.6 path ready when LONG + schedule size exist",
+      "probeTarget": "p1 schedule + p4 placement LONG callouts",
+      "scores": {
+        "contractorTimeSaved": 5,
+        "materialCoverageGained": 7,
+        "downstreamObjectsAffected": 4,
+        "evidenceReadiness": 6,
+        "implementationLeverage": 9,
+        "complexity": 3,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 5
+      },
+      "score": 40
+    },
+    {
+      "rank": 3,
+      "id": "review_root_cause_consolidation_mvp",
+      "kind": "decision_burden",
+      "candidateName": "Review root-cause grouping MVP (no silent defaults)",
+      "unlocks": [
+        "contractor sees governing decisions vs 476 object RIs",
+        "longitudinal Decision Burden measurement substrate"
+      ],
+      "currentBlockingAuthority": "architecture emits per-object validation RIs only",
+      "scores": {
+        "contractorTimeSaved": 8,
+        "materialCoverageGained": 1,
+        "downstreamObjectsAffected": 10,
+        "evidenceReadiness": 8,
+        "implementationLeverage": 6,
+        "complexity": 4,
+        "safetyRiskPenalty": 1,
+        "usableTakeoffProgress": 6
+      },
+      "score": 39
+    },
+    {
+      "rank": 4,
+      "id": "opening_framing_after_height",
+      "kind": "material_coverage",
+      "candidateName": "Opening framing materials (depends on height / dims)",
+      "unlocks": ["kings/jacks/cripples/sills"],
+      "currentBlockingAuthority": "wall height + opening nominal/rough dims; opening assumptions exist but never fire on Beckstead",
+      "dependency": "strongly benefits from rank-1 height assumption",
+      "scores": {
+        "contractorTimeSaved": 6,
+        "materialCoverageGained": 8,
+        "downstreamObjectsAffected": 7,
+        "evidenceReadiness": 3,
+        "implementationLeverage": 7,
+        "complexity": 5,
+        "safetyRiskPenalty": 3,
+        "usableTakeoffProgress": 6
+      },
+      "score": 38
+    },
+    {
+      "rank": 5,
+      "id": "sheathing_area_authority_future",
+      "kind": "material_coverage",
+      "candidateName": "Sheathing area authority (future milestone)",
+      "unlocks": ["wall/roof OSB SF lines"],
+      "currentBlockingAuthority": "M7_SHEATHING_STOP — 0 areas; no safe SF",
+      "scores": {
+        "contractorTimeSaved": 4,
+        "materialCoverageGained": 9,
+        "downstreamObjectsAffected": 3,
+        "evidenceReadiness": 2,
+        "implementationLeverage": 4,
+        "complexity": 6,
+        "safetyRiskPenalty": 4,
+        "usableTakeoffProgress": 4
+      },
+      "score": 23
+    }
+  ],
+  "demoted": [
+    {
+      "id": "p3_additional_floor_bay_layout",
+      "reason": "M7_FLOOR_BAY_STOP — no second distinct calculable bay without double-count"
+    },
+    {
+      "id": "main_floor_joist_layout_revisit",
+      "reason": "M6_MAIN_FLOOR_STOP_CONFIRMED"
+    }
+  ],
+  "selectedNext": {
+    "target": "project_typical_wall_height_assumption",
+    "decision": "CLOSE_M7_DUAL_STOP_AND_START_M8_wall_height_assumption",
+    "rationale": [
+      "Highest post-dual-STOP score (47) when decision burden competes with material unlocks",
+      "42 identical wall.height RIs → one governing decision opportunity",
+      "Brain already allows wall height assumption with review",
+      "Unblocks path toward opening framing materials",
+      "structural_member_placement_lengths remains strong #2 if height probe STOPs"
+    ]
+  },
+  "nextMilestoneContract": {
+    "target": "project_typical_wall_height_assumption",
+    "sop": "rank → probe elevations for height authority → GREEN bounded assumption+consolidation OR STOP → pivot to structural_member_placement_lengths",
+    "stopCondition": "If elevations do not establish a safe typical/project height authority, emit M8_HEIGHT_STOP and pivot to #2 structural_member_placement_lengths",
+    "doNot": [
+      "invent height",
+      "force floor/sheathing unlocks",
+      "build full review redesign beyond minimal governing-decision substrate if GREEN"
+    ]
+  }
+}
