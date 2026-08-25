@@ -16,6 +16,11 @@ import {
   reviewQuantityImpactSchema,
 } from "./review-item.schema.js";
 import {
+  contractorPrimaryQueueEntrySchema,
+  reviewRootCauseProjectionSummarySchema,
+  reviewRootCauseSchema,
+} from "./review-root-cause.schema.js";
+import {
   blockingStatusSchema,
   reviewStatusSchema,
 } from "./status.schema.js";
@@ -132,12 +137,36 @@ export const reviewWorkspaceSummarySchema = z.object({
   affectedObjectCount: z.number().int().nonnegative(),
   calculatedUnderAssumptionCount: z.number().int().nonnegative(),
   resolvedByUserDecisionCount: z.number().int().nonnegative(),
+  /**
+   * Contractor-facing primary queue size after root-cause consolidation.
+   * Undefined/omitted only for legacy fixtures; production projection always sets it.
+   */
+  contractorPrimaryQueueCount: z.number().int().nonnegative().optional(),
+  rootCauseFamilyCount: z.number().int().nonnegative().optional(),
 });
 
 export const reviewWorkspacePayloadSchema = z.object({
+  /**
+   * Full raw active ReviewItem inventory (audit / debug / provenance).
+   * Consolidation must never delete these rows.
+   */
   items: z.array(reviewWorkspaceItemSchema),
   resolvedItems: z.array(reviewWorkspaceResolvedItemSchema).default([]),
   summary: reviewWorkspaceSummarySchema,
+  /**
+   * Root-cause families derived post-validation. Empty array when projection
+   * inputs lack validation issues (should not happen in production).
+   */
+  rootCauses: z.array(reviewRootCauseSchema).default([]),
+  /**
+   * Contractor-facing decision queue: governing issues + ungrouped
+   * object-specific actionable reviews. Prefer this over `items` in UI.
+   */
+  primaryQueue: z.array(contractorPrimaryQueueEntrySchema).default([]),
+  secondaryInformationalRootCauseIds: z
+    .array(z.string().trim().min(1))
+    .default([]),
+  rootCauseSummary: reviewRootCauseProjectionSummarySchema.optional(),
 });
 
 export type ReviewWorkspaceValueSource = z.infer<
@@ -156,3 +185,9 @@ export type ReviewWorkspaceSummary = z.infer<
 export type ReviewWorkspacePayload = z.infer<
   typeof reviewWorkspacePayloadSchema
 >;
+
+export type {
+  ContractorPrimaryQueueEntry,
+  ReviewRootCause,
+  ReviewRootCauseProjectionSummary,
+} from "./review-root-cause.schema.js";

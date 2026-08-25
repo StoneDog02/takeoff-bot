@@ -33,6 +33,7 @@ import {
   readFramingPropertyValue,
   type FramingResolvedObject,
 } from "./readResolvedPropertyValue.js";
+import { projectReviewRootCauses } from "./projectReviewRootCauses.js";
 
 export type FramingReviewWorkspaceInput = {
   validation: ValidationPayload;
@@ -571,6 +572,8 @@ function sortResolvedItems(
 function buildSummary(
   items: readonly ReviewWorkspaceItem[],
   resolvedItems: readonly ReviewWorkspaceResolvedItem[],
+  contractorPrimaryQueueCount?: number,
+  rootCauseFamilyCount?: number,
 ): ReviewWorkspaceSummary {
   const affectedObjectIds = new Set<ObjectId>();
 
@@ -597,12 +600,17 @@ function buildSummary(
       (item) => item.currentState.valueSource === "industry-default-assumption",
     ).length,
     resolvedByUserDecisionCount: resolvedItems.length,
+    contractorPrimaryQueueCount,
+    rootCauseFamilyCount,
   };
 }
 
 /**
  * Derives a framing Review Workspace read model from canonical persisted engine
  * artifacts. This projection is not authoritative state.
+ *
+ * `items` remains the full raw ReviewItem inventory. `primaryQueue` / `rootCauses`
+ * are the contractor-facing consolidation projection (M.9).
  */
 export function projectFramingReviewWorkspace(
   input: FramingReviewWorkspaceInput,
@@ -635,10 +643,27 @@ export function projectFramingReviewWorkspace(
       ),
   );
 
+  const rootCauseProjection = projectReviewRootCauses({
+    validation: input.validation,
+    openings: input.openings,
+    wallFraming: input.wallFraming,
+    floorFraming: input.floorFraming,
+  });
+
   return reviewWorkspacePayloadSchema.parse({
     items,
     resolvedItems,
-    summary: buildSummary(items, resolvedItems),
+    summary: buildSummary(
+      items,
+      resolvedItems,
+      rootCauseProjection.summary.contractorPrimaryQueueCount,
+      rootCauseProjection.summary.rootCauseFamilies,
+    ),
+    rootCauses: rootCauseProjection.rootCauses,
+    primaryQueue: rootCauseProjection.primaryQueue,
+    secondaryInformationalRootCauseIds:
+      rootCauseProjection.secondaryInformationalRootCauseIds,
+    rootCauseSummary: rootCauseProjection.summary,
   });
 }
 

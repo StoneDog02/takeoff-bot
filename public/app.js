@@ -121,26 +121,74 @@ function formatQuantity(quantity, comparison) {
  */
 function renderReviewItems(state) {
   const workspaceSummary = state.reviewWorkspace.summary;
-  reviewSummary.textContent = `${workspaceSummary.activeReviewItemCount} active · ${workspaceSummary.calculatedUnderAssumptionCount} under assumption · ${workspaceSummary.resolvedByUserDecisionCount} resolved`;
+  const primaryCount =
+    workspaceSummary.contractorPrimaryQueueCount ??
+    state.reviewWorkspace.primaryQueue?.length;
+  const rawCount = workspaceSummary.activeReviewItemCount;
+  const queueLabel =
+    primaryCount == null
+      ? `${rawCount} active`
+      : `${primaryCount} primary · ${rawCount} raw`;
+  reviewSummary.textContent = `${queueLabel} · ${workspaceSummary.calculatedUnderAssumptionCount} under assumption · ${workspaceSummary.resolvedByUserDecisionCount} resolved`;
 
   reviewList.innerHTML = "";
-  for (const item of state.reviewWorkspace.items) {
-    const li = document.createElement("li");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = selectedReviewItemId === item.reviewItemId ? "selected" : "";
-    button.innerHTML = `
-      <strong>${escapeHtml(item.title)}</strong><br />
-      <span>${escapeHtml(item.objectId)} · ${escapeHtml(item.targetProperty ?? "—")}</span><br />
-      <span>${escapeHtml(item.status.reviewStatus)} · ${escapeHtml(item.currentState.valueSource)}</span>
-    `;
-    button.addEventListener("click", () => {
-      selectedReviewItemId = item.reviewItemId;
-      renderReviewItems(state);
-      renderReviewDetail(state);
-    });
-    li.append(button);
-    reviewList?.append(li);
+
+  const primaryQueue = state.reviewWorkspace.primaryQueue ?? [];
+  if (primaryQueue.length > 0) {
+    for (const entry of primaryQueue) {
+      const li = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      if (entry.kind === "governing-issue") {
+        const selected =
+          selectedReviewItemId === `governing:${entry.governingGroupId}`;
+        button.className = selected ? "selected" : "";
+        button.innerHTML = `
+          <strong>${escapeHtml(entry.title)}</strong><br />
+          <span>governing · ${escapeHtml(entry.decisionReadiness)} · ${entry.affectedObjectCount} objects · ${entry.dependentReviewItemCount} reviews</span>
+        `;
+        button.addEventListener("click", () => {
+          selectedReviewItemId = `governing:${entry.governingGroupId}`;
+          renderReviewItems(state);
+          renderReviewDetail(state);
+        });
+      } else {
+        const selected = selectedReviewItemId === entry.reviewItemId;
+        button.className = selected ? "selected" : "";
+        button.innerHTML = `
+          <strong>${escapeHtml(entry.title)}</strong><br />
+          <span>${escapeHtml(entry.objectId)} · ${escapeHtml(entry.targetProperty ?? "—")}</span><br />
+          <span>object-specific · ${escapeHtml(entry.blockingStatus)}</span>
+        `;
+        button.addEventListener("click", () => {
+          selectedReviewItemId = entry.reviewItemId;
+          renderReviewItems(state);
+          renderReviewDetail(state);
+        });
+      }
+      li.append(button);
+      reviewList?.append(li);
+    }
+  } else {
+    for (const item of state.reviewWorkspace.items) {
+      const li = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className =
+        selectedReviewItemId === item.reviewItemId ? "selected" : "";
+      button.innerHTML = `
+        <strong>${escapeHtml(item.title)}</strong><br />
+        <span>${escapeHtml(item.objectId)} · ${escapeHtml(item.targetProperty ?? "—")}</span><br />
+        <span>${escapeHtml(item.status.reviewStatus)} · ${escapeHtml(item.currentState.valueSource)}</span>
+      `;
+      button.addEventListener("click", () => {
+        selectedReviewItemId = item.reviewItemId;
+        renderReviewItems(state);
+        renderReviewDetail(state);
+      });
+      li.append(button);
+      reviewList?.append(li);
+    }
   }
 
   if (state.reviewWorkspace.resolvedItems.length > 0) {
@@ -166,6 +214,48 @@ function renderReviewDetail(state) {
     reviewDetail.className = "review-detail empty";
     reviewDetail.textContent =
       "Select a review item to inspect provenance and impact.";
+    return;
+  }
+
+  if (selectedReviewItemId.startsWith("governing:")) {
+    const groupId = selectedReviewItemId.slice("governing:".length);
+    const rootCause = (state.reviewWorkspace.rootCauses ?? []).find((cause) =>
+      cause.governingGroups.some((group) => group.id === groupId),
+    );
+    const group = rootCause?.governingGroups.find((entry) => entry.id === groupId);
+    if (!rootCause || !group) {
+      reviewDetail.className = "review-detail empty";
+      reviewDetail.textContent = "Selected governing issue is no longer active.";
+      return;
+    }
+    reviewDetail.className = "review-detail";
+    reviewDetail.innerHTML = "";
+    appendDetailBlock(reviewDetail, "Governing issue", group.contractorSummary);
+    appendDetailBlock(
+      reviewDetail,
+      "Decision readiness",
+      group.decisionReadiness,
+    );
+    appendDetailBlock(
+      reviewDetail,
+      "Grouping authority",
+      `${rootCause.groupingAuthority.strength} · ${rootCause.groupingAuthority.kind} · ${rootCause.groupingAuthority.key}`,
+    );
+    appendDetailBlock(
+      reviewDetail,
+      "Affected objects",
+      `${group.affectedObjectCount}: ${group.affectedObjectIds.join(", ")}`,
+    );
+    appendDetailBlock(
+      reviewDetail,
+      "Dependent review items",
+      group.affectedReviewItemIds.join(", "),
+    );
+    appendDetailBlock(
+      reviewDetail,
+      "Note",
+      "Raw review items remain in the engine inventory; this queue entry consolidates the contractor-facing decision.",
+    );
     return;
   }
 

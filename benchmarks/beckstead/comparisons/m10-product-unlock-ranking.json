@@ -1,0 +1,157 @@
+{
+  "generatedAt": "2026-08-25T15:12:00.000Z",
+  "rankingMethod": "post-M.9 GREEN re-rank from scratch: score = contractorTimeSaved×2 + materialCoverageGained×2 + downstreamObjectsAffected + evidenceReadiness + implementationLeverage − complexity×2 − safetyRiskPenalty + usableTakeoffProgress — material AND decision-burden compete; not inherited from M.9 attempt",
+  "productStateContext": {
+    "materialLines": 55,
+    "m9Verdict": "M9_GREEN",
+    "rawReviewItems": 476,
+    "contractorPrimaryQueueCount": 274,
+    "actionableGoverningDecisions": 1,
+    "needsPartitioningGroups": 2,
+    "wallHeightStop": "M8_WALL_HEIGHT_PROBE_STOP",
+    "structuralMemberPlacementStop": "M8_STRUCTURAL_MEMBER_PLACEMENT_STOP",
+    "sheathingStop": "M7_SHEATHING_STOP",
+    "activeAssumptions": 0,
+    "governingValuePropagation": false
+  },
+  "top5": [
+    {
+      "rank": 1,
+      "id": "governing_decision_value_propagation",
+      "kind": "decision_burden",
+      "candidateName": "Governing decision → multi-object assumption/override propagation",
+      "unlocks": [
+        "one contractor answer updates N dependent objects",
+        "closes M.9 substrate into material recalculation path",
+        "enables future wall-height fan-out once partitioned"
+      ],
+      "currentBlockingAuthority": "UserDecision/Assumption still 1:1 object.property; applyUserDecisions rejects multi-object RIs",
+      "scores": {
+        "contractorTimeSaved": 9,
+        "materialCoverageGained": 4,
+        "downstreamObjectsAffected": 10,
+        "evidenceReadiness": 8,
+        "implementationLeverage": 9,
+        "complexity": 5,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 8
+      },
+      "score": 44
+    },
+    {
+      "rank": 2,
+      "id": "opening_category_parent_authority",
+      "kind": "material_coverage",
+      "candidateName": "Opening category + resolve missing parent wall object (now one governing issue)",
+      "unlocks": [
+        "material path toward opening framing once height bindable",
+        "clears the M.9 positive-control governing issue with real wall authority"
+      ],
+      "currentBlockingAuthority": "missing physical-run wall object + category unknowns; height still NEEDS_PARTITIONING",
+      "scores": {
+        "contractorTimeSaved": 7,
+        "materialCoverageGained": 7,
+        "downstreamObjectsAffected": 9,
+        "evidenceReadiness": 6,
+        "implementationLeverage": 7,
+        "complexity": 5,
+        "safetyRiskPenalty": 3,
+        "usableTakeoffProgress": 7
+      },
+      "score": 39
+    },
+    {
+      "rank": 3,
+      "id": "wall_level_location_partitioning",
+      "kind": "decision_burden",
+      "candidateName": "Wall level/location partitioning (unlock height governing populations)",
+      "unlocks": [
+        "converts wall-height NEEDS_PARTITIONING into ACTIONABLE_PARTITIONED groups",
+        "safer story/exterior scopes for assumptions"
+      ],
+      "currentBlockingAuthority": "all 42 walls level=null location=unknown; M8 multi-population",
+      "scores": {
+        "contractorTimeSaved": 7,
+        "materialCoverageGained": 3,
+        "downstreamObjectsAffected": 9,
+        "evidenceReadiness": 4,
+        "implementationLeverage": 7,
+        "complexity": 5,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 8
+      },
+      "score": 37
+    },
+    {
+      "rank": 4,
+      "id": "sheathing_area_authority_future",
+      "kind": "material_coverage",
+      "candidateName": "Sheathing area authority",
+      "unlocks": ["wall/roof OSB SF lines"],
+      "currentBlockingAuthority": "M7_SHEATHING_STOP — 0 areas",
+      "scores": {
+        "contractorTimeSaved": 4,
+        "materialCoverageGained": 9,
+        "downstreamObjectsAffected": 3,
+        "evidenceReadiness": 2,
+        "implementationLeverage": 4,
+        "complexity": 6,
+        "safetyRiskPenalty": 4,
+        "usableTakeoffProgress": 4
+      },
+      "score": 23
+    },
+    {
+      "rank": 5,
+      "id": "roof_truss_materialization",
+      "kind": "material_coverage",
+      "candidateName": "Roof/truss materialization from plan callouts",
+      "unlocks": ["truss/roof member quantities"],
+      "currentBlockingAuthority": "roof planes unresolved; manufacturer deferrals",
+      "scores": {
+        "contractorTimeSaved": 4,
+        "materialCoverageGained": 8,
+        "downstreamObjectsAffected": 4,
+        "evidenceReadiness": 3,
+        "implementationLeverage": 4,
+        "complexity": 6,
+        "safetyRiskPenalty": 4,
+        "usableTakeoffProgress": 5
+      },
+      "score": 22
+    }
+  ],
+  "demoted": [
+    {
+      "id": "review_root_cause_consolidation_mvp",
+      "reason": "M9_GREEN — substrate shipped; further grouping without propagation is lower leverage"
+    },
+    {
+      "id": "project_typical_wall_height_assumption",
+      "reason": "Still blocked by M8 multi-population until partitioning exists"
+    },
+    {
+      "id": "structural_member_placement_lengths",
+      "reason": "M8_STRUCTURAL_MEMBER_PLACEMENT_STOP unchanged"
+    }
+  ],
+  "selectedNext": {
+    "target": "governing_decision_value_propagation",
+    "decision": "CLOSE_M9_GREEN_AND_RANK_M10_PROPAGATION_FIRST",
+    "rationale": [
+      "Highest score (44): turns M.9 governing issues into takeoff-wide recalculation",
+      "Does not invent plan facts; implements missing multi-object apply substrate",
+      "Material unlocks (openings/sheathing/roof) still compete but need authority binding"
+    ]
+  },
+  "nextMilestoneContract": {
+    "target": "governing_decision_value_propagation",
+    "sop": "rank → design minimal multi-object decision/assumption fan-out without silent defaults → GREEN bounded propagation OR STOP → re-rank",
+    "doNot": [
+      "invent wall heights",
+      "force single height across unpartitioned walls",
+      "hide raw RIs",
+      "Beckstead-hardcode populations"
+    ]
+  }
+}
