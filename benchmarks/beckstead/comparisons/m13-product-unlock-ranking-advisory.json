@@ -1,0 +1,258 @@
+{
+  "generatedAt": "2026-08-25T17:42:41.976Z",
+  "rankingStatus": "ADVISORY_PENDING_FULL_MVP_COVERAGE_AUDIT",
+  "rankingMethod": "Post-M.12 advisory re-rank from scratch (same score formula). NOT an authorization to start M.13.",
+  "doNotAutoStartM13": true,
+  "nextMandatoryRoadmapStep": "FULL_MVP_COVERAGE_AUDIT",
+  "m12Verdict": "M12_MVP_VALUE_STOP",
+  "productStateContext": {
+    "rawReviewItems": 424,
+    "contractorPrimaryQueueCount": 277,
+    "actionableGoverningDecisions": 0,
+    "stage16Lines": 55,
+    "studs": 284,
+    "platesLfApprox": 985.96,
+    "crawlJoistLines": 2,
+    "lvlLines": 1,
+    "openingFramingLines": 1,
+    "note": "Stage 16 unchanged by M.12 (no BUILD). Baseline from b2.2m.6 audit-b report (55 lines)."
+  },
+  "top5": [
+    {
+      "rank": 1,
+      "id": "wall_height_population_partitioning",
+      "kind": "decision_burden",
+      "candidateName": "Wall height / level population partitioning",
+      "scores": {
+        "contractorTimeSaved": 9,
+        "materialCoverageGained": 8,
+        "downstreamObjectsAffected": 10,
+        "evidenceReadiness": 5,
+        "implementationLeverage": 9,
+        "complexity": 6,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 9
+      },
+      "currentBlockingAuthority": "Unresolved height populations starve walls + openings",
+      "score": 42
+    },
+    {
+      "rank": 2,
+      "id": "floor_framing_main_bay_ownership",
+      "kind": "material_coverage",
+      "candidateName": "Main-floor bay ownership / floor framing completion",
+      "scores": {
+        "contractorTimeSaved": 8,
+        "materialCoverageGained": 9,
+        "downstreamObjectsAffected": 8,
+        "evidenceReadiness": 4,
+        "implementationLeverage": 7,
+        "complexity": 6,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 9
+      },
+      "currentBlockingAuthority": "Crawl partial; main floor ownership prior STOP",
+      "score": 37
+    },
+    {
+      "rank": 3,
+      "id": "sheathing_subject_existence",
+      "kind": "material_coverage",
+      "candidateName": "Sheathing subject existence + SF authority",
+      "scores": {
+        "contractorTimeSaved": 7,
+        "materialCoverageGained": 9,
+        "downstreamObjectsAffected": 7,
+        "evidenceReadiness": 3,
+        "implementationLeverage": 6,
+        "complexity": 5,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 8
+      },
+      "currentBlockingAuthority": "M7_SHEATHING_STOP — subjects absent",
+      "score": 33
+    },
+    {
+      "rank": 4,
+      "id": "opening_framing_continuation_post_wall_height",
+      "kind": "material_coverage",
+      "candidateName": "Opening framing continuation (after wall height)",
+      "scores": {
+        "contractorTimeSaved": 6,
+        "materialCoverageGained": 7,
+        "downstreamObjectsAffected": 8,
+        "evidenceReadiness": 4,
+        "implementationLeverage": 6,
+        "complexity": 5,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 6
+      },
+      "currentBlockingAuthority": "M12 deferred; still needs height + cat/dims + jacks",
+      "score": 30
+    },
+    {
+      "rank": 5,
+      "id": "structural_header_lvl_placement",
+      "kind": "material_coverage",
+      "candidateName": "Structural header / LVL placement ownership",
+      "scores": {
+        "contractorTimeSaved": 5,
+        "materialCoverageGained": 6,
+        "downstreamObjectsAffected": 6,
+        "evidenceReadiness": 5,
+        "implementationLeverage": 5,
+        "complexity": 5,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 6
+      },
+      "currentBlockingAuthority": "Partial LVL; broader placement ownership",
+      "score": 26
+    }
+  ],
+  "allCandidates": [
+    {
+      "rank": 1,
+      "id": "wall_height_population_partitioning",
+      "kind": "decision_burden",
+      "candidateName": "Wall height / level population partitioning",
+      "scores": {
+        "contractorTimeSaved": 9,
+        "materialCoverageGained": 8,
+        "downstreamObjectsAffected": 10,
+        "evidenceReadiness": 5,
+        "implementationLeverage": 9,
+        "complexity": 6,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 9
+      },
+      "currentBlockingAuthority": "Unresolved height populations starve walls + openings",
+      "score": 42
+    },
+    {
+      "rank": 2,
+      "id": "floor_framing_main_bay_ownership",
+      "kind": "material_coverage",
+      "candidateName": "Main-floor bay ownership / floor framing completion",
+      "scores": {
+        "contractorTimeSaved": 8,
+        "materialCoverageGained": 9,
+        "downstreamObjectsAffected": 8,
+        "evidenceReadiness": 4,
+        "implementationLeverage": 7,
+        "complexity": 6,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 9
+      },
+      "currentBlockingAuthority": "Crawl partial; main floor ownership prior STOP",
+      "score": 37
+    },
+    {
+      "rank": 3,
+      "id": "sheathing_subject_existence",
+      "kind": "material_coverage",
+      "candidateName": "Sheathing subject existence + SF authority",
+      "scores": {
+        "contractorTimeSaved": 7,
+        "materialCoverageGained": 9,
+        "downstreamObjectsAffected": 7,
+        "evidenceReadiness": 3,
+        "implementationLeverage": 6,
+        "complexity": 5,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 8
+      },
+      "currentBlockingAuthority": "M7_SHEATHING_STOP — subjects absent",
+      "score": 33
+    },
+    {
+      "rank": 4,
+      "id": "opening_framing_continuation_post_wall_height",
+      "kind": "material_coverage",
+      "candidateName": "Opening framing continuation (after wall height)",
+      "scores": {
+        "contractorTimeSaved": 6,
+        "materialCoverageGained": 7,
+        "downstreamObjectsAffected": 8,
+        "evidenceReadiness": 4,
+        "implementationLeverage": 6,
+        "complexity": 5,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 6
+      },
+      "currentBlockingAuthority": "M12 deferred; still needs height + cat/dims + jacks",
+      "score": 30
+    },
+    {
+      "rank": 5,
+      "id": "structural_header_lvl_placement",
+      "kind": "material_coverage",
+      "candidateName": "Structural header / LVL placement ownership",
+      "scores": {
+        "contractorTimeSaved": 5,
+        "materialCoverageGained": 6,
+        "downstreamObjectsAffected": 6,
+        "evidenceReadiness": 5,
+        "implementationLeverage": 5,
+        "complexity": 5,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 6
+      },
+      "currentBlockingAuthority": "Partial LVL; broader placement ownership",
+      "score": 26
+    },
+    {
+      "rank": 6,
+      "id": "roof_framing_evidence_extraction",
+      "kind": "material_coverage",
+      "candidateName": "Roof framing evidence / plane authority",
+      "scores": {
+        "contractorTimeSaved": 6,
+        "materialCoverageGained": 8,
+        "downstreamObjectsAffected": 6,
+        "evidenceReadiness": 2,
+        "implementationLeverage": 5,
+        "complexity": 7,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 7
+      },
+      "currentBlockingAuthority": "No governed roof plane materials",
+      "score": 25
+    },
+    {
+      "rank": 7,
+      "id": "schedule_to_plan_binding_horizontal",
+      "kind": "horizontal",
+      "candidateName": "Schedule ↔ plan object binding (horizontal)",
+      "scores": {
+        "contractorTimeSaved": 5,
+        "materialCoverageGained": 5,
+        "downstreamObjectsAffected": 9,
+        "evidenceReadiness": 3,
+        "implementationLeverage": 8,
+        "complexity": 7,
+        "safetyRiskPenalty": 3,
+        "usableTakeoffProgress": 5
+      },
+      "currentBlockingAuthority": "No door/window schedule on Beckstead; generic capability unproven for MVP",
+      "score": 25
+    },
+    {
+      "rank": 8,
+      "id": "hardware_calculator_rules",
+      "kind": "material_coverage",
+      "candidateName": "Hardware / connectors calculator rules",
+      "scores": {
+        "contractorTimeSaved": 4,
+        "materialCoverageGained": 5,
+        "downstreamObjectsAffected": 4,
+        "evidenceReadiness": 2,
+        "implementationLeverage": 3,
+        "complexity": 6,
+        "safetyRiskPenalty": 1,
+        "usableTakeoffProgress": 4
+      },
+      "currentBlockingAuthority": "CALCULATOR_RULE — not producing",
+      "score": 15
+    }
+  ]
+}
