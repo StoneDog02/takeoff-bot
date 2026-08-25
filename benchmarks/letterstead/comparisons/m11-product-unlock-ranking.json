@@ -1,0 +1,152 @@
+{
+  "generatedAt": "2026-08-25T16:30:00.000Z",
+  "rankingMethod": "post-M.10 re-rank from scratch: score = contractorTimeSaved×2 + materialCoverageGained×2 + downstreamObjectsAffected + evidenceReadiness + implementationLeverage − complexity×2 − safetyRiskPenalty + usableTakeoffProgress — material AND decision-burden compete; not inherited from M.10 attempt",
+  "productStateContext": {
+    "materialLines": 55,
+    "m10Verdict": "M10_ARCHITECTURE_GREEN_AND_BECKSTEAD_PRODUCT_STOP",
+    "rawReviewItems": 476,
+    "contractorPrimaryQueueCount": 274,
+    "actionableGoverningDecisions": 1,
+    "needsPartitioningGroups": 2,
+    "governingValuePropagation": true,
+    "becksteadOpeningParentPropagation": false,
+    "wallHeightStop": "M8_WALL_HEIGHT_PROBE_STOP",
+    "activeAssumptions": 0
+  },
+  "top5": [
+    {
+      "rank": 1,
+      "id": "opening_missing_wall_materialization",
+      "kind": "material_coverage",
+      "candidateName": "Materialize missing parent wall/run for opening-parent governing issue",
+      "unlocks": [
+        "clears RC-missing-parent-wall without inventing scalar fan-out",
+        "unblocks opening framing path toward Stage 16",
+        "uses M.10 propagation substrate once wall exists"
+      ],
+      "currentBlockingAuthority": "physical-run:p4:fd36917c47ec absent from wallFraming; BECKSTEAD_OPENING_PARENT_PROPAGATION_STOP",
+      "scores": {
+        "contractorTimeSaved": 8,
+        "materialCoverageGained": 8,
+        "downstreamObjectsAffected": 10,
+        "evidenceReadiness": 5,
+        "implementationLeverage": 8,
+        "complexity": 6,
+        "safetyRiskPenalty": 3,
+        "usableTakeoffProgress": 8
+      },
+      "score": 40
+    },
+    {
+      "rank": 2,
+      "id": "wall_level_location_partitioning",
+      "kind": "decision_burden",
+      "candidateName": "Wall level/location partitioning (unlock height governing populations)",
+      "unlocks": [
+        "converts wall-height NEEDS_PARTITIONING into ACTIONABLE_PARTITIONED",
+        "enables future governing assumption fan-out via M.10 substrate"
+      ],
+      "currentBlockingAuthority": "all 42 walls level=null location=unknown; M8 multi-population",
+      "scores": {
+        "contractorTimeSaved": 8,
+        "materialCoverageGained": 4,
+        "downstreamObjectsAffected": 9,
+        "evidenceReadiness": 4,
+        "implementationLeverage": 8,
+        "complexity": 5,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 8
+      },
+      "score": 39
+    },
+    {
+      "rank": 3,
+      "id": "opening_category_dimension_authority",
+      "kind": "material_coverage",
+      "candidateName": "Opening category + dimension authority after parent wall exists",
+      "unlocks": ["opening framing materials once parent + category bind"],
+      "currentBlockingAuthority": "category unknowns + parent wall missing; height still unpartitioned",
+      "scores": {
+        "contractorTimeSaved": 6,
+        "materialCoverageGained": 7,
+        "downstreamObjectsAffected": 8,
+        "evidenceReadiness": 5,
+        "implementationLeverage": 7,
+        "complexity": 5,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 7
+      },
+      "score": 36
+    },
+    {
+      "rank": 4,
+      "id": "governing_assumption_fanout_post_partition",
+      "kind": "decision_burden",
+      "candidateName": "Governing assumption value propagation (post wall-height partition)",
+      "unlocks": ["typical story height → N walls via M.10 seam"],
+      "currentBlockingAuthority": "blocked by M8 multi-population until partitioning",
+      "scores": {
+        "contractorTimeSaved": 7,
+        "materialCoverageGained": 5,
+        "downstreamObjectsAffected": 9,
+        "evidenceReadiness": 3,
+        "implementationLeverage": 9,
+        "complexity": 4,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 6
+      },
+      "score": 36
+    },
+    {
+      "rank": 5,
+      "id": "sheathing_area_authority_future",
+      "kind": "material_coverage",
+      "candidateName": "Sheathing area authority",
+      "unlocks": ["wall/roof OSB SF lines"],
+      "currentBlockingAuthority": "M7_SHEATHING_STOP — 0 areas",
+      "scores": {
+        "contractorTimeSaved": 4,
+        "materialCoverageGained": 9,
+        "downstreamObjectsAffected": 3,
+        "evidenceReadiness": 2,
+        "implementationLeverage": 4,
+        "complexity": 6,
+        "safetyRiskPenalty": 4,
+        "usableTakeoffProgress": 4
+      },
+      "score": 23
+    }
+  ],
+  "demoted": [
+    {
+      "id": "governing_decision_value_propagation",
+      "reason": "M10_ARCHITECTURE_GREEN — substrate shipped; Beckstead product STOP on opening-parent"
+    },
+    {
+      "id": "review_root_cause_consolidation_mvp",
+      "reason": "M9_GREEN — already shipped"
+    },
+    {
+      "id": "project_typical_wall_height_assumption",
+      "reason": "Still blocked by M8 multi-population until partitioning"
+    }
+  ],
+  "selectedNext": {
+    "target": "opening_missing_wall_materialization",
+    "decision": "RANK_M11_MISSING_WALL_OR_PARTITIONING",
+    "rationale": [
+      "Highest score (40): converts M.9 actionable question into domain authority without unsafe scalar fan-out",
+      "M.10 substrate ready once a real wall object exists",
+      "Wall partitioning remains close second for decision-burden unlock"
+    ]
+  },
+  "nextMilestoneContract": {
+    "target": "opening_missing_wall_materialization",
+    "sop": "rank → prove wall materialization without inventing plan facts OR STOP → if STOP, pursue partitioning → re-rank",
+    "doNot": [
+      "fan-out parent ObjectIds across openings without a wall",
+      "invent wall heights across unpartitioned populations",
+      "hide raw RIs"
+    ]
+  }
+}

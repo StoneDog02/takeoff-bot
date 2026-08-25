@@ -2,6 +2,13 @@ import type { Evidence } from "../../../core/schemas/evidence.schema.js";
 import type { ReviewItemId, EvidenceId, ObjectId } from "../../../core/schemas/identity.schema.js";
 import type { ReviewItem } from "../../../core/schemas/review-item.schema.js";
 import type { UserDecision } from "../../../core/schemas/user-decision.schema.js";
+import type { GoverningApplyEligibility } from "../../../core/schemas/governing-propagation.schema.js";
+import type { GoverningDecisionAnswer } from "../../../core/schemas/governing-propagation.schema.js";
+import type { ReviewRootCause } from "../../../core/schemas/review-root-cause.schema.js";
+import {
+  buildCombinedOverrideIndex,
+  filterOutGoverningUserDecisions,
+} from "./applyGoverningDecision.js";
 import {
   buildUserDecisionIndex,
   createUserOverrideTrace,
@@ -50,6 +57,9 @@ export type ResolveOpeningsOptions = {
   wallFraming?: WallFramingPayload;
   userDecisions?: readonly UserDecision[];
   reviewItemsById?: ReadonlyMap<ReviewItemId, ReviewItem>;
+  governingAnswers?: readonly GoverningDecisionAnswer[];
+  rootCausesById?: ReadonlyMap<string, ReviewRootCause>;
+  governingEligibilityByAnswerId?: ReadonlyMap<string, GoverningApplyEligibility>;
 };
 
 function compareIds(left: string, right: string): number {
@@ -857,28 +867,59 @@ function buildUserDecisionContext(
   options?: ResolveOpeningsOptions,
 ): UserDecisionIndex {
   const userDecisions = options?.userDecisions ?? [];
-  if (userDecisions.length === 0) {
+  const governingAnswers = options?.governingAnswers ?? [];
+  if (userDecisions.length === 0 && governingAnswers.length === 0) {
     return new Map();
   }
 
   if (!options?.reviewItemsById) {
     throw new Error(
-      "resolveOpenings requires reviewItemsById when userDecisions are supplied.",
+      "resolveOpenings requires reviewItemsById when userDecisions or governingAnswers are supplied.",
     );
   }
 
-  return buildUserDecisionIndex(
-    filterUserDecisionsForPropertyPaths(
-      {
-        userDecisions,
-        reviewItemsById: options.reviewItemsById,
-        evidenceById: buildEvidenceById(evidence),
-      },
-      isOpeningPropertyPath,
-      new Set(buildOpeningSubjectBindingByObjectId(clusters).keys()),
-    ),
-    buildOpeningSubjectBindingByObjectId(clusters),
+  const subjectBindingByObjectId = buildOpeningSubjectBindingByObjectId(clusters);
+  const ordinaryDecisions = filterOutGoverningUserDecisions(
+    userDecisions,
+    governingAnswers,
   );
+
+  const ordinaryIndex =
+    ordinaryDecisions.length === 0
+      ? new Map()
+      : buildUserDecisionIndex(
+          filterUserDecisionsForPropertyPaths(
+            {
+              userDecisions: ordinaryDecisions,
+              reviewItemsById: options.reviewItemsById,
+              evidenceById: buildEvidenceById(evidence),
+            },
+            isOpeningPropertyPath,
+            new Set(subjectBindingByObjectId.keys()),
+          ),
+          subjectBindingByObjectId,
+        );
+
+  if (governingAnswers.length === 0) {
+    return ordinaryIndex;
+  }
+
+  if (!options.rootCausesById) {
+    throw new Error(
+      "resolveOpenings requires rootCausesById when governingAnswers are supplied.",
+    );
+  }
+
+  const { index } = buildCombinedOverrideIndex({
+    ordinaryIndex,
+    governingAnswers,
+    userDecisions,
+    rootCausesById: options.rootCausesById,
+    reviewItemsById: options.reviewItemsById,
+    subjectBindingByObjectId,
+    eligibilityByAnswerId: options.governingEligibilityByAnswerId,
+  });
+  return index;
 }
 
 function resolveOneOpening(

@@ -776,6 +776,10 @@ const stages: PipelineStage[] = [
         ? resolveWallFraming(extracted.evidence, {
             userDecisions: userDecisionRunInput.userDecisions,
             reviewItemsById: userDecisionRunInput.reviewItemsById,
+            governingAnswers: userDecisionRunInput.governingAnswers,
+            rootCausesById: userDecisionRunInput.rootCausesById,
+            governingEligibilityByAnswerId:
+              userDecisionRunInput.governingEligibilityByAnswerId,
           })
         : resolveWallFraming(extracted.evidence);
 
@@ -806,6 +810,10 @@ const stages: PipelineStage[] = [
           ? {
               userDecisions: userDecisionRunInput.userDecisions,
               reviewItemsById: userDecisionRunInput.reviewItemsById,
+              governingAnswers: userDecisionRunInput.governingAnswers,
+              rootCausesById: userDecisionRunInput.rootCausesById,
+              governingEligibilityByAnswerId:
+                userDecisionRunInput.governingEligibilityByAnswerId,
             }
           : {}),
       });

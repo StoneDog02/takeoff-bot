@@ -1,7 +1,12 @@
 import type { ArtifactEnvelope } from "../schemas/artifact-envelope.schema.js";
 import type { Evidence } from "../schemas/evidence.schema.js";
+import type {
+  GoverningApplyEligibility,
+  GoverningDecisionAnswer,
+} from "../schemas/governing-propagation.schema.js";
 import type { ArtifactId, ReviewItemId } from "../schemas/identity.schema.js";
 import type { ReviewItem } from "../schemas/review-item.schema.js";
+import type { ReviewRootCause } from "../schemas/review-root-cause.schema.js";
 import type { UserDecision } from "../schemas/user-decision.schema.js";
 import type { PlanIndex } from "../../plans/PlanIndex.js";
 import type { PipelineStageSideEffects } from "./PipelineStageSideEffects.js";
@@ -28,6 +33,13 @@ export type UserDecisionRunInput = {
    * re-extraction. Omit only for explicit re-extraction workflows.
    */
   evidenceReplay?: EvidenceReplayInput;
+  /**
+   * M.10 governing answers: one UserDecision fans out to eligible dependents.
+   * Ordinary 1:1 indexing skips these decision IDs; derived applications merge in.
+   */
+  governingAnswers?: readonly GoverningDecisionAnswer[];
+  rootCausesById?: ReadonlyMap<string, ReviewRootCause>;
+  governingEligibilityByAnswerId?: ReadonlyMap<string, GoverningApplyEligibility>;
 };
 
 export interface PipelineStageContext {

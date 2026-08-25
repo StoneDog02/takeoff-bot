@@ -7,6 +7,10 @@ import { evidenceSchema } from "../../../core/schemas/evidence.schema.js";
 import { reviewItemSchema } from "../../../core/schemas/review-item.schema.js";
 import { userDecisionSchema } from "../../../core/schemas/user-decision.schema.js";
 import {
+  governingDecisionAnswerSchema,
+  governingPropagationResultPayloadSchema,
+} from "../../../core/schemas/governing-propagation.schema.js";
+import {
   validationIssueSchema,
   validationResultSchema,
 } from "../../../core/schemas/validation.schema.js";
@@ -173,6 +177,11 @@ export const assumptionsPayloadSchema = z.object({
 
 export const userDecisionPayloadSchema = userDecisionSchema;
 
+export const governingDecisionAnswerPayloadSchema = governingDecisionAnswerSchema;
+
+export const governingPropagationResultArtifactPayloadSchema =
+  governingPropagationResultPayloadSchema;
+
 export const validationPayloadSchema = z.object({
   validationIssues: z.array(validationIssueSchema),
   validationResults: z.array(validationResultSchema),
@@ -293,6 +302,16 @@ export const userDecisionArtifactSchema = createTypedArtifactEnvelopeSchema(
   "user-decision",
   userDecisionPayloadSchema,
 );
+export const governingDecisionAnswerArtifactSchema =
+  createTypedArtifactEnvelopeSchema(
+    "governing-decision-answer",
+    governingDecisionAnswerPayloadSchema,
+  );
+export const governingPropagationResultArtifactSchema =
+  createTypedArtifactEnvelopeSchema(
+    "governing-propagation-result",
+    governingPropagationResultArtifactPayloadSchema,
+  );
 export const validationArtifactSchema = createTypedArtifactEnvelopeSchema(
   "validation",
   validationPayloadSchema,
