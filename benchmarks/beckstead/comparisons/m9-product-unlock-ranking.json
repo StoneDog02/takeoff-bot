@@ -1,0 +1,164 @@
+{
+  "generatedAt": "2026-08-24T22:25:00.000Z",
+  "rankingMethod": "post-M.8 dual-STOP re-rank from scratch: score = contractorTimeSaved×2 + materialCoverageGained×2 + downstreamObjectsAffected + evidenceReadiness + implementationLeverage − complexity×2 − safetyRiskPenalty + usableTakeoffProgress — material AND decision-burden compete; not inherited from M.7/M.8 attempts",
+  "productStateContext": {
+    "materialLines": 55,
+    "wallHeightStop": "M8_WALL_HEIGHT_PROBE_STOP",
+    "structuralMemberPlacementStop": "M8_STRUCTURAL_MEMBER_PLACEMENT_STOP",
+    "sheathingStop": "M7_SHEATHING_STOP",
+    "floorBayStop": "M7_FLOOR_BAY_STOP",
+    "mainFloorStop": "M6_MAIN_FLOOR_STOP_CONFIRMED",
+    "rawReviewItems": 476,
+    "estimatedGoverningDecisionsWorking": 45,
+    "activeAssumptions": 0
+  },
+  "top5": [
+    {
+      "rank": 1,
+      "id": "review_root_cause_consolidation_mvp",
+      "kind": "decision_burden",
+      "candidateName": "Review root-cause grouping MVP (no silent defaults)",
+      "unlocks": [
+        "contractor sees governing decisions vs 476 object RIs",
+        "longitudinal Decision Burden measurement substrate",
+        "prepares future wall-height / opening consolidations when bindable"
+      ],
+      "currentBlockingAuthority": "architecture emits per-object validation RIs only; no governing/dependent roles",
+      "scores": {
+        "contractorTimeSaved": 9,
+        "materialCoverageGained": 1,
+        "downstreamObjectsAffected": 10,
+        "evidenceReadiness": 9,
+        "implementationLeverage": 7,
+        "complexity": 4,
+        "safetyRiskPenalty": 1,
+        "usableTakeoffProgress": 7
+      },
+      "score": 44
+    },
+    {
+      "rank": 2,
+      "id": "opening_category_parent_authority",
+      "kind": "material_coverage",
+      "candidateName": "Opening category + parent-wall authority (independent of height where possible)",
+      "unlocks": [
+        "reduces opening.category / parent blockers",
+        "partial path toward opening framing once height bindable"
+      ],
+      "currentBlockingAuthority": "many openings category unknown / sparse parent links; height still separate STOP",
+      "scores": {
+        "contractorTimeSaved": 6,
+        "materialCoverageGained": 7,
+        "downstreamObjectsAffected": 8,
+        "evidenceReadiness": 5,
+        "implementationLeverage": 7,
+        "complexity": 5,
+        "safetyRiskPenalty": 3,
+        "usableTakeoffProgress": 6
+      },
+      "score": 36
+    },
+    {
+      "rank": 3,
+      "id": "wall_level_location_partitioning",
+      "kind": "decision_burden",
+      "candidateName": "Wall level/location partitioning from plans (enables future height fan-out)",
+      "unlocks": [
+        "bindable wall populations for later height governing authority",
+        "safer exterior/interior and story scopes"
+      ],
+      "currentBlockingAuthority": "all 42 walls level=null location=unknown; elevations outside Mode B compiled set",
+      "scores": {
+        "contractorTimeSaved": 5,
+        "materialCoverageGained": 2,
+        "downstreamObjectsAffected": 9,
+        "evidenceReadiness": 4,
+        "implementationLeverage": 6,
+        "complexity": 5,
+        "safetyRiskPenalty": 2,
+        "usableTakeoffProgress": 7
+      },
+      "score": 34
+    },
+    {
+      "rank": 4,
+      "id": "sheathing_area_authority_future",
+      "kind": "material_coverage",
+      "candidateName": "Sheathing area authority (future milestone)",
+      "unlocks": ["wall/roof OSB SF lines"],
+      "currentBlockingAuthority": "M7_SHEATHING_STOP — 0 areas; no safe SF",
+      "scores": {
+        "contractorTimeSaved": 4,
+        "materialCoverageGained": 9,
+        "downstreamObjectsAffected": 3,
+        "evidenceReadiness": 2,
+        "implementationLeverage": 4,
+        "complexity": 6,
+        "safetyRiskPenalty": 4,
+        "usableTakeoffProgress": 4
+      },
+      "score": 23
+    },
+    {
+      "rank": 5,
+      "id": "roof_truss_materialization",
+      "kind": "material_coverage",
+      "candidateName": "Roof/truss materialization from plan callouts",
+      "unlocks": ["truss/roof member quantities"],
+      "currentBlockingAuthority": "roof planes unresolved; truss design notes defer to manufacturer",
+      "scores": {
+        "contractorTimeSaved": 4,
+        "materialCoverageGained": 8,
+        "downstreamObjectsAffected": 4,
+        "evidenceReadiness": 3,
+        "implementationLeverage": 4,
+        "complexity": 6,
+        "safetyRiskPenalty": 4,
+        "usableTakeoffProgress": 5
+      },
+      "score": 22
+    }
+  ],
+  "demoted": [
+    {
+      "id": "project_typical_wall_height_assumption",
+      "reason": "M8_WALL_HEIGHT_PROBE_STOP — multiple elevation populations; walls not bindable (level/location null)"
+    },
+    {
+      "id": "structural_member_placement_lengths",
+      "reason": "M8_STRUCTURAL_MEMBER_PLACEMENT_STOP — only explicit LONG already unlocked (23.5 LVL); no additional placement lengths"
+    },
+    {
+      "id": "p3_additional_floor_bay_layout",
+      "reason": "M7_FLOOR_BAY_STOP"
+    },
+    {
+      "id": "main_floor_joist_layout_revisit",
+      "reason": "M6_MAIN_FLOOR_STOP_CONFIRMED"
+    },
+    {
+      "id": "opening_framing_after_height",
+      "reason": "Depends on wall-height bindability which STOPped; demote until partitioning or consolidation substrate exists"
+    }
+  ],
+  "selectedNext": {
+    "target": "review_root_cause_consolidation_mvp",
+    "decision": "CLOSE_M8_DUAL_STOP_AND_START_M9_review_consolidation",
+    "rationale": [
+      "Highest post-dual-STOP score (44) when decision burden competes with material unlocks",
+      "Does not require inventing missing plan facts",
+      "Creates substrate for future wall-height / opening governing decisions once bindable",
+      "Wall-height and SM LONG remain documented future unlocks, not half-wired"
+    ]
+  },
+  "nextMilestoneContract": {
+    "target": "review_root_cause_consolidation_mvp",
+    "sop": "rank → design minimal governing/dependent review roles without silent defaults → GREEN bounded consolidation OR STOP → re-rank",
+    "doNot": [
+      "hide RIs without governing linkage",
+      "invent wall heights or SM lengths",
+      "force sheathing/floor unlocks",
+      "Beckstead-hardcode populations"
+    ]
+  }
+}
