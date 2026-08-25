@@ -29,6 +29,11 @@ import type { SemanticDefinition } from "../../../drawing-compiler/schemas/seman
 import { buildGeometryEvidenceFromCompiledPages } from "../geometry/buildGeometryEvidenceFromCompiledPages.js";
 import { buildGovernedSemanticCompilerEvidence } from "../geometry/buildGovernedSemanticCompilerEvidence.js";
 import { buildSemanticBindingEvidenceFromCompiledPages } from "../geometry/buildSemanticBindingEvidenceFromCompiledPages.js";
+import {
+  buildWallExistenceEvidenceFromCompiledPages,
+  openingParentDemandedRunKeysFromEvidence,
+  wallSubjectKeysFromEvidence,
+} from "../geometry/buildWallExistenceEvidenceFromCompiledPages.js";
 import { collectWallAssemblyNoteTexts } from "../geometry/collectWallAssemblyNoteTexts.js";
 import { mergeExtractedAndGeometryEvidence } from "../geometry/mergeExtractedAndGeometryEvidence.js";
 import {
@@ -728,6 +733,23 @@ const stages: PipelineStage[] = [
             { type: "system", identifier: "drawing-compiler" },
           ),
         );
+      }
+
+      // Existence-only wall Evidence for corroborated PBG runs that never
+      // received property Evidence (length/assembly/binding). Must run after
+      // all other wall emitters so existing subjects are skipped. Requires
+      // opening parentPhysicalRunKey demand so unused gap-runs do not inflate
+      // Decision Burden (geometry alone is insufficient for mint).
+      const existenceEvidence = buildWallExistenceEvidenceFromCompiledPages(
+        compiledPages.pages,
+        {
+          existingWallSubjectKeys: wallSubjectKeysFromEvidence(evidence),
+          openingParentDemandedRunKeys:
+            openingParentDemandedRunKeysFromEvidence(evidence),
+        },
+      );
+      if (existenceEvidence.length > 0) {
+        evidence = [...evidence, ...existenceEvidence];
       }
 
       const baseAudit = buildCompilerAutomationAudit(compiledPages.pages);

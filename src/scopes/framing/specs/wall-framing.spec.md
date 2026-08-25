@@ -117,6 +117,13 @@ Construction behavior is defined by these knowledge files and must not be duplic
 
 - Wall Extraction Prompt
 
+### Geometry Evidence
+
+- Wall existence Evidence from corroborated physical runs may mint Building Wall /
+  Wall Segment subjects with unresolved secondary properties (`wallType: unknown`).
+  Existence must not invent length, height, bearing, assembly, or level/location.
+  Material eligibility remains validator- and calculator-controlled.
+
 ---
 
 ## 9. Success Criteria
