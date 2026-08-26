@@ -30,6 +30,11 @@ import {
   type UserDecisionPropertyPath,
 } from "./applyUserDecisions.js";
 import {
+  convergeEvidenceByCanonicalObjectId,
+  formatSubjectKeyConvergenceNote,
+  type CanonicalEvidenceCluster,
+} from "./convergeEvidenceByCanonicalObjectId.js";
+import {
   createOpeningObjectId,
   createRoofFramingSystemObjectId,
   createRoofPlaneObjectId,
@@ -315,12 +320,33 @@ function collectRelationshipTags(
   };
 }
 
+function convergenceTraces(
+  cluster: CanonicalEvidenceCluster,
+): PropertyResolutionTrace[] {
+  const note = formatSubjectKeyConvergenceNote(
+    cluster.rawSubjectKeys,
+    cluster.objectId,
+  );
+  if (!note) {
+    return [];
+  }
+  return [
+    createTrace(
+      "subjectKey",
+      "supported-inference",
+      note,
+      cluster.records.map((record) => record.id),
+    ),
+  ];
+}
+
 function resolveOneSystem(
-  subjectKey: string,
-  records: readonly Evidence[],
+  cluster: CanonicalEvidenceCluster,
   userDecisionIndex: UserDecisionIndex,
 ): RoofFramingSystem {
-  const systemId = createRoofFramingSystemObjectId(subjectKey);
+  const subjectKey = cluster.canonicalSubjectKey;
+  const records = cluster.records;
+  const systemId = cluster.objectId;
   const propertyResults = Object.fromEntries(
     ROOF_SYSTEM_PROPERTY_PATHS.map((propertyPath) => {
       const result = resolvePropertyAuthority(
@@ -348,9 +374,12 @@ function resolveOneSystem(
     ]),
   ) as Record<RoofSystemPropertyPath, CandidateDecision>;
 
-  const resolutionTraces = ROOF_SYSTEM_PROPERTY_PATHS.flatMap(
-    (propertyPath) => propertyResults[propertyPath]!.traces,
-  );
+  const resolutionTraces = [
+    ...convergenceTraces(cluster),
+    ...ROOF_SYSTEM_PROPERTY_PATHS.flatMap(
+      (propertyPath) => propertyResults[propertyPath]!.traces,
+    ),
+  ];
 
   const constructionPhaseDecision = decisions.constructionPhase;
   const constructionPhase: RoofConstructionPhase =
@@ -405,11 +434,12 @@ function resolveOneSystem(
 }
 
 function resolveOnePlane(
-  subjectKey: string,
-  records: readonly Evidence[],
+  cluster: CanonicalEvidenceCluster,
   userDecisionIndex: UserDecisionIndex,
 ): RoofPlane {
-  const planeId = createRoofPlaneObjectId(subjectKey);
+  const subjectKey = cluster.canonicalSubjectKey;
+  const records = cluster.records;
+  const planeId = cluster.objectId;
   const propertyResults = Object.fromEntries(
     ROOF_PLANE_PROPERTY_PATHS.map((propertyPath) => {
       const result = resolvePropertyAuthority(
@@ -459,6 +489,7 @@ function resolveOnePlane(
   ) as Record<RoofPlanePropertyPath, CandidateDecision>;
 
   const resolutionTraces = [
+    ...convergenceTraces(cluster),
     ...ROOF_PLANE_PROPERTY_PATHS.flatMap(
       (propertyPath) => propertyResults[propertyPath]!.traces,
     ),
@@ -529,35 +560,6 @@ type ResolvedSubjectIdentity = {
   kind: "roof-framing-system" | "roof-plane";
 };
 
-function assertNoObjectIdCollisions(
-  identities: readonly ResolvedSubjectIdentity[],
-): void {
-  const owners = new Map<string, { kind: string; subjectKeys: string[] }>();
-
-  for (const identity of identities) {
-    const existing = owners.get(identity.objectId);
-    if (existing) {
-      existing.subjectKeys.push(identity.subjectKey);
-    } else {
-      owners.set(identity.objectId, {
-        kind: identity.kind,
-        subjectKeys: [identity.subjectKey],
-      });
-    }
-  }
-
-  for (const [objectId, owner] of owners) {
-    if (owner.subjectKeys.length <= 1) {
-      continue;
-    }
-
-    const sortedSubjectKeys = [...owner.subjectKeys].sort(compareIds);
-    throw new Error(
-      `subjectKeys ${sortedSubjectKeys.map((key) => `"${key}"`).join(" and ")} both resolve to Roof Framing ${owner.kind} ObjectId ${objectId}.`,
-    );
-  }
-}
-
 function linkSystemPlaneIds(
   systems: RoofFramingSystem[],
   planes: RoofPlane[],
@@ -586,7 +588,8 @@ function linkSystemPlaneIds(
 /**
  * Deterministic Roof Framing resolver.
  *
- * Groups Evidence by subjectKind + subjectKey, resolves systems and planes
+ * Groups Evidence by subjectKind + subjectKey, converges raw subjectKeys that
+ * mint the same ObjectId into one domain object, resolves systems and planes
  * independently, links parent/child relationships, and preserves partial
  * objects when inputs are missing or conflicted. Optional User Decisions may
  * resolve missing or conflicted scalar properties before Evidence selection.
@@ -598,23 +601,29 @@ export function resolveRoofFraming(
   const systemGroups = groupBySubjectKind(evidence, "roof-framing-system");
   const planeGroups = groupBySubjectKind(evidence, "roof-plane");
 
-  const systemIdentities = [...systemGroups.keys()]
-    .sort(compareIds)
-    .map((subjectKey) => ({
-      subjectKey,
-      objectId: createRoofFramingSystemObjectId(subjectKey),
-      kind: "roof-framing-system" as const,
-    }));
+  const systemClusters = convergeEvidenceByCanonicalObjectId({
+    groups: systemGroups,
+    createObjectId: createRoofFramingSystemObjectId,
+  });
+  const planeClusters = convergeEvidenceByCanonicalObjectId({
+    groups: planeGroups,
+    createObjectId: createRoofPlaneObjectId,
+  });
 
-  const planeIdentities = [...planeGroups.keys()]
-    .sort(compareIds)
-    .map((subjectKey) => ({
-      subjectKey,
-      objectId: createRoofPlaneObjectId(subjectKey),
-      kind: "roof-plane" as const,
-    }));
-
-  assertNoObjectIdCollisions([...systemIdentities, ...planeIdentities]);
+  const systemIdentities: ResolvedSubjectIdentity[] = systemClusters.map(
+    (cluster) => ({
+      subjectKey: cluster.canonicalSubjectKey,
+      objectId: cluster.objectId,
+      kind: "roof-framing-system",
+    }),
+  );
+  const planeIdentities: ResolvedSubjectIdentity[] = planeClusters.map(
+    (cluster) => ({
+      subjectKey: cluster.canonicalSubjectKey,
+      objectId: cluster.objectId,
+      kind: "roof-plane",
+    }),
+  );
 
   const userDecisionIndex = buildRoofUserDecisionContext(
     evidence,
@@ -623,15 +632,11 @@ export function resolveRoofFraming(
     options,
   );
 
-  const systems = systemIdentities.map(({ subjectKey }) =>
-    resolveOneSystem(
-      subjectKey,
-      systemGroups.get(subjectKey)!,
-      userDecisionIndex,
-    ),
+  const systems = systemClusters.map((cluster) =>
+    resolveOneSystem(cluster, userDecisionIndex),
   );
-  const planes = planeIdentities.map(({ subjectKey }) =>
-    resolveOnePlane(subjectKey, planeGroups.get(subjectKey)!, userDecisionIndex),
+  const planes = planeClusters.map((cluster) =>
+    resolveOnePlane(cluster, userDecisionIndex),
   );
 
   return roofFramingPayloadSchema.parse({

@@ -36,12 +36,7 @@ import {
   type PageClassificationPayload,
   type PlanReadingOrderPayload,
 } from "../schemas/framing-artifacts.schema.js";
-
-const EXTRACTION_KNOWLEDGE_PATHS = [
-  "framing/01-scope-definition.md",
-  "framing/05-wall-identification.md",
-  "universal/page-reference-rules.md",
-];
+import { resolveExtractionBrainPackPaths } from "../extraction/framingExtractionBrainPacks.js";
 
 export interface ExtractFramingEvidenceInput {
   planIndex: PlanIndex;
@@ -943,7 +938,10 @@ export async function extractFramingEvidenceViaClaude(
     );
   }
 
-  const knowledge = await loadKnowledgeFiles(EXTRACTION_KNOWLEDGE_PATHS);
+  const brainPackPaths = resolveExtractionBrainPackPaths(
+    input.extractionBundle?.intent,
+  );
+  const knowledge = await loadKnowledgeFiles([...brainPackPaths]);
   const knowledgeBlock = formatKnowledgeForPrompt(knowledge);
   const systemPrompt = buildSystemPrompt(knowledgeBlock);
   const pageVisualMode = input.pageVisualMode ?? "full-page-and-tiles";

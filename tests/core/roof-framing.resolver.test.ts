@@ -108,4 +108,36 @@ describe("resolveRoofFraming", () => {
     assert.equal(plane.rafterLayoutLengthFeet, 20);
     assert.equal(plane.parentSystemId, "RFS-TRUSS");
   });
+
+  it("converges subjectKeys that mint the same ObjectId into one plane", () => {
+    const payload = resolveRoofFraming([
+      roofEvidence(
+        "roof-plane",
+        "ROOF PLANE A",
+        "E-SPACE",
+        "areaSquareFeet",
+        1200,
+      ),
+      roofEvidence(
+        "roof-plane",
+        "ROOF-PLANE-A",
+        "E-HYPHEN",
+        "pitch",
+        "6/12",
+      ),
+    ]);
+
+    assert.equal(payload.planes.length, 1);
+    assert.equal(payload.planes[0]?.id, "RFP-ROOF-PLANE-A");
+    assert.equal(payload.planes[0]?.areaSquareFeet, 1200);
+    assert.equal(payload.planes[0]?.pitch, "6/12");
+    assert.ok(
+      payload.planes[0]?.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "subjectKey" &&
+          trace.explanation.includes("ROOF PLANE A") &&
+          trace.explanation.includes("ROOF-PLANE-A"),
+      ),
+    );
+  });
 });

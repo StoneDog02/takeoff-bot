@@ -20,9 +20,17 @@ import type {
   ExtractionBudgetAudit,
   ExtractionWorkUnitAudit,
 } from "./extractionBudgetAudit.schema.js";
+import { resolveExtractionBrainPackPaths } from "./framingExtractionBrainPacks.js";
 
 export const DEFAULT_FRAMING_EXTRACTION_INTENTS: readonly FramingExtractionIntent[] =
-  ["wall-framing", "floor-framing", "roof-framing"];
+  [
+    "wall-framing",
+    "floor-framing",
+    "roof-framing",
+    "openings",
+    "structural-members",
+    "sheathing",
+  ];
 
 export interface FramingExtractionWorkUnit {
   extractionPassId: string;
@@ -111,6 +119,7 @@ function workUnitAudit(
     tileCount,
     pageCount: workUnit.bundle.orderedPageNumbers.length,
     routingNotes: [...workUnit.bundle.routingNotes],
+    brainPackPaths: [...resolveExtractionBrainPackPaths(workUnit.bundle.intent)],
   };
 }
 

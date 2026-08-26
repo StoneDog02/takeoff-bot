@@ -639,22 +639,34 @@ describe("resolveWallFraming", () => {
       );
     });
 
-    it("throws a deterministic collision error when distinct subjectKeys sanitize to the same Wall ObjectId", () => {
-      assert.throws(
-        () =>
-          resolveWallFraming([
-            evidenceForSubject("W-001", {
-              id: "E-W001-CLASS",
-              propertyPath: "wallType",
-              candidateValue: "wood stud wall",
-            }),
-            evidenceForSubject("W 001", {
-              id: "E-W001-SPACE-CLASS",
-              propertyPath: "wallType",
-              candidateValue: "wood stud wall",
-            }),
-          ]),
-        /subjectKeys "W 001" and "W-001" both resolve to Wall ObjectId W-001\./,
+    it("converges subjectKeys that mint the same ObjectId into one wall", () => {
+      const payload = resolveWallFraming([
+        evidenceForSubject("W-001", {
+          id: "E-W001-CLASS",
+          propertyPath: "wallType",
+          candidateValue: "wood stud wall",
+        }),
+        evidenceForSubject("W 001", {
+          id: "E-W001-SPACE-CLASS",
+          propertyPath: "location",
+          candidateValue: "exterior",
+        }),
+      ]);
+
+      assert.equal(payload.walls.length, 1);
+      assert.equal(payload.segments.length, 1);
+      assert.equal(payload.walls[0]?.id, "W-001");
+      assert.equal(payload.walls[0]?.wallType, "wood stud wall");
+      assert.equal(payload.walls[0]?.location, "exterior");
+      assert.ok(payload.walls[0]?.evidenceIds.includes("E-W001-CLASS"));
+      assert.ok(payload.walls[0]?.evidenceIds.includes("E-W001-SPACE-CLASS"));
+      assert.ok(
+        payload.walls[0]?.resolutionTraces.some(
+          (trace) =>
+            trace.propertyPath === "subjectKey" &&
+            trace.explanation.includes("W 001") &&
+            trace.explanation.includes("W-001"),
+        ),
       );
     });
 

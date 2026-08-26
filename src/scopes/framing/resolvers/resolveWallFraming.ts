@@ -38,6 +38,11 @@ import {
 } from "./applyUserDecisions.js";
 import { createWallObjectId, createWallSegmentObjectId } from "./ids.js";
 import {
+  convergeEvidenceByCanonicalObjectId,
+  formatSubjectKeyConvergenceNote,
+  type CanonicalEvidenceCluster,
+} from "./convergeEvidenceByCanonicalObjectId.js";
+import {
   isSegmentPropertyPath,
   isWallFramingPropertyPath,
   normalizeWallFramingCandidate,
@@ -332,13 +337,34 @@ function groupBySubjectKey(evidence: readonly Evidence[]): Map<string, Evidence[
   return groups;
 }
 
+function convergenceTraces(
+  cluster: CanonicalEvidenceCluster,
+): PropertyResolutionTrace[] {
+  const note = formatSubjectKeyConvergenceNote(
+    cluster.rawSubjectKeys,
+    cluster.objectId,
+  );
+  if (!note) {
+    return [];
+  }
+  return [
+    createTrace(
+      "subjectKey",
+      "supported-inference",
+      note,
+      cluster.records.map((record) => record.id),
+    ),
+  ];
+}
+
 function resolveOneWall(
-  subjectKey: string,
-  records: readonly Evidence[],
+  cluster: CanonicalEvidenceCluster,
   userDecisionIndex: UserDecisionIndex,
   allGroups: Map<string, Evidence[]>,
 ): { wall: BuildingWall; segment: WallSegment } {
-  const wallId = createWallObjectId(subjectKey);
+  const subjectKey = cluster.canonicalSubjectKey;
+  const records = cluster.records;
+  const wallId = cluster.objectId;
   const segmentId = createWallSegmentObjectId(wallId);
 
   const semanticTypeDecision = isPhysicalRunSubjectKey(subjectKey)
@@ -388,9 +414,12 @@ function resolveOneWall(
     ]),
   ) as Record<WallPropertyPath, CandidateDecision>;
 
-  const wallTraces = WALL_PROPERTY_PATHS.flatMap(
-    (propertyPath) => wallPropertyResults[propertyPath]!.traces,
-  );
+  const wallTraces = [
+    ...convergenceTraces(cluster),
+    ...WALL_PROPERTY_PATHS.flatMap(
+      (propertyPath) => wallPropertyResults[propertyPath]!.traces,
+    ),
+  ];
 
   const lengthResolved = resolvePropertyAuthority(
     "lengthFeet",
@@ -498,62 +527,22 @@ function resolveOneWall(
   return { wall, segment };
 }
 
-type ResolvedSubjectIdentity = {
-  subjectKey: string;
-  wallId: BuildingWall["id"];
-  segmentId: WallSegment["id"];
-};
-
-function assertNoObjectIdCollisions(identities: readonly ResolvedSubjectIdentity[]): void {
-  const wallOwners = new Map<string, string[]>();
-  const segmentOwners = new Map<string, string[]>();
-
-  for (const identity of identities) {
-    const wallSubjectKeys = wallOwners.get(identity.wallId) ?? [];
-    wallSubjectKeys.push(identity.subjectKey);
-    wallOwners.set(identity.wallId, wallSubjectKeys);
-
-    const segmentSubjectKeys = segmentOwners.get(identity.segmentId) ?? [];
-    segmentSubjectKeys.push(identity.subjectKey);
-    segmentOwners.set(identity.segmentId, segmentSubjectKeys);
-  }
-
-  for (const [objectId, subjectKeys] of wallOwners) {
-    if (subjectKeys.length <= 1) {
-      continue;
-    }
-
-    const sortedSubjectKeys = [...subjectKeys].sort(compareIds);
-    throw new Error(
-      `subjectKeys ${sortedSubjectKeys.map((key) => `"${key}"`).join(" and ")} both resolve to Wall ObjectId ${objectId}.`,
-    );
-  }
-
-  for (const [objectId, subjectKeys] of segmentOwners) {
-    if (subjectKeys.length <= 1) {
-      continue;
-    }
-
-    const sortedSubjectKeys = [...subjectKeys].sort(compareIds);
-    throw new Error(
-      `subjectKeys ${sortedSubjectKeys.map((key) => `"${key}"`).join(" and ")} both resolve to Segment ObjectId ${objectId}.`,
-    );
-  }
-}
-
 function buildEvidenceById(evidence: readonly Evidence[]): Map<EvidenceId, Evidence> {
   return new Map(evidence.map((record) => [record.id, record]));
 }
 
 function buildSubjectBindingByObjectId(
-  subjectKeys: readonly string[],
+  clusters: readonly CanonicalEvidenceCluster[],
 ): Map<ObjectId, SubjectBinding> {
   const subjectBindingByObjectId = new Map<ObjectId, SubjectBinding>();
 
-  for (const subjectKey of subjectKeys) {
-    const wallId = createWallObjectId(subjectKey);
+  for (const cluster of clusters) {
+    const wallId = cluster.objectId;
     const segmentId = createWallSegmentObjectId(wallId);
-    const binding: SubjectBinding = { subjectKey, subjectKind: "wall" };
+    const binding: SubjectBinding = {
+      subjectKey: cluster.canonicalSubjectKey,
+      subjectKind: "wall",
+    };
     subjectBindingByObjectId.set(wallId, binding);
     subjectBindingByObjectId.set(segmentId, binding);
   }
@@ -563,7 +552,7 @@ function buildSubjectBindingByObjectId(
 
 function buildUserDecisionContext(
   evidence: readonly Evidence[],
-  subjectKeys: readonly string[],
+  clusters: readonly CanonicalEvidenceCluster[],
   options?: ResolveWallFramingOptions,
 ): UserDecisionIndex {
   const userDecisions = options?.userDecisions ?? [];
@@ -578,7 +567,7 @@ function buildUserDecisionContext(
     );
   }
 
-  const subjectBindingByObjectId = buildSubjectBindingByObjectId(subjectKeys);
+  const subjectBindingByObjectId = buildSubjectBindingByObjectId(clusters);
   const ordinaryDecisions = filterOutGoverningUserDecisions(
     userDecisions,
     governingAnswers,
@@ -625,40 +614,40 @@ function buildUserDecisionContext(
 /**
  * Deterministic Wall Framing resolver.
  *
- * Groups Evidence by exact subjectKey (after schema trim), resolves each
- * subject independently into one Building Wall and one Wall Segment, and
- * fails deterministically when distinct subjectKeys sanitize to the same
- * ObjectId. Optional User Decisions may resolve conflicted properties before
- * Evidence candidate selection runs. It never applies assumptions, sheet
- * precedence, validation, or quantity calculation.
+ * Groups Evidence by exact subjectKey (after schema trim), converges raw
+ * subjectKeys that mint the same ObjectId into one domain object, resolves
+ * each subject independently into one Building Wall and one Wall Segment.
+ * Optional User Decisions may resolve conflicted properties before Evidence
+ * candidate selection runs. It never applies assumptions, sheet precedence,
+ * validation, or quantity calculation.
  */
 export function resolveWallFraming(
   evidence: readonly Evidence[],
   options?: ResolveWallFramingOptions,
 ): WallFramingPayload {
   const groups = groupBySubjectKey(evidence);
-  const subjectKeys = [...groups.keys()].sort(compareIds);
 
-  if (subjectKeys.length === 0) {
+  if (groups.size === 0) {
     return wallFramingPayloadSchema.parse({ walls: [], segments: [] });
   }
 
-  const identities: ResolvedSubjectIdentity[] = subjectKeys.map((subjectKey) => ({
-    subjectKey,
-    wallId: createWallObjectId(subjectKey),
-    segmentId: createWallSegmentObjectId(createWallObjectId(subjectKey)),
-  }));
-  assertNoObjectIdCollisions(identities);
+  const clusters = convergeEvidenceByCanonicalObjectId({
+    groups,
+    createObjectId: createWallObjectId,
+  });
 
-  const userDecisionIndex = buildUserDecisionContext(evidence, subjectKeys, options);
+  const userDecisionIndex = buildUserDecisionContext(
+    evidence,
+    clusters,
+    options,
+  );
 
   const walls: BuildingWall[] = [];
   const segments: WallSegment[] = [];
 
-  for (const subjectKey of subjectKeys) {
+  for (const cluster of clusters) {
     const { wall, segment } = resolveOneWall(
-      subjectKey,
-      groups.get(subjectKey) ?? [],
+      cluster,
       userDecisionIndex,
       groups,
     );

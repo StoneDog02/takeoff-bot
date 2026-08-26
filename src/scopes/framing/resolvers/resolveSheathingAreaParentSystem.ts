@@ -1,6 +1,6 @@
 import type { Evidence } from "../../../core/schemas/evidence.schema.js";
 import type { PropertyResolutionTrace } from "../../../core/schemas/resolved-object.schema.js";
-import { createFloorFramingSystemObjectId } from "./ids.js";
+import { createSheathingSystemObjectId } from "./ids.js";
 import {
   parentSystemLinkTrace as sharedParentSystemLinkTrace,
   resolveEvidenceBackedParentSystemLink,
@@ -8,15 +8,15 @@ import {
   type EvidenceBackedParentSystemLinkMethod,
 } from "./resolveEvidenceBackedParentSystemLink.js";
 
-export type FloorParentSystemLinkMethod = EvidenceBackedParentSystemLinkMethod;
+export type SheathingParentSystemLinkMethod = EvidenceBackedParentSystemLinkMethod;
 
-export type FloorParentSystemLink = EvidenceBackedParentSystemLink;
+export type SheathingParentSystemLink = EvidenceBackedParentSystemLink;
 
 /**
- * Recover floor area → system ownership with evidence-backed corroboration tiers.
+ * Recover sheathing area → system ownership with evidence-backed corroboration tiers.
  * Returns null when authority is ambiguous — fail closed.
  */
-export function resolveFloorAreaParentSystemLink(input: {
+export function resolveSheathingAreaParentSystemLink(input: {
   areaSubjectKey: string;
   areaRecords: readonly Evidence[];
   explicitParentSystemTag: string | null;
@@ -24,16 +24,16 @@ export function resolveFloorAreaParentSystemLink(input: {
     subjectKey: string;
     records: readonly Evidence[];
   }>;
-}): FloorParentSystemLink | null {
+}): SheathingParentSystemLink | null {
   return resolveEvidenceBackedParentSystemLink({
     ...input,
-    createSystemObjectId: createFloorFramingSystemObjectId,
-    domainLabel: "floor",
+    createSystemObjectId: createSheathingSystemObjectId,
+    domainLabel: "sheathing",
   });
 }
 
 export function parentSystemLinkTrace(
-  link: FloorParentSystemLink,
+  link: SheathingParentSystemLink,
 ): PropertyResolutionTrace {
   return sharedParentSystemLinkTrace(link);
 }

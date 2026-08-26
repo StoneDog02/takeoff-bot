@@ -111,4 +111,116 @@ describe("resolveFloorFraming", () => {
     assert.equal(area.joistLayoutLengthFeet, null);
     assert.equal(area.joistMemberLengthFeet, 12);
   });
+
+  it("converges subjectKeys that mint the same ObjectId into one area", () => {
+    const payload = resolveFloorFraming([
+      floorEvidence(
+        "floor-framing-area",
+        "MAIN FLOOR AREA",
+        "E-SPACE",
+        "areaSquareFeet",
+        1621,
+      ),
+      floorEvidence(
+        "floor-framing-area",
+        "MAIN-FLOOR-AREA",
+        "E-HYPHEN",
+        "layout",
+        "joist",
+      ),
+    ]);
+
+    assert.equal(payload.areas.length, 1);
+    assert.equal(payload.areas[0]?.id, "FFA-MAIN-FLOOR-AREA");
+    assert.equal(payload.areas[0]?.areaSquareFeet, 1621);
+    assert.equal(payload.areas[0]?.layout, "joist");
+    assert.ok(payload.areas[0]?.evidenceIds.includes("E-SPACE"));
+    assert.ok(payload.areas[0]?.evidenceIds.includes("E-HYPHEN"));
+    assert.ok(
+      payload.areas[0]?.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "subjectKey" &&
+          trace.explanation.includes("MAIN FLOOR AREA") &&
+          trace.explanation.includes("MAIN-FLOOR-AREA"),
+      ),
+    );
+  });
+
+  it("keeps conflicting property values fail-closed after identity convergence", () => {
+    const payload = resolveFloorFraming([
+      floorEvidence(
+        "floor-framing-area",
+        "FFA-001",
+        "E-A",
+        "layout",
+        "joist",
+      ),
+      floorEvidence(
+        "floor-framing-area",
+        "FFA 001",
+        "E-B",
+        "layout",
+        "truss",
+      ),
+    ]);
+
+    assert.equal(payload.areas.length, 1);
+    assert.equal(payload.areas[0]?.id, "FFA-001");
+    assert.equal(payload.areas[0]?.layout, null);
+    assert.ok(
+      payload.areas[0]?.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "layout" && trace.method === "unresolved",
+      ),
+    );
+  });
+
+  it("keeps distinct ObjectIds as separate areas", () => {
+    const payload = resolveFloorFraming([
+      floorEvidence(
+        "floor-framing-area",
+        "FFA-001",
+        "E-1",
+        "areaSquareFeet",
+        100,
+      ),
+      floorEvidence(
+        "floor-framing-area",
+        "FFA-002",
+        "E-2",
+        "areaSquareFeet",
+        200,
+      ),
+    ]);
+
+    assert.equal(payload.areas.length, 2);
+    assert.deepEqual(
+      payload.areas.map((area) => area.id).sort(),
+      ["FFA-001", "FFA-002"],
+    );
+  });
+
+  it("does not merge floor-framing-system and floor-framing-area with similar text", () => {
+    const payload = resolveFloorFraming([
+      floorEvidence(
+        "floor-framing-system",
+        "MAIN FLOOR",
+        "E-SYS",
+        "name",
+        "Main Floor",
+      ),
+      floorEvidence(
+        "floor-framing-area",
+        "MAIN FLOOR",
+        "E-AREA",
+        "areaSquareFeet",
+        1621,
+      ),
+    ]);
+
+    assert.equal(payload.systems.length, 1);
+    assert.equal(payload.areas.length, 1);
+    assert.equal(payload.systems[0]?.id, "FFS-MAIN-FLOOR");
+    assert.equal(payload.areas[0]?.id, "FFA-MAIN-FLOOR");
+  });
 });

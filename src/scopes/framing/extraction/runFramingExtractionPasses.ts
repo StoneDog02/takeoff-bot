@@ -7,11 +7,13 @@ import {
   type ExtractFramingEvidenceInput,
 } from "../prompts/extractFramingEvidence.js";
 import type { ExtractedFramingEvidencePayload } from "../schemas/framing-artifacts.schema.js";
+import { drainPlanReferenceFollowUps } from "./drainPlanReferenceFollowUps.js";
 import {
   buildFramingExtractionWorkPlan,
   type FramingExtractionWorkPlan,
 } from "./buildFramingExtractionWorkPlan.js";
 import type { ExtractionBudgetAudit } from "./extractionBudgetAudit.schema.js";
+import type { PlanReferenceTrace } from "./planReferenceTrace.schema.js";
 
 export interface RunFramingExtractionPassesInput {
   planIndex: PlanIndex;
@@ -32,6 +34,8 @@ export interface RunFramingExtractionPassesInput {
   tileOverlapFraction?: ExtractFramingEvidenceInput["tileOverlapFraction"];
   onApiCall?: ExtractFramingEvidenceInput["onApiCall"];
   onUsage?: ExtractFramingEvidenceInput["onUsage"];
+  /** Skip PlanReference follow-up drain (tests / frozen probes). */
+  skipPlanReferenceDrain?: boolean;
   /** Optional pre-built work plan (for tests / frozen probes). */
   workPlan?: FramingExtractionWorkPlan;
 }
@@ -40,6 +44,7 @@ export interface RunFramingExtractionPassesResult {
   payload: ExtractedFramingEvidencePayload;
   audit: ExtractionBudgetAudit;
   apiCallCount: number;
+  planReferenceTrace: PlanReferenceTrace | null;
 }
 
 /**
@@ -97,11 +102,53 @@ export async function runFramingExtractionPasses(
     });
   }
 
+  const primaryEvidence = aggregateExtractionEvidencePasses({ passes });
+  const alreadyCoveredPageNumbers = new Set<number>();
+  for (const unit of workPlan.audit.workUnits) {
+    for (const pageNumber of unit.orderedPageNumbers) {
+      alreadyCoveredPageNumbers.add(pageNumber);
+    }
+  }
+
+  let planReferenceTrace: PlanReferenceTrace | null = null;
+  if (!input.skipPlanReferenceDrain) {
+    const drainResult = await drainPlanReferenceFollowUps({
+      planIndex: input.planIndex,
+      pages: input.pages,
+      primaryEvidence,
+      alreadyCoveredPageNumbers,
+      scopeName,
+      pageClassification: input.pageClassification,
+      planReadingOrder: input.planReadingOrder,
+      buildingAssemblies: input.buildingAssemblies,
+      pageVisuals: input.pageVisuals,
+      visualOutputDir: input.visualOutputDir,
+      visualScale: input.visualScale,
+      pageTiles: input.pageTiles,
+      tileOutputDir: input.tileOutputDir,
+      tileSourceScale: input.tileSourceScale,
+      tileColumns: input.tileColumns,
+      tileRows: input.tileRows,
+      tileOverlapFraction: input.tileOverlapFraction,
+      onApiCall: () => {
+        apiCallCount += 1;
+        input.onApiCall?.();
+      },
+      onUsage: input.onUsage,
+    });
+    planReferenceTrace = drainResult.trace;
+    apiCallCount += drainResult.apiCallCount;
+    if (drainResult.passes.length > 0) {
+      passes.push(...drainResult.passes);
+    }
+  }
+
   const evidence = aggregateExtractionEvidencePasses({ passes });
 
   return {
     payload: { evidence },
     audit: workPlan.audit,
     apiCallCount,
+    planReferenceTrace,
   };
 }

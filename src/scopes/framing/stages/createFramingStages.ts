@@ -12,6 +12,9 @@ import { computePlanSourceFingerprint } from "../../../plans/computePlanSourceFi
 import { buildPlanReadingOrderFromClassification } from "../../../plans/buildPlanReadingOrder.js";
 import { resolvePageClassificationForPipeline } from "../../../plans/resolvePageClassificationForPipeline.js";
 import { runFramingExtractionPasses } from "../extraction/runFramingExtractionPasses.js";
+import {
+  buildFramingPackageProductState,
+} from "../observability/buildFramingPackageProductState.js";
 import { compileDrawingPage } from "../../../drawing-compiler/compileDrawingPage.js";
 import { buildCompilerAutomationAudit } from "../compiler/buildCompilerAutomationAudit.js";
 import { buildSemanticBindingAudit } from "../compiler/buildSemanticBindingAudit.js";
@@ -46,6 +49,8 @@ import {
   extractedFramingEvidenceArtifactSchema,
   extractedFramingEvidencePayloadSchema,
   extractionBudgetAuditArtifactSchema,
+  planReferenceTraceArtifactSchema,
+  framingPackageProductStateArtifactSchema,
   finalFramingTakeoffArtifactSchema,
   framingCalculationsArtifactSchema,
   openingsArtifactSchema,
@@ -170,6 +175,8 @@ const COMPILER_AUTOMATION_AUDIT_COMPANION_SUFFIX = "compiler-automation-audit";
 const PROJECT_DICTIONARY_COMPANION_SUFFIX = "project-dictionary";
 const SEMANTIC_BINDING_AUDIT_COMPANION_SUFFIX = "semantic-binding-audit";
 const EXTRACTION_WORK_UNITS_COMPANION_SUFFIX = "extraction-work-units";
+const PLAN_REFERENCE_QUEUE_COMPANION_SUFFIX = "plan-reference-queue";
+const PACKAGE_PRODUCT_STATE_COMPANION_SUFFIX = "package-product-state";
 const WALL_FRAMING_OPENING_LINKS_COMPANION_SUFFIX = "wall-framing-links";
 const OPENINGS_HEADER_LINKS_COMPANION_SUFFIX = "openings-header-links";
 const STRUCTURAL_MEMBERS_OPENING_LINKS_COMPANION_SUFFIX =
@@ -679,6 +686,19 @@ const stages: PipelineStage[] = [
             { type: "system", identifier: "extractedEvidence-routing" },
           ),
         );
+        if (extractionResult.planReferenceTrace) {
+          context.stageSideEffects.publishCompanionArtifact(
+            PLAN_REFERENCE_QUEUE_COMPANION_SUFFIX,
+            createFramingStageArtifact(
+              context,
+              6,
+              planReferenceTraceArtifactSchema,
+              "plan-reference-trace",
+              extractionResult.planReferenceTrace,
+              { type: "system", identifier: "plan-reference-drain" },
+            ),
+          );
+        }
       }
 
       const compiledPages = getPayload<CompiledDrawingPagesPayload>(
@@ -1140,6 +1160,12 @@ const stages: PipelineStage[] = [
         context,
         "structuralMembers",
       );
+      const sheathing = getPayload<SheathingPayload>(context, "sheathing");
+      const floorFraming = getPayload<FloorFramingPayload>(
+        context,
+        "floorFraming",
+      );
+      const roofFraming = getPayload<RoofFramingPayload>(context, "roofFraming");
       const validation = getPayload<ValidationPayload>(context, "validation");
       const payload = coordinateFramingConfidence({
         pipelineRunId: context.pipelineRunId as PipelineRunId,
@@ -1148,6 +1174,9 @@ const stages: PipelineStage[] = [
         wallFraming: wallPayload,
         openings,
         structuralMembers,
+        floorFraming,
+        roofFraming,
+        sheathing,
         evidenceIds: extracted.evidence.map((evidence) => evidence.id),
         useExplicitFixture: context.useMockAi,
       });
@@ -1186,6 +1215,40 @@ const stages: PipelineStage[] = [
       if (!confidence) {
         throw new Error("Takeoff confidence evaluation is missing.");
       }
+
+      const extracted = getPayload<ExtractedFramingEvidencePayload>(
+        context,
+        "extractedEvidence",
+      );
+      const productState = buildFramingPackageProductState({
+        runLabel: context.projectId,
+        artifacts: {
+          evidence: extracted.evidence,
+          wallFraming: wallPayload,
+          openings,
+          structuralMembers,
+          floorFraming,
+          roofFraming,
+          sheathing,
+          validation,
+          calculations,
+          confidence: confidencePayload,
+          takeoff: null,
+          extractionAudit: null,
+          planReferenceTrace: null,
+        },
+      });
+      context.stageSideEffects.publishCompanionArtifact(
+        PACKAGE_PRODUCT_STATE_COMPANION_SUFFIX,
+        createFramingStageArtifact(
+          context,
+          16,
+          framingPackageProductStateArtifactSchema,
+          "framing-package-product-state",
+          productState,
+          { type: "system", identifier: "wave1-product-state" },
+        ),
+      );
 
       return createFramingStageArtifact(
         context,

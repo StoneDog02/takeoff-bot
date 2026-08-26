@@ -26,6 +26,11 @@ import {
 } from "./applyUserDecisions.js";
 import { createStructuralMemberObjectId } from "./ids.js";
 import {
+  convergeEvidenceByCanonicalObjectId,
+  formatSubjectKeyConvergenceNote,
+  type CanonicalEvidenceCluster,
+} from "./convergeEvidenceByCanonicalObjectId.js";
+import {
   isStructuralMemberPropertyPath,
   normalizeStructuralMemberCandidate,
   STRUCTURAL_MEMBER_PROPERTY_PATHS,
@@ -265,12 +270,33 @@ function groupBySubjectKey(evidence: readonly Evidence[]): Map<string, Evidence[
   return groups;
 }
 
+function convergenceTraces(
+  cluster: CanonicalEvidenceCluster,
+): PropertyResolutionTrace[] {
+  const note = formatSubjectKeyConvergenceNote(
+    cluster.rawSubjectKeys,
+    cluster.objectId,
+  );
+  if (!note) {
+    return [];
+  }
+  return [
+    createTrace(
+      "subjectKey",
+      "supported-inference",
+      note,
+      cluster.records.map((record) => record.id),
+    ),
+  ];
+}
+
 function resolveOneMember(
-  subjectKey: string,
-  records: readonly Evidence[],
+  cluster: CanonicalEvidenceCluster,
   userDecisionIndex: UserDecisionIndex,
 ): StructuralMember {
-  const memberId = createStructuralMemberObjectId(subjectKey);
+  const subjectKey = cluster.canonicalSubjectKey;
+  const records = cluster.records;
+  const memberId = cluster.objectId;
   const propertyResults = Object.fromEntries(
     STRUCTURAL_MEMBER_PROPERTY_PATHS.map((propertyPath) => {
       const result = resolvePropertyAuthority(
@@ -293,9 +319,12 @@ function resolveOneMember(
     ]),
   ) as Record<StructuralMemberPropertyPath, CandidateDecision>;
 
-  const resolutionTraces = STRUCTURAL_MEMBER_PROPERTY_PATHS.flatMap(
-    (propertyPath) => propertyResults[propertyPath]!.traces,
-  );
+  const resolutionTraces = [
+    ...convergenceTraces(cluster),
+    ...STRUCTURAL_MEMBER_PROPERTY_PATHS.flatMap(
+      (propertyPath) => propertyResults[propertyPath]!.traces,
+    ),
+  ];
 
   const categoryDecision = decisions.category;
   const category =
@@ -345,36 +374,12 @@ type ResolvedSubjectIdentity = {
   memberId: ObjectId;
 };
 
-function assertNoObjectIdCollisions(identities: readonly ResolvedSubjectIdentity[]): void {
-  const owners = new Map<string, string[]>();
-
-  for (const identity of identities) {
-    const existing = owners.get(identity.memberId);
-    if (existing) {
-      existing.push(identity.subjectKey);
-    } else {
-      owners.set(identity.memberId, [identity.subjectKey]);
-    }
-  }
-
-  for (const [memberId, subjectKeys] of owners) {
-    if (subjectKeys.length <= 1) {
-      continue;
-    }
-
-    const sortedSubjectKeys = [...subjectKeys].sort(compareIds);
-    throw new Error(
-      `subjectKeys ${sortedSubjectKeys.map((key) => `"${key}"`).join(" and ")} both resolve to Structural Member ObjectId ${memberId}.`,
-    );
-  }
-}
-
 /**
  * Deterministic Structural Members resolver.
  *
- * Groups Evidence by exact subjectKind + subjectKey, resolves each subject
- * independently into one Structural Member, and fails deterministically when
- * distinct subjectKeys sanitize to the same ObjectId.
+ * Groups Evidence by exact subjectKind + subjectKey, converges raw subjectKeys
+ * that mint the same ObjectId into one domain object, and resolves each cluster
+ * independently into one Structural Member.
  *
  * Optional User Decisions may resolve missing or conflicted scalar properties
  * before Evidence candidate selection. Missing or conflicted properties are
@@ -387,17 +392,20 @@ export function resolveStructuralMembers(
   options?: ResolveStructuralMembersOptions,
 ): StructuralMembersPayload {
   const groups = groupBySubjectKey(evidence);
-  const subjectKeys = [...groups.keys()].sort(compareIds);
 
-  if (subjectKeys.length === 0) {
+  if (groups.size === 0) {
     return structuralMembersPayloadSchema.parse({ structuralMembers: [] });
   }
 
-  const identities: ResolvedSubjectIdentity[] = subjectKeys.map((subjectKey) => ({
-    subjectKey,
-    memberId: createStructuralMemberObjectId(subjectKey),
+  const clusters = convergeEvidenceByCanonicalObjectId({
+    groups,
+    createObjectId: createStructuralMemberObjectId,
+  });
+
+  const identities: ResolvedSubjectIdentity[] = clusters.map((cluster) => ({
+    subjectKey: cluster.canonicalSubjectKey,
+    memberId: cluster.objectId,
   }));
-  assertNoObjectIdCollisions(identities);
 
   const userDecisionIndex = buildStructuralMemberUserDecisionContext(
     evidence,
@@ -405,10 +413,13 @@ export function resolveStructuralMembers(
     options,
   );
 
-  const structuralMembers = subjectKeys.map((subjectKey) => {
-    const records = groups.get(subjectKey) ?? [];
-    const resolved = resolveOneMember(subjectKey, records, userDecisionIndex);
-    return applyStructuralMemberAuthority(subjectKey, resolved, records);
+  const structuralMembers = clusters.map((cluster) => {
+    const resolved = resolveOneMember(cluster, userDecisionIndex);
+    return applyStructuralMemberAuthority(
+      cluster.canonicalSubjectKey,
+      resolved,
+      cluster.records,
+    );
   });
 
   return structuralMembersPayloadSchema.parse({ structuralMembers });

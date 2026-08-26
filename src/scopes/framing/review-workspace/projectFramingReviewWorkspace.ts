@@ -52,7 +52,7 @@ function compareIds(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-function buildResolvedObjectIndex(
+export function buildResolvedObjectIndex(
   input: FramingReviewWorkspaceInput,
 ): Map<ObjectId, FramingResolvedObject> {
   const index = new Map<ObjectId, FramingResolvedObject>();

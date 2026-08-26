@@ -12,6 +12,7 @@ export const extractionWorkUnitAuditSchema = z.object({
   tileCount: z.number().int().nonnegative(),
   pageCount: z.number().int().nonnegative(),
   routingNotes: z.array(z.string()),
+  brainPackPaths: z.array(z.string().trim().min(1)).optional(),
 });
 
 export const extractionBudgetAuditSchema = z.object({

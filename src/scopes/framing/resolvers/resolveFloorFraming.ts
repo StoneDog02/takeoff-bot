@@ -30,6 +30,11 @@ import {
   type UserDecisionPropertyPath,
 } from "./applyUserDecisions.js";
 import {
+  convergeEvidenceByCanonicalObjectId,
+  formatSubjectKeyConvergenceNote,
+  type CanonicalEvidenceCluster,
+} from "./convergeEvidenceByCanonicalObjectId.js";
+import {
   createFloorFramingAreaObjectId,
   createFloorFramingSystemObjectId,
   createOpeningObjectId,
@@ -325,12 +330,33 @@ function collectRelationshipTags(
   };
 }
 
+function convergenceTraces(
+  cluster: CanonicalEvidenceCluster,
+): PropertyResolutionTrace[] {
+  const note = formatSubjectKeyConvergenceNote(
+    cluster.rawSubjectKeys,
+    cluster.objectId,
+  );
+  if (!note) {
+    return [];
+  }
+  return [
+    createTrace(
+      "subjectKey",
+      "supported-inference",
+      note,
+      cluster.records.map((record) => record.id),
+    ),
+  ];
+}
+
 function resolveOneSystem(
-  subjectKey: string,
-  records: readonly Evidence[],
+  cluster: CanonicalEvidenceCluster,
   userDecisionIndex: UserDecisionIndex,
 ): FloorFramingSystem {
-  const systemId = createFloorFramingSystemObjectId(subjectKey);
+  const subjectKey = cluster.canonicalSubjectKey;
+  const records = cluster.records;
+  const systemId = cluster.objectId;
   const propertyResults = Object.fromEntries(
     FLOOR_SYSTEM_PROPERTY_PATHS.map((propertyPath) => {
       const result = resolvePropertyAuthority(
@@ -358,9 +384,12 @@ function resolveOneSystem(
     ]),
   ) as Record<FloorSystemPropertyPath, CandidateDecision>;
 
-  const resolutionTraces = FLOOR_SYSTEM_PROPERTY_PATHS.flatMap(
-    (propertyPath) => propertyResults[propertyPath]!.traces,
-  );
+  const resolutionTraces = [
+    ...convergenceTraces(cluster),
+    ...FLOOR_SYSTEM_PROPERTY_PATHS.flatMap(
+      (propertyPath) => propertyResults[propertyPath]!.traces,
+    ),
+  ];
 
   const constructionPhaseDecision = decisions.constructionPhase;
   const constructionPhase: FloorConstructionPhase =
@@ -452,11 +481,12 @@ function applyJoistSizeInference(system: FloorFramingSystem): FloorFramingSystem
 }
 
 function resolveOneArea(
-  subjectKey: string,
-  records: readonly Evidence[],
+  cluster: CanonicalEvidenceCluster,
   userDecisionIndex: UserDecisionIndex,
 ): FloorFramingArea {
-  const areaId = createFloorFramingAreaObjectId(subjectKey);
+  const subjectKey = cluster.canonicalSubjectKey;
+  const records = cluster.records;
+  const areaId = cluster.objectId;
   const propertyResults = Object.fromEntries(
     FLOOR_AREA_PROPERTY_PATHS.map((propertyPath) => {
       const result = resolvePropertyAuthority(
@@ -506,6 +536,7 @@ function resolveOneArea(
   ) as Record<FloorAreaPropertyPath, CandidateDecision>;
 
   const resolutionTraces = [
+    ...convergenceTraces(cluster),
     ...FLOOR_AREA_PROPERTY_PATHS.flatMap(
       (propertyPath) => propertyResults[propertyPath]!.traces,
     ),
@@ -704,35 +735,6 @@ type ResolvedSubjectIdentity = {
   kind: "floor-framing-system" | "floor-framing-area";
 };
 
-function assertNoObjectIdCollisions(
-  identities: readonly ResolvedSubjectIdentity[],
-): void {
-  const owners = new Map<string, { kind: string; subjectKeys: string[] }>();
-
-  for (const identity of identities) {
-    const existing = owners.get(identity.objectId);
-    if (existing) {
-      existing.subjectKeys.push(identity.subjectKey);
-    } else {
-      owners.set(identity.objectId, {
-        kind: identity.kind,
-        subjectKeys: [identity.subjectKey],
-      });
-    }
-  }
-
-  for (const [objectId, owner] of owners) {
-    if (owner.subjectKeys.length <= 1) {
-      continue;
-    }
-
-    const sortedSubjectKeys = [...owner.subjectKeys].sort(compareIds);
-    throw new Error(
-      `subjectKeys ${sortedSubjectKeys.map((key) => `"${key}"`).join(" and ")} both resolve to Floor Framing ${owner.kind} ObjectId ${objectId}.`,
-    );
-  }
-}
-
 function linkSystemAreaIds(
   systems: FloorFramingSystem[],
   areas: FloorFramingArea[],
@@ -761,7 +763,8 @@ function linkSystemAreaIds(
 /**
  * Deterministic Floor Framing resolver.
  *
- * Groups Evidence by subjectKind + subjectKey, resolves systems and areas
+ * Groups Evidence by subjectKind + subjectKey, converges raw subjectKeys that
+ * mint the same ObjectId into one domain object, resolves systems and areas
  * independently, links parent/child relationships, and preserves partial
  * objects when inputs are missing or conflicted. Optional User Decisions may
  * resolve missing or conflicted scalar properties before Evidence selection.
@@ -773,23 +776,29 @@ export function resolveFloorFraming(
   const systemGroups = groupBySubjectKind(evidence, "floor-framing-system");
   const areaGroups = groupBySubjectKind(evidence, "floor-framing-area");
 
-  const systemIdentities = [...systemGroups.keys()]
-    .sort(compareIds)
-    .map((subjectKey) => ({
-      subjectKey,
-      objectId: createFloorFramingSystemObjectId(subjectKey),
-      kind: "floor-framing-system" as const,
-    }));
+  const systemClusters = convergeEvidenceByCanonicalObjectId({
+    groups: systemGroups,
+    createObjectId: createFloorFramingSystemObjectId,
+  });
+  const areaClusters = convergeEvidenceByCanonicalObjectId({
+    groups: areaGroups,
+    createObjectId: createFloorFramingAreaObjectId,
+  });
 
-  const areaIdentities = [...areaGroups.keys()]
-    .sort(compareIds)
-    .map((subjectKey) => ({
-      subjectKey,
-      objectId: createFloorFramingAreaObjectId(subjectKey),
-      kind: "floor-framing-area" as const,
-    }));
-
-  assertNoObjectIdCollisions([...systemIdentities, ...areaIdentities]);
+  const systemIdentities: ResolvedSubjectIdentity[] = systemClusters.map(
+    (cluster) => ({
+      subjectKey: cluster.canonicalSubjectKey,
+      objectId: cluster.objectId,
+      kind: "floor-framing-system",
+    }),
+  );
+  const areaIdentities: ResolvedSubjectIdentity[] = areaClusters.map(
+    (cluster) => ({
+      subjectKey: cluster.canonicalSubjectKey,
+      objectId: cluster.objectId,
+      kind: "floor-framing-area",
+    }),
+  );
 
   const userDecisionIndex = buildFloorUserDecisionContext(
     evidence,
@@ -798,28 +807,22 @@ export function resolveFloorFraming(
     options,
   );
 
-  const systems = systemIdentities.map(({ subjectKey }) =>
-    applyJoistSizeInference(
-      resolveOneSystem(
-        subjectKey,
-        systemGroups.get(subjectKey)!,
-        userDecisionIndex,
-      ),
-    ),
+  const systems = systemClusters.map((cluster) =>
+    applyJoistSizeInference(resolveOneSystem(cluster, userDecisionIndex)),
   );
 
-  const systemCandidates = systemIdentities.map(({ subjectKey }) => ({
-    subjectKey,
-    records: systemGroups.get(subjectKey)!,
+  const systemCandidates = systemClusters.map((cluster) => ({
+    subjectKey: cluster.canonicalSubjectKey,
+    records: cluster.records,
   }));
 
-  const areas = areaIdentities.map(({ subjectKey }) => {
-    const areaRecords = areaGroups.get(subjectKey)!;
-    let area = resolveOneArea(subjectKey, areaRecords, userDecisionIndex);
+  const areas = areaClusters.map((cluster) => {
+    const areaRecords = cluster.records;
+    let area = resolveOneArea(cluster, userDecisionIndex);
     area = applyMemberLengthFromMisassignedSpan(area, areaRecords);
     area = applyInferredParentSystemLink(
       area,
-      subjectKey,
+      cluster.canonicalSubjectKey,
       areaRecords,
       systemCandidates,
     );

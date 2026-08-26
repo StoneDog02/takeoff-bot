@@ -92,27 +92,137 @@ describe("resolveSheathing", () => {
     );
   });
 
-  it("rejects subjectKeys that collide to the same ObjectId", () => {
-    assert.throws(
-      () =>
-        resolveSheathing([
-          sheathingEvidence(
-            "sheathing-system",
-            "SHS-001",
-            "E-A",
-            "name",
-            "System A",
-          ),
-          sheathingEvidence(
-            "sheathing-system",
-            "SHS 001",
-            "E-B",
-            "name",
-            "System B",
-          ),
-        ]),
-      /both resolve to Sheathing sheathing-system ObjectId SHS-001/,
+  it("converges subjectKeys that mint the same ObjectId into one system", () => {
+    const payload = resolveSheathing([
+      sheathingEvidence(
+        "sheathing-system",
+        "FLOOR SHEATHING",
+        "E-SPACE",
+        "application",
+        "floor",
+      ),
+      sheathingEvidence(
+        "sheathing-system",
+        "FLOOR-SHEATHING",
+        "E-HYPHEN",
+        "panelSpecification.panelType",
+        "T&G",
+      ),
+    ]);
+
+    assert.equal(payload.systems.length, 1);
+    assert.equal(payload.systems[0]?.id, "SHS-FLOOR-SHEATHING");
+    assert.equal(payload.systems[0]?.application, "floor");
+    assert.equal(payload.systems[0]?.panelSpecification.panelType, "T&G");
+    assert.ok(payload.systems[0]?.evidenceIds.includes("E-SPACE"));
+    assert.ok(payload.systems[0]?.evidenceIds.includes("E-HYPHEN"));
+    assert.ok(
+      payload.systems[0]?.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "subjectKey" &&
+          trace.explanation.includes("FLOOR SHEATHING") &&
+          trace.explanation.includes("FLOOR-SHEATHING"),
+      ),
     );
+  });
+
+  it("keeps conflicting property values fail-closed after identity convergence", () => {
+    const payload = resolveSheathing([
+      sheathingEvidence(
+        "sheathing-system",
+        "SHS-001",
+        "E-A",
+        "name",
+        "System A",
+      ),
+      sheathingEvidence(
+        "sheathing-system",
+        "SHS 001",
+        "E-B",
+        "name",
+        "System B",
+      ),
+    ]);
+
+    assert.equal(payload.systems.length, 1);
+    assert.equal(payload.systems[0]?.id, "SHS-001");
+    assert.equal(payload.systems[0]?.name, "SHS-001");
+    assert.ok(
+      payload.systems[0]?.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "name" && trace.method === "unresolved",
+      ),
+    );
+  });
+
+  it("does not merge sheathing-system and sheathing-area with similar text", () => {
+    const payload = resolveSheathing([
+      sheathingEvidence(
+        "sheathing-system",
+        "FLOOR SHEATHING",
+        "E-SYS",
+        "application",
+        "floor",
+      ),
+      sheathingEvidence(
+        "sheathing-area",
+        "FLOOR SHEATHING",
+        "E-AREA",
+        "areaSquareFeet",
+        100,
+      ),
+    ]);
+
+    assert.equal(payload.systems.length, 1);
+    assert.equal(payload.areas.length, 1);
+    assert.equal(payload.systems[0]?.id, "SHS-FLOOR-SHEATHING");
+    assert.equal(payload.areas[0]?.objectType, "sheathing-area");
+    assert.notEqual(payload.systems[0]?.id, payload.areas[0]?.id);
+  });
+
+  it("keeps distinct ObjectIds as separate systems", () => {
+    const payload = resolveSheathing([
+      ...buildSheathingEvidenceForWall001(),
+      ...buildSheathingEvidenceForWall001("SHS-002", "SHA-002", "E-SHS2"),
+    ]);
+    assert.equal(payload.systems.length, 2);
+    assert.deepEqual(
+      payload.systems.map((system) => system.id).sort(),
+      ["SHS-001", "SHS-002"],
+    );
+  });
+
+  it("enriches one system when a second pass adds compatible properties", () => {
+    const payload = resolveSheathing([
+      {
+        ...sheathingEvidence(
+          "sheathing-system",
+          "FLOOR SHEATHING",
+          "E-PASS1",
+          "application",
+          "floor",
+        ),
+        extractionPassId: "pass:wall-framing",
+        bundleId: "bundle:wall",
+      },
+      {
+        ...sheathingEvidence(
+          "sheathing-system",
+          "FLOOR-SHEATHING",
+          "E-PASS2",
+          "panelSpecification.thickness",
+          '3/4"',
+        ),
+        extractionPassId: "pass:referenced-detail",
+        bundleId: "bundle:detail",
+      },
+    ]);
+
+    assert.equal(payload.systems.length, 1);
+    assert.equal(payload.systems[0]?.application, "floor");
+    assert.equal(payload.systems[0]?.panelSpecification.thickness, '3/4"');
+    assert.ok(payload.systems[0]?.evidenceIds.includes("E-PASS1"));
+    assert.ok(payload.systems[0]?.evidenceIds.includes("E-PASS2"));
   });
 
   it("sorts systems and areas deterministically regardless of evidence order", () => {

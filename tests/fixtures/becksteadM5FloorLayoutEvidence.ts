@@ -127,6 +127,14 @@ export function buildBecksteadM5CrawlSpaceFloorEvidence(): Evidence[] {
     ),
     floorAreaEvidence(
       "FLOOR-AREA-CRAWL-SPACE",
+      "E-FFA-CRAWL-PARENT",
+      "parentSystemTag",
+      "FLOOR-SYS-CRAWL-SPACE",
+      "FLOOR SYS CRAWL SPACE",
+      "Explicit parent system tag linking crawl area to crawl space floor system.",
+    ),
+    floorAreaEvidence(
+      "FLOOR-AREA-CRAWL-SPACE",
       "E-FFA-CRAWL-LAYOUTLENGTH-40",
       "joistLayoutLengthFeet",
       40,

@@ -262,4 +262,82 @@ describe("coordinateFramingConfidence", () => {
 
     confidencePayloadSchema.parse(payload);
   });
+
+  it("includes floor, roof, and sheathing object evaluations when payloads are supplied", () => {
+    const validation = {
+      validationIssues: [],
+      validationResults: [],
+      reviewItems: [],
+    };
+    const payload = coordinateFramingConfidence({
+      pipelineRunId: "RUN-001",
+      scopeName: "framing",
+      validation,
+      floorFraming: {
+        systems: [
+          {
+            id: "FS-001",
+            objectType: "floor-framing-system" as const,
+            completion: complete,
+            reviewStatus: "no-review-required" as const,
+            blockingStatus: "not-blocked" as const,
+            evidenceIds: [],
+            assumptionIds: [],
+            validationIssueIds: [],
+            reviewItemIds: [],
+            resolutionTraces: [],
+            name: "Main floor",
+            level: "Level 1",
+          },
+        ],
+        areas: [],
+      },
+      roofFraming: {
+        systems: [],
+        planes: [
+          {
+            id: "RP-001",
+            objectType: "roof-plane" as const,
+            completion: complete,
+            reviewStatus: "no-review-required" as const,
+            blockingStatus: "not-blocked" as const,
+            evidenceIds: [],
+            assumptionIds: [],
+            validationIssueIds: [],
+            reviewItemIds: [],
+            resolutionTraces: [],
+            name: "Roof plane A",
+            pitch: null,
+          },
+        ],
+      },
+      sheathing: {
+        systems: [
+          {
+            id: "SH-001",
+            objectType: "sheathing-system" as const,
+            completion: complete,
+            reviewStatus: "no-review-required" as const,
+            blockingStatus: "not-blocked" as const,
+            evidenceIds: [],
+            assumptionIds: [],
+            validationIssueIds: [],
+            reviewItemIds: [],
+            resolutionTraces: [],
+            name: "Wall sheathing",
+            material: "OSB",
+          },
+        ],
+        areas: [],
+      },
+    });
+
+    const objectTypes = payload.confidenceEvaluations
+      .filter((evaluation) => evaluation.target.kind === "object")
+      .map((evaluation) => evaluation.target.objectType);
+
+    assert.ok(objectTypes.includes("floor-framing-system"));
+    assert.ok(objectTypes.includes("roof-plane"));
+    assert.ok(objectTypes.includes("sheathing-system"));
+  });
 });

@@ -173,7 +173,7 @@ describe("buildFramingExtractionWorkPlan Beckstead routing (fixture)", () => {
     }
   });
 
-  it("uses default wall, floor, and roof intents", () => {
+  it("uses default wall, floor, roof, openings, structural-members, and sheathing intents", () => {
     const pages = loadBecksteadClassification();
     const plan = buildFramingExtractionWorkPlan({
       planIndex: planIndexWithPages(11),

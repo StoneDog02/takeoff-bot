@@ -42,6 +42,10 @@ import { classifiedPlanPageSchema } from "../../../plans/pageClassification.js";
 import { compiledDrawingPageSchema } from "../../../drawing-compiler/schemas/compiledDrawingPage.schema.js";
 import { governedProjectDictionarySchema } from "../../../project-interpreter/schemas/projectDictionary.schema.js";
 import { extractionBudgetAuditSchema } from "../extraction/extractionBudgetAudit.schema.js";
+import { planReferenceTraceSchema } from "../extraction/planReferenceTrace.schema.js";
+import {
+  framingPackageProductStateSchema,
+} from "../observability/framingPackageProductState.schema.js";
 
 export const verifiedPlanSetPayloadSchema = z.object({
   pdfPath: z.string().trim().min(1),
@@ -239,6 +243,16 @@ export const extractionBudgetAuditArtifactSchema =
   createTypedArtifactEnvelopeSchema(
     "extraction-budget-audit",
     extractionBudgetAuditSchema,
+  );
+export const planReferenceTraceArtifactSchema =
+  createTypedArtifactEnvelopeSchema(
+    "plan-reference-trace",
+    planReferenceTraceSchema,
+  );
+export const framingPackageProductStateArtifactSchema =
+  createTypedArtifactEnvelopeSchema(
+    "framing-package-product-state",
+    framingPackageProductStateSchema,
   );
 export const compiledDrawingPagesArtifactSchema =
   createTypedArtifactEnvelopeSchema(

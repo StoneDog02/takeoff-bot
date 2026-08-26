@@ -31,11 +31,20 @@ import {
   type UserDecisionPropertyPath,
 } from "./applyUserDecisions.js";
 import {
+  convergeEvidenceByCanonicalObjectId,
+  formatSubjectKeyConvergenceNote,
+  type CanonicalEvidenceCluster,
+} from "./convergeEvidenceByCanonicalObjectId.js";
+import {
   createOpeningObjectId,
   createSheathingAreaObjectId,
   createSheathingSystemObjectId,
   createWallObjectId,
 } from "./ids.js";
+import {
+  parentSystemLinkTrace,
+  resolveSheathingAreaParentSystemLink,
+} from "./resolveSheathingAreaParentSystem.js";
 import {
   isResolvedSheathingAreaPropertyValue,
   isResolvedSheathingSystemPropertyValue,
@@ -315,12 +324,33 @@ function collectRelationshipTags(
   };
 }
 
+function convergenceTraces(
+  cluster: CanonicalEvidenceCluster,
+): PropertyResolutionTrace[] {
+  const note = formatSubjectKeyConvergenceNote(
+    cluster.rawSubjectKeys,
+    cluster.objectId,
+  );
+  if (!note) {
+    return [];
+  }
+  return [
+    createTrace(
+      "subjectKey",
+      "supported-inference",
+      note,
+      cluster.records.map((record) => record.id),
+    ),
+  ];
+}
+
 function resolveOneSystem(
-  subjectKey: string,
-  records: readonly Evidence[],
+  cluster: CanonicalEvidenceCluster,
   userDecisionIndex: UserDecisionIndex,
 ): SheathingSystem {
-  const systemId = createSheathingSystemObjectId(subjectKey);
+  const subjectKey = cluster.canonicalSubjectKey;
+  const records = cluster.records;
+  const systemId = cluster.objectId;
   const propertyResults = Object.fromEntries(
     SHEATHING_SYSTEM_PROPERTY_PATHS.map((propertyPath) => {
       const result = resolvePropertyAuthority(
@@ -348,9 +378,12 @@ function resolveOneSystem(
     ]),
   ) as Record<SheathingSystemPropertyPath, CandidateDecision>;
 
-  const resolutionTraces = SHEATHING_SYSTEM_PROPERTY_PATHS.flatMap(
-    (propertyPath) => propertyResults[propertyPath]!.traces,
-  );
+  const resolutionTraces = [
+    ...convergenceTraces(cluster),
+    ...SHEATHING_SYSTEM_PROPERTY_PATHS.flatMap(
+      (propertyPath) => propertyResults[propertyPath]!.traces,
+    ),
+  ];
 
   const applicationDecision = decisions.application;
   const application: SheathingApplication =
@@ -431,11 +464,11 @@ function resolveOneSystem(
 }
 
 function resolveOneArea(
-  subjectKey: string,
-  records: readonly Evidence[],
+  cluster: CanonicalEvidenceCluster,
   userDecisionIndex: UserDecisionIndex,
 ): SheathingArea {
-  const areaId = createSheathingAreaObjectId(subjectKey);
+  const records = cluster.records;
+  const areaId = cluster.objectId;
   const propertyResults = Object.fromEntries(
     SHEATHING_AREA_PROPERTY_PATHS.map((propertyPath) => {
       const result = resolvePropertyAuthority(
@@ -492,6 +525,7 @@ function resolveOneArea(
   ) as Record<SheathingAreaPropertyPath, CandidateDecision>;
 
   const resolutionTraces = [
+    ...convergenceTraces(cluster),
     ...SHEATHING_AREA_PROPERTY_PATHS.flatMap(
       (propertyPath) => propertyResults[propertyPath]!.traces,
     ),
@@ -543,33 +577,49 @@ type ResolvedSubjectIdentity = {
   subjectKey: string;
   objectId: ObjectId;
   kind: "sheathing-system" | "sheathing-area";
+  rawSubjectKeys: string[];
 };
 
-function assertNoObjectIdCollisions(identities: readonly ResolvedSubjectIdentity[]): void {
-  const owners = new Map<string, { kind: string; subjectKeys: string[] }>();
-
-  for (const identity of identities) {
-    const existing = owners.get(identity.objectId);
-    if (existing) {
-      existing.subjectKeys.push(identity.subjectKey);
-    } else {
-      owners.set(identity.objectId, {
-        kind: identity.kind,
-        subjectKeys: [identity.subjectKey],
-      });
-    }
+function applyInferredParentSystemLink(
+  area: SheathingArea,
+  areaSubjectKey: string,
+  areaRecords: readonly Evidence[],
+  explicitParentSystemTag: string | null,
+  systemCandidates: ReadonlyArray<{
+    subjectKey: string;
+    records: readonly Evidence[];
+  }>,
+): SheathingArea {
+  if (!area.parentSystemId.endsWith("UNRESOLVED")) {
+    return area;
   }
 
-  for (const [objectId, owner] of owners) {
-    if (owner.subjectKeys.length <= 1) {
-      continue;
-    }
+  const link = resolveSheathingAreaParentSystemLink({
+    areaSubjectKey,
+    areaRecords,
+    explicitParentSystemTag,
+    systemCandidates,
+  });
 
-    const sortedSubjectKeys = [...owner.subjectKeys].sort(compareIds);
-    throw new Error(
-      `subjectKeys ${sortedSubjectKeys.map((key) => `"${key}"`).join(" and ")} both resolve to Sheathing ${owner.kind} ObjectId ${objectId}.`,
-    );
+  if (!link) {
+    return area;
   }
+
+  const parentTrace = parentSystemLinkTrace(link);
+  const filteredTraces = area.resolutionTraces.filter(
+    (trace) => trace.propertyPath !== "parentSystemTag",
+  );
+
+  return {
+    ...area,
+    parentSystemId: link.systemId,
+    resolutionTraces: [...filteredTraces, parentTrace],
+    evidenceIds: uniqueSortedIds([...area.evidenceIds, ...link.evidenceIds]),
+    completion: createCompletion(
+      (area.completion.completedItems ?? 0) + 1,
+      area.completion.totalItems ?? SHEATHING_AREA_PROPERTY_PATHS.length + 1,
+    ),
+  };
 }
 
 function linkSystemAreaIds(
@@ -600,7 +650,8 @@ function linkSystemAreaIds(
 /**
  * Deterministic Sheathing resolver.
  *
- * Groups Evidence by subjectKind + subjectKey, resolves systems and areas
+ * Groups Evidence by subjectKind + subjectKey, converges raw subjectKeys that
+ * mint the same ObjectId into one domain object, resolves systems and areas
  * independently, links parent/child relationships, and preserves partial
  * objects when inputs are missing or conflicted. Optional User Decisions may
  * resolve missing or conflicted scalar properties before Evidence selection.
@@ -612,23 +663,31 @@ export function resolveSheathing(
   const systemGroups = groupBySubjectKind(evidence, "sheathing-system");
   const areaGroups = groupBySubjectKind(evidence, "sheathing-area");
 
-  const systemIdentities = [...systemGroups.keys()]
-    .sort(compareIds)
-    .map((subjectKey) => ({
-      subjectKey,
-      objectId: createSheathingSystemObjectId(subjectKey),
+  const systemClusters = convergeEvidenceByCanonicalObjectId({
+    groups: systemGroups,
+    createObjectId: createSheathingSystemObjectId,
+  });
+  const areaClusters = convergeEvidenceByCanonicalObjectId({
+    groups: areaGroups,
+    createObjectId: createSheathingAreaObjectId,
+  });
+
+  const systemIdentities: ResolvedSubjectIdentity[] = systemClusters.map(
+    (cluster) => ({
+      subjectKey: cluster.canonicalSubjectKey,
+      objectId: cluster.objectId,
       kind: "sheathing-system" as const,
-    }));
-
-  const areaIdentities = [...areaGroups.keys()]
-    .sort(compareIds)
-    .map((subjectKey) => ({
-      subjectKey,
-      objectId: createSheathingAreaObjectId(subjectKey),
+      rawSubjectKeys: cluster.rawSubjectKeys,
+    }),
+  );
+  const areaIdentities: ResolvedSubjectIdentity[] = areaClusters.map(
+    (cluster) => ({
+      subjectKey: cluster.canonicalSubjectKey,
+      objectId: cluster.objectId,
       kind: "sheathing-area" as const,
-    }));
-
-  assertNoObjectIdCollisions([...systemIdentities, ...areaIdentities]);
+      rawSubjectKeys: cluster.rawSubjectKeys,
+    }),
+  );
 
   const userDecisionIndex = buildSheathingUserDecisionContext(
     evidence,
@@ -637,16 +696,42 @@ export function resolveSheathing(
     options,
   );
 
-  const systems = systemIdentities.map(({ subjectKey }) =>
-    resolveOneSystem(
-      subjectKey,
-      systemGroups.get(subjectKey)!,
-      userDecisionIndex,
-    ),
+  const systems = systemClusters.map((cluster) =>
+    resolveOneSystem(cluster, userDecisionIndex),
   );
-  const areas = areaIdentities.map(({ subjectKey }) =>
-    resolveOneArea(subjectKey, areaGroups.get(subjectKey)!, userDecisionIndex),
-  );
+
+  const systemCandidates = systemClusters.map((cluster) => ({
+    subjectKey: cluster.canonicalSubjectKey,
+    records: cluster.records,
+  }));
+
+  const areas = areaClusters.map((cluster) => {
+    const areaRecords = cluster.records;
+    let area = resolveOneArea(cluster, userDecisionIndex);
+    const parentSystemDecision = selectCandidate(
+      areaRecords,
+      "parentSystemTag",
+      (path, candidateValue) =>
+        normalizeSheathingAreaRelationshipCandidate(
+          path as SheathingAreaRelationshipPropertyPath,
+          candidateValue,
+        ),
+    );
+    const explicitParentSystemTag =
+      parentSystemDecision.kind === "resolved"
+        ? (parentSystemDecision.value as string)
+        : null;
+
+    area = applyInferredParentSystemLink(
+      area,
+      cluster.canonicalSubjectKey,
+      areaRecords,
+      explicitParentSystemTag,
+      systemCandidates,
+    );
+
+    return area;
+  });
 
   return sheathingPayloadSchema.parse({
     systems: linkSystemAreaIds(systems, areas),

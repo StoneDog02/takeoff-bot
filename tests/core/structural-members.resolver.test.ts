@@ -409,14 +409,23 @@ describe("resolveStructuralMembers", () => {
     );
   });
 
-  it("throws when distinct subjectKeys sanitize to the same Structural Member ObjectId", () => {
-    assert.throws(
-      () =>
-        resolveStructuralMembers([
-          ...completeHeaderEvidence("HDR 001", "E-HDR-A"),
-          ...completeHeaderEvidence("HDR-001", "E-HDR-B"),
-        ]),
-      /both resolve to Structural Member ObjectId SM-HDR-001/,
+  it("converges subjectKeys that mint the same ObjectId into one member", () => {
+    const payload = resolveStructuralMembers([
+      ...completeHeaderEvidence("HDR 001", "E-HDR-A"),
+      ...completeHeaderEvidence("HDR-001", "E-HDR-B"),
+    ]);
+
+    assert.equal(payload.structuralMembers.length, 1);
+    assert.equal(payload.structuralMembers[0]?.id, "SM-HDR-001");
+    assert.ok(payload.structuralMembers[0]?.evidenceIds.includes("E-HDR-A-CATEGORY"));
+    assert.ok(payload.structuralMembers[0]?.evidenceIds.includes("E-HDR-B-CATEGORY"));
+    assert.ok(
+      payload.structuralMembers[0]?.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "subjectKey" &&
+          trace.explanation.includes("HDR 001") &&
+          trace.explanation.includes("HDR-001"),
+      ),
     );
   });
 
