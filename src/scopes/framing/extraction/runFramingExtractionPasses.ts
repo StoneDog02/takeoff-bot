@@ -2,11 +2,17 @@ import { aggregateExtractionEvidencePasses } from "../../../plans/aggregateExtra
 import type { PlanIndex } from "../../../plans/PlanIndex.js";
 import type { FramingExtractionIntent } from "../../../plans/deriveRoleAssignmentsFromPageClassification.js";
 import type { ClassifiedPlanPage } from "../../../plans/pageClassification.js";
+import type { CompiledDrawingPage } from "../../../drawing-compiler/schemas/compiledDrawingPage.schema.js";
+import type { GovernedProjectDictionary } from "../../../project-interpreter/schemas/projectDictionary.schema.js";
 import {
   extractFramingEvidenceViaClaude,
   type ExtractFramingEvidenceInput,
 } from "../prompts/extractFramingEvidence.js";
 import type { ExtractedFramingEvidencePayload } from "../schemas/framing-artifacts.schema.js";
+import {
+  auditExtractionProjectContext,
+  buildExtractionProjectContext,
+} from "./buildExtractionProjectContext.js";
 import { drainPlanReferenceFollowUps } from "./drainPlanReferenceFollowUps.js";
 import {
   buildFramingExtractionWorkPlan,
@@ -21,6 +27,8 @@ export interface RunFramingExtractionPassesInput {
   pageClassification: ExtractFramingEvidenceInput["pageClassification"];
   planReadingOrder: ExtractFramingEvidenceInput["planReadingOrder"];
   buildingAssemblies: ExtractFramingEvidenceInput["buildingAssemblies"];
+  projectDictionary?: GovernedProjectDictionary | null;
+  compiledPages?: readonly CompiledDrawingPage[];
   scopeName?: string;
   intents?: readonly FramingExtractionIntent[];
   pageVisuals?: ExtractFramingEvidenceInput["pageVisuals"];
@@ -69,13 +77,30 @@ export async function runFramingExtractionPasses(
     stamp: { extractionPassId: string; bundleId: string };
     evidence: ExtractedFramingEvidencePayload["evidence"];
   }> = [];
+  const compiledPages = input.compiledPages ?? [];
+  const dictionary = input.projectDictionary ?? null;
+  const enrichedWorkUnits = [...workPlan.audit.workUnits];
 
-  for (const workUnit of workPlan.workUnits) {
+  for (const [index, workUnit] of workPlan.workUnits.entries()) {
+    const extractionProjectContext = buildExtractionProjectContext({
+      intent: workUnit.bundle.intent,
+      bundle: workUnit.bundle,
+      dictionary,
+      compiledPages,
+      buildingAssemblies: input.buildingAssemblies,
+    });
+    const contextAudit = auditExtractionProjectContext(extractionProjectContext);
+    enrichedWorkUnits[index] = {
+      ...enrichedWorkUnits[index]!,
+      ...contextAudit,
+    };
+
     const passResult = await extractFramingEvidenceViaClaude({
       planIndex: input.planIndex,
       pageClassification: input.pageClassification,
       planReadingOrder: input.planReadingOrder,
       buildingAssemblies: input.buildingAssemblies,
+      extractionProjectContext,
       extractionBundle: workUnit.bundle,
       pageVisuals: input.pageVisuals,
       visualOutputDir: input.visualOutputDir,
@@ -147,7 +172,10 @@ export async function runFramingExtractionPasses(
 
   return {
     payload: { evidence },
-    audit: workPlan.audit,
+    audit: {
+      ...workPlan.audit,
+      workUnits: enrichedWorkUnits,
+    },
     apiCallCount,
     planReferenceTrace,
   };

@@ -54,6 +54,10 @@ import {
   type RoofPlaneRelationshipPropertyPath,
   type RoofSystemPropertyPath,
 } from "./roofFramingPropertyPaths.js";
+import {
+  parentSystemLinkTrace,
+  resolveRoofPlaneParentSystemLink,
+} from "./resolveRoofPlaneParentSystem.js";
 
 export type ResolveRoofFramingOptions = {
   userDecisions?: readonly UserDecision[];
@@ -560,6 +564,48 @@ type ResolvedSubjectIdentity = {
   kind: "roof-framing-system" | "roof-plane";
 };
 
+function applyExplicitParentSystemLink(
+  plane: RoofPlane,
+  planeSubjectKey: string,
+  planeRecords: readonly Evidence[],
+  explicitParentSystemTag: string | null,
+  systemCandidates: ReadonlyArray<{
+    subjectKey: string;
+    records: readonly Evidence[];
+  }>,
+): RoofPlane {
+  if (!plane.parentSystemId.endsWith("UNRESOLVED")) {
+    return plane;
+  }
+
+  const link = resolveRoofPlaneParentSystemLink({
+    planeSubjectKey,
+    planeRecords,
+    explicitParentSystemTag,
+    systemCandidates,
+  });
+
+  if (!link) {
+    return plane;
+  }
+
+  const parentTrace = parentSystemLinkTrace(link);
+  const filteredTraces = plane.resolutionTraces.filter(
+    (trace) => trace.propertyPath !== "parentSystemTag",
+  );
+
+  return {
+    ...plane,
+    parentSystemId: link.systemId,
+    resolutionTraces: [...filteredTraces, parentTrace],
+    evidenceIds: uniqueSortedIds([...plane.evidenceIds, ...link.evidenceIds]),
+    completion: createCompletion(
+      (plane.completion.completedItems ?? 0) + 1,
+      plane.completion.totalItems ?? ROOF_PLANE_PROPERTY_PATHS.length + 1,
+    ),
+  };
+}
+
 function linkSystemPlaneIds(
   systems: RoofFramingSystem[],
   planes: RoofPlane[],
@@ -635,9 +681,39 @@ export function resolveRoofFraming(
   const systems = systemClusters.map((cluster) =>
     resolveOneSystem(cluster, userDecisionIndex),
   );
-  const planes = planeClusters.map((cluster) =>
-    resolveOnePlane(cluster, userDecisionIndex),
-  );
+
+  const systemCandidates = systemClusters.map((cluster) => ({
+    subjectKey: cluster.canonicalSubjectKey,
+    records: cluster.records,
+  }));
+
+  const planes = planeClusters.map((cluster) => {
+    const planeRecords = cluster.records;
+    let plane = resolveOnePlane(cluster, userDecisionIndex);
+    const parentSystemDecision = selectCandidate(
+      planeRecords,
+      "parentSystemTag",
+      (path, candidateValue) =>
+        normalizeRoofPlaneRelationshipCandidate(
+          path as RoofPlaneRelationshipPropertyPath,
+          candidateValue,
+        ),
+    );
+    const explicitParentSystemTag =
+      parentSystemDecision.kind === "resolved"
+        ? (parentSystemDecision.value as string)
+        : null;
+
+    plane = applyExplicitParentSystemLink(
+      plane,
+      cluster.canonicalSubjectKey,
+      planeRecords,
+      explicitParentSystemTag,
+      systemCandidates,
+    );
+
+    return plane;
+  });
 
   return roofFramingPayloadSchema.parse({
     systems: linkSystemPlaneIds(systems, planes),

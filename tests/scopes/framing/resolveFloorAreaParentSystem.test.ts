@@ -39,7 +39,7 @@ describe("resolveFloorAreaParentSystemLink", () => {
     assert.ok(link.evidenceIds.includes("E-FFA-CRAWL-PARENT"));
   });
 
-  it("links via shared assembly callout when one system uniquely corroborates", () => {
+  it("fail-closes when only shared assembly callout corroborates without parentSystemTag", () => {
     const sharedText =
       '11.7/8" TJI 210 FLOOR JOISTS AT 16" O.C. OVER (MAX. SPAN = 17\'-0")';
     const source = {
@@ -82,10 +82,58 @@ describe("resolveFloorAreaParentSystemLink", () => {
       systemCandidates,
     });
 
-    assert.ok(link);
-    assert.equal(link.systemSubjectKey, "FFS-CRAWL-SPACE-FLOOR-FRAMING");
-    assert.equal(link.method, "shared-assembly-callout");
-    assert.equal(link.requiresReview, true);
+    assert.equal(link, null);
+  });
+
+  it("fail-closes when same-page shared elementLabel lacks parentSystemTag", () => {
+    const source = {
+      page: {
+        documentId: null,
+        pageNumber: 4,
+        sheetId: null,
+        sheetTitle: null,
+        pageLabel: null,
+        revision: null,
+      },
+      region: null,
+      elementLabel: "MAIN FLOOR SYSTEM",
+      detailNumber: null,
+      sectionNumber: null,
+      scheduleName: null,
+      noteReference: null,
+    };
+
+    const areaRecords = [
+      {
+        id: "E-AREA-SF",
+        propertyPath: "areaSquareFeet",
+        originalText: "1621 SF",
+        source,
+      },
+    ] as never;
+
+    const systemCandidates = [
+      {
+        subjectKey: "FFS-MAIN-FLOOR-SYSTEM",
+        records: [
+          {
+            id: "E-SYS-NOTE",
+            propertyPath: "assembly.joistType",
+            originalText: "floor joists",
+            source,
+          },
+        ] as never,
+      },
+    ];
+
+    const link = resolveFloorAreaParentSystemLink({
+      areaSubjectKey: "FFA-MAIN-FLOOR-AREA",
+      areaRecords,
+      explicitParentSystemTag: null,
+      systemCandidates,
+    });
+
+    assert.equal(link, null);
   });
 
   it("fail-closes when shared callout ties and semantic identity is ambiguous", () => {

@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import type { PlanIndex } from "../../src/plans/PlanIndex.js";
 import {
+  buildExtractionUserContent,
   buildSystemPrompt,
   selectPagesForExtraction,
 } from "../../src/scopes/framing/prompts/extractFramingEvidence.js";
@@ -395,5 +396,65 @@ describe("extracted framing evidence output contract", () => {
     assert.equal(evidence?.references[0]?.type, "schedule");
     assert.equal(evidence?.type, "dimension");
     assert.equal(evidence?.relationship, "supports");
+  });
+
+  it("includes parentSystemTag relationship examples in system prompt", () => {
+    const prompt = buildSystemPrompt("construction-brain-context");
+    assert.match(prompt, /parentSystemTag/);
+    assert.match(prompt, /floor-framing-area/);
+    assert.match(prompt, /Shared assembly callout text alone does not establish/);
+  });
+
+  it("includes project context block in extraction preamble when provided", async () => {
+    const blocks = await buildExtractionUserContent({
+      pages: [
+        {
+          pageNumber: 4,
+          sheetId: "A1",
+          label: "Floor Plan",
+          textContent: "MAIN FLOOR AREA = 1621 SF",
+        },
+      ],
+      buildingAssemblies: { assemblyNames: [], notes: [] },
+      extractionBundle: {
+        bundleId: "test:floor",
+        scopeName: "framing",
+        intent: "floor-framing",
+        orderedPageNumbers: [4],
+        members: [
+          {
+            pageNumber: 4,
+            role: "primary",
+            visualDetailLevel: "none",
+            sheetId: null,
+            label: null,
+            reason: "test",
+          },
+        ],
+        routingNotes: [],
+        imageBudget: {
+          maxImages: 20,
+          estimatedImages: 0,
+          tilesPerDetailedPage: 4,
+        },
+      },
+      extractionProjectContext: {
+        intent: "floor-framing",
+        bundlePageNumbers: [4],
+        knownSystemTags: ["FFS-MAIN-FLOOR-SYSTEM"],
+        knownAreaTags: ["FFA-MAIN-FLOOR-AREA"],
+        dictionaryBindings: [],
+        crossPageNotes: [],
+        contextDisclaimer: "CONTEXT ONLY — not plan evidence",
+      },
+    });
+
+    const text = blocks
+      .filter((block) => block.type === "text")
+      .map((block) => ("text" in block ? block.text : ""))
+      .join("\n");
+    assert.match(text, /Project context \(not plan text\)/);
+    assert.match(text, /FFS-MAIN-FLOOR-SYSTEM/);
+    assert.match(text, /Do not emit relationships from context alone/);
   });
 });

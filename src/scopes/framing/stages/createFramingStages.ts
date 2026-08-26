@@ -12,6 +12,8 @@ import { computePlanSourceFingerprint } from "../../../plans/computePlanSourceFi
 import { buildPlanReadingOrderFromClassification } from "../../../plans/buildPlanReadingOrder.js";
 import { resolvePageClassificationForPipeline } from "../../../plans/resolvePageClassificationForPipeline.js";
 import { runFramingExtractionPasses } from "../extraction/runFramingExtractionPasses.js";
+import { buildRelationshipEmissionAudit } from "../extraction/buildRelationshipEmissionAudit.js";
+import { relationshipEmissionAuditArtifactSchema } from "../extraction/relationshipEmissionAudit.schema.js";
 import {
   buildFramingPackageProductState,
 } from "../observability/buildFramingPackageProductState.js";
@@ -30,6 +32,8 @@ import { DictionaryGovernor } from "../../../project-interpreter/dictionaryGover
 import type { ProjectOrientationContext } from "../../../project-interpreter/projectOrientationContext.js";
 import type { SemanticDefinition } from "../../../drawing-compiler/schemas/semanticDefinition.schema.js";
 import { buildGeometryEvidenceFromCompiledPages } from "../geometry/buildGeometryEvidenceFromCompiledPages.js";
+import { buildAreaSystemRelationshipEvidence } from "../geometry/buildAreaSystemRelationshipEvidence.js";
+import { buildConstructionSemanticRelationshipEvidence } from "../geometry/buildConstructionSemanticRelationshipEvidence.js";
 import { buildGovernedSemanticCompilerEvidence } from "../geometry/buildGovernedSemanticCompilerEvidence.js";
 import { buildSemanticBindingEvidenceFromCompiledPages } from "../geometry/buildSemanticBindingEvidenceFromCompiledPages.js";
 import {
@@ -176,6 +180,7 @@ const PROJECT_DICTIONARY_COMPANION_SUFFIX = "project-dictionary";
 const SEMANTIC_BINDING_AUDIT_COMPANION_SUFFIX = "semantic-binding-audit";
 const EXTRACTION_WORK_UNITS_COMPANION_SUFFIX = "extraction-work-units";
 const PLAN_REFERENCE_QUEUE_COMPANION_SUFFIX = "plan-reference-queue";
+const RELATIONSHIP_EMISSION_AUDIT_COMPANION_SUFFIX = "relationship-emission-audit";
 const PACKAGE_PRODUCT_STATE_COMPANION_SUFFIX = "package-product-state";
 const WALL_FRAMING_OPENING_LINKS_COMPANION_SUFFIX = "wall-framing-links";
 const OPENINGS_HEADER_LINKS_COMPANION_SUFFIX = "openings-header-links";
@@ -661,6 +666,14 @@ const stages: PipelineStage[] = [
         context,
         "buildingAssemblies",
       );
+      const compiledPages = getPayload<CompiledDrawingPagesPayload>(
+        context,
+        "compiledDrawingPages",
+      );
+      const dictionaryEnvelope = context.completedArtifacts.get("projectDictionary");
+      const dictionaryPayload = dictionaryEnvelope
+        ? projectDictionaryArtifactSchema.parse(dictionaryEnvelope).payload
+        : null;
 
       let claudePayload: ExtractedFramingEvidencePayload;
       if (context.useMockAi) {
@@ -672,6 +685,8 @@ const stages: PipelineStage[] = [
           pageClassification,
           planReadingOrder,
           buildingAssemblies,
+          projectDictionary: dictionaryPayload,
+          compiledPages: compiledPages.pages,
           scopeName: context.scopeName,
         });
         claudePayload = extractionResult.payload;
@@ -701,10 +716,6 @@ const stages: PipelineStage[] = [
         }
       }
 
-      const compiledPages = getPayload<CompiledDrawingPagesPayload>(
-        context,
-        "compiledDrawingPages",
-      );
       const geometryEvidence = buildGeometryEvidenceFromCompiledPages(
         compiledPages.pages,
       );
@@ -715,10 +726,37 @@ const stages: PipelineStage[] = [
 
       let evidence = merged.evidence;
 
-      const dictionaryEnvelope = context.completedArtifacts.get("projectDictionary");
-      const dictionaryPayload = dictionaryEnvelope
-        ? projectDictionaryArtifactSchema.parse(dictionaryEnvelope).payload
-        : null;
+      const bridgeEvidence = buildAreaSystemRelationshipEvidence(
+        evidence,
+        dictionaryPayload,
+      );
+      if (bridgeEvidence.length > 0) {
+        evidence = [...evidence, ...bridgeEvidence];
+      }
+
+      const constructionSemanticResult = buildConstructionSemanticRelationshipEvidence({
+        evidence,
+        classifiedPages: pageClassification.pages,
+      });
+      if (constructionSemanticResult.evidence.length > 0) {
+        evidence = [...evidence, ...constructionSemanticResult.evidence];
+      }
+
+      context.stageSideEffects.publishCompanionArtifact(
+        RELATIONSHIP_EMISSION_AUDIT_COMPANION_SUFFIX,
+        createFramingStageArtifact(
+          context,
+          6,
+          relationshipEmissionAuditArtifactSchema,
+          "relationship-emission-audit",
+          buildRelationshipEmissionAudit(
+            evidence,
+            constructionSemanticResult.audit,
+          ),
+          { type: "system", identifier: "area-system-relationship-bridge" },
+        ),
+      );
+
       const wallAssemblyNoteTexts = await collectWallAssemblyNoteTexts({
         pdfPath: context.planIndex.pdfPath,
         pageNumbers: [1, 3, 4].filter(

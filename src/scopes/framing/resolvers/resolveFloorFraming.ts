@@ -692,6 +692,7 @@ function applyInferredParentSystemLink(
   area: FloorFramingArea,
   areaSubjectKey: string,
   areaRecords: readonly Evidence[],
+  explicitParentSystemTag: string | null,
   systemCandidates: ReadonlyArray<{
     subjectKey: string;
     records: readonly Evidence[];
@@ -704,7 +705,7 @@ function applyInferredParentSystemLink(
   const link = resolveFloorAreaParentSystemLink({
     areaSubjectKey,
     areaRecords,
-    explicitParentSystemTag: null,
+    explicitParentSystemTag,
     systemCandidates,
   });
 
@@ -820,10 +821,24 @@ export function resolveFloorFraming(
     const areaRecords = cluster.records;
     let area = resolveOneArea(cluster, userDecisionIndex);
     area = applyMemberLengthFromMisassignedSpan(area, areaRecords);
+    const parentSystemDecision = selectCandidate(
+      areaRecords,
+      "parentSystemTag",
+      (path, candidateValue) =>
+        normalizeFloorAreaRelationshipCandidate(
+          path as FloorAreaRelationshipPropertyPath,
+          candidateValue,
+        ),
+    );
+    const explicitParentSystemTag =
+      parentSystemDecision.kind === "resolved"
+        ? (parentSystemDecision.value as string)
+        : null;
     area = applyInferredParentSystemLink(
       area,
       cluster.canonicalSubjectKey,
       areaRecords,
+      explicitParentSystemTag,
       systemCandidates,
     );
 

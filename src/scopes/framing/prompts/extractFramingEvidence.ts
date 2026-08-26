@@ -37,6 +37,7 @@ import {
   type PlanReadingOrderPayload,
 } from "../schemas/framing-artifacts.schema.js";
 import { resolveExtractionBrainPackPaths } from "../extraction/framingExtractionBrainPacks.js";
+import type { ExtractionProjectContext } from "../extraction/extractionProjectContext.schema.js";
 
 export interface ExtractFramingEvidenceInput {
   planIndex: PlanIndex;
@@ -46,6 +47,8 @@ export interface ExtractFramingEvidenceInput {
     assemblyNames: string[];
     notes: string[];
   };
+  /** Intent-scoped project context (O1) — not Evidence truth. */
+  extractionProjectContext?: ExtractionProjectContext | null;
   /**
    * Optional pre-rendered page visuals. When omitted, pages with empty text
    * layers are rendered on demand into `visualOutputDir` (or a temp directory).
@@ -424,6 +427,13 @@ sheathing extraction rules (this stage):
   explicitly stated.
 - Emit areaSquareFeet only when the page text explicitly states the sheathing
   coverage area in square feet for that area tag.
+- Emit parentSystemTag only when the source explicitly states the parent sheathing
+  system reference for that area tag — not from same-sheet co-location or shared
+  spec text alone.
+- When a global/support-page note in this bundle explicitly names both a sheathing
+  area tag and its governing sheathing system tag, emit parentSystemTag on the
+  sheathing area subjectKey. Attribute source.pageNumber to the page where the
+  explicit ownership statement was read.
 - Do not create review items or resolve competing candidates.
 
 floor-framing extraction rules (this stage):
@@ -438,6 +448,15 @@ floor-framing extraction rules (this stage):
 - Do not emit parentSystemTag merely because a floor area and floor system appear
   on the same sheet. Emit parentSystemTag only when the source explicitly states
   the parent system reference for that area tag.
+- When a global/support-page note in this bundle explicitly names both an area
+  tag and its governing floor system tag, emit parentSystemTag on the floor area
+  subjectKey with the system tag as candidateValue. Attribute source.pageNumber
+  to the page where the explicit ownership statement was read.
+- Shared assembly callout text alone does not establish area→system ownership.
+- Do not emit parentSystemTag from construction-semantic inference (region labels,
+  sheet role, assembly callouts co-located on a plan). The TypeScript authority
+  compiler mints CONSTRUCTION_SEMANTIC relationships after extraction; continue
+  extracting observations (region labels, assembly specs, span facts) only.
 - Emit joistLayoutLengthFeet only when the page text explicitly establishes the
   floor bay length along the joist spacing axis (perpendicular to span), in
   feet, for that floor area — including orthogonal bay dimensions when span
@@ -474,6 +493,10 @@ roof-framing extraction rules (this stage):
 - Do not convert truss systems into stick common-rafter counts.
 - Pitch and areaSquareFeet may be emitted when explicitly stated, but they are
   not inputs to common-rafter count.
+- Emit parentSystemTag only when the source explicitly states the parent roof
+  system reference for that roof plane tag — not from same-sheet co-location alone.
+- When a note in this bundle explicitly names both a roof plane tag and its
+  governing roof system tag, emit parentSystemTag on the roof plane subjectKey.
 - Do not create review items or resolve competing candidates.
 
 structural-member opening-association extraction rules (this stage):
@@ -648,6 +671,35 @@ JSON shape (illustrative; do not copy values unless present in page text):
       "subjectKey": "HDR-001",
       "propertyPath": "category",
       "candidateValue": "header"
+    },
+    {
+      "id": "E-FFA-001-PARENT",
+      "type": "callout",
+      "relationship": "supports",
+      "description": "Floor area parent system.",
+      "source": {
+        "page": {
+          "documentId": null,
+          "pageNumber": 4,
+          "sheetId": "A2.01",
+          "sheetTitle": null,
+          "pageLabel": null,
+          "revision": null
+        },
+        "region": null,
+        "tileId": null,
+        "elementLabel": "FFA-001",
+        "detailNumber": null,
+        "sectionNumber": null,
+        "scheduleName": null,
+        "noteReference": "NOTE 15"
+      },
+      "originalText": "FFA-001 under FFS-001",
+      "references": [],
+      "subjectKind": "floor-framing-area",
+      "subjectKey": "FFA-001",
+      "propertyPath": "parentSystemTag",
+      "candidateValue": "FFS-001"
     }
   ]
 }
@@ -665,6 +717,8 @@ ${knowledgeBlock}`;
 function buildUserPrompt(input: {
   pages: PlanPage[];
   buildingAssemblies: ExtractFramingEvidenceInput["buildingAssemblies"];
+  extractionBundle?: ExtractionPageBundle;
+  extractionProjectContext?: ExtractionProjectContext | null;
 }): string {
   const pageBlocks = input.pages
     .map((page) => {
@@ -678,10 +732,13 @@ function buildUserPrompt(input: {
     })
     .join("\n\n---\n\n");
 
-  return `Extract framing evidence from these plan pages.
+  const preamble = buildExtractionPreamble(
+    input.buildingAssemblies,
+    input.extractionBundle,
+    input.extractionProjectContext,
+  );
 
-Known assemblies from prior stage (context only, not plan text):
-${JSON.stringify(input.buildingAssemblies, null, 2)}
+  return `${preamble}
 
 Page text:
 ${pageBlocks}`;
@@ -690,6 +747,7 @@ ${pageBlocks}`;
 function buildExtractionPreamble(
   buildingAssemblies: ExtractFramingEvidenceInput["buildingAssemblies"],
   extractionBundle?: ExtractionPageBundle,
+  extractionProjectContext?: ExtractionProjectContext | null,
 ): string {
   const bundleLines: string[] = [];
   if (extractionBundle) {
@@ -738,11 +796,29 @@ function buildExtractionPreamble(
     }
   }
 
+  const contextLines: string[] = [];
+  if (
+    extractionProjectContext &&
+    (extractionProjectContext.knownSystemTags.length > 0 ||
+      extractionProjectContext.knownAreaTags.length > 0 ||
+      extractionProjectContext.dictionaryBindings.length > 0 ||
+      extractionProjectContext.crossPageNotes.length > 0)
+  ) {
+    contextLines.push(
+      "",
+      "Project context (not plan text):",
+      extractionProjectContext.contextDisclaimer,
+      "Use this block only to recognize tags and cross-page notes.",
+      "Do not emit relationships from context alone — plan text in this pass must explicitly establish ownership.",
+      JSON.stringify(extractionProjectContext, null, 2),
+    );
+  }
+
   return `Extract framing evidence from these plan pages.
 
 Known assemblies from prior stage (context only, not plan text):
 ${JSON.stringify(buildingAssemblies, null, 2)}
-${bundleLines.join("\n")}
+${bundleLines.join("\n")}${contextLines.join("\n")}
 
 Each page block below is labeled with pageNumber. Attached full-sheet images and
 tiles, when present, are visuals for that pageNumber only. Tile labels are
@@ -891,6 +967,7 @@ export async function buildExtractionUserContent(input: {
   visualsByPageNumber?: ReadonlyMap<number, PlanPageVisual>;
   tilesByPageNumber?: ReadonlyMap<number, readonly PlanPageVisualTile[]>;
   extractionBundle?: ExtractionPageBundle;
+  extractionProjectContext?: ExtractionProjectContext | null;
 }): Promise<ContentBlockParam[]> {
   return buildPlanPagesUserContent({
     pages: input.pages,
@@ -899,6 +976,7 @@ export async function buildExtractionUserContent(input: {
     preambleText: buildExtractionPreamble(
       input.buildingAssemblies,
       input.extractionBundle,
+      input.extractionProjectContext,
     ),
   });
 }
@@ -954,6 +1032,8 @@ export async function extractFramingEvidenceViaClaude(
       userPrompt: buildUserPrompt({
         pages,
         buildingAssemblies: input.buildingAssemblies,
+        extractionBundle: bundle,
+        extractionProjectContext: input.extractionProjectContext,
       }),
       schema: extractedFramingEvidencePayloadSchema,
       label: "extracted framing evidence",
@@ -1053,6 +1133,7 @@ export async function extractFramingEvidenceViaClaude(
     visualsByPageNumber,
     tilesByPageNumber,
     extractionBundle: bundle,
+    extractionProjectContext: input.extractionProjectContext,
   });
 
   return runClaudeJson({

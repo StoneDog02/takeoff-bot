@@ -13,6 +13,10 @@ export const extractionWorkUnitAuditSchema = z.object({
   pageCount: z.number().int().nonnegative(),
   routingNotes: z.array(z.string()),
   brainPackPaths: z.array(z.string().trim().min(1)).optional(),
+  contextSliceHash: z.string().trim().min(1).optional(),
+  contextBindingCount: z.number().int().nonnegative().optional(),
+  contextNoteCount: z.number().int().nonnegative().optional(),
+  contextInjected: z.boolean().optional(),
 });
 
 export const extractionBudgetAuditSchema = z.object({
