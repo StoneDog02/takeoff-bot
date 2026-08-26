@@ -18,8 +18,10 @@ import {
   wallFramingArtifactSchema,
   type FramingCalculationsPayload,
 } from "../scopes/framing/schemas/framing-artifacts.schema.js";
+import type { FramingPackageProductState } from "../scopes/framing/observability/framingPackageProductState.schema.js";
 import type { FramingTakeoff } from "../scopes/framing/schemas/framing-takeoff.schema.js";
 import type { FramingMaterialLineItem } from "../scopes/framing/schemas/material.schema.js";
+import { loadPackageProductStateCompanion } from "./loadPackageProductStateCompanion.js";
 
 export type FramingMaterialComparison = {
   materialLineId: string;
@@ -34,6 +36,7 @@ export type LoadedFramingRunState = {
   takeoff: FramingTakeoff;
   reviewWorkspace: ReviewWorkspacePayload;
   calculations: FramingCalculationsPayload;
+  packageProductState: FramingPackageProductState | null;
 };
 
 function stageByName(result: PipelineRunResult, name: string) {
@@ -94,11 +97,14 @@ export async function loadFramingRunState(
     supplementalReviewItemsById: options.supplementalReviewItemsById,
   });
 
+  const packageProductState = await loadPackageProductStateCompanion(result);
+
   return {
     pipelineRunId: result.pipelineRunId,
     takeoff: reportArtifact.payload,
     reviewWorkspace,
     calculations: calculationsArtifact.payload,
+    packageProductState,
   };
 }
 

@@ -11,6 +11,7 @@ import type { PipelineRunId } from "../core/schemas/identity.schema.js";
 import type { ReviewItem } from "../core/schemas/review-item.schema.js";
 import type { UserDecision } from "../core/schemas/user-decision.schema.js";
 import type { ReviewWorkspacePayload } from "../core/schemas/review-workspace.schema.js";
+import type { FramingPackageProductState } from "../scopes/framing/observability/framingPackageProductState.schema.js";
 import {
   generateUiSessionId,
   generateUserDecisionId,
@@ -22,6 +23,8 @@ import {
   validationArtifactSchema,
 } from "../scopes/framing/schemas/framing-artifacts.schema.js";
 import { buildEvidenceReplayInput } from "../scopes/framing/stages/buildEvidenceReplayInput.js";
+import { createFramingStages } from "../scopes/framing/stages/createFramingStages.js";
+import { copyArtifactDirectory } from "./copyArtifactDirectory.js";
 import {
   createUserDecisionArtifact,
 } from "./createUserDecisionArtifact.js";
@@ -37,11 +40,30 @@ import {
   type LoadedFramingRunState,
 } from "./loadFramingRunState.js";
 import { loadPipelineRunResultFromArtifactDir } from "./loadPipelineRunResultFromArtifactDir.js";
+import {
+  deriveProductPackageViewRows,
+  type ProductPackageViewRow,
+} from "./projectProductState.js";
 
 export type FramingTakeoffServiceOptions = {
   artifactRoot?: string;
   artifactDir?: string | null;
   pdfPath?: string | null;
+};
+
+export type SessionSource = "artifact-load" | "demo-run";
+
+export type RunSnapshot = {
+  runNumber: 1 | 2;
+  pipelineRunId: string;
+  label: "automatic" | "recalculated";
+  artifactRoot: string;
+};
+
+export type RunLineageView = {
+  runs: RunSnapshot[];
+  activeRun: 1 | 2;
+  userDecisionIds: UserDecisionId[];
 };
 
 export type TakeoffViewState = {
@@ -56,6 +78,13 @@ export type TakeoffViewState = {
   materialComparison: FramingMaterialComparison[] | null;
   run1PipelineRunId: string;
   run2PipelineRunId: string | null;
+  sessionSource: SessionSource;
+  replayCapable: boolean;
+  packageProductState: FramingPackageProductState | null;
+  packages: ProductPackageViewRow[];
+  runLineage: RunLineageView;
+  limitations: string[];
+  sourceArtifactDir: string | null;
 };
 
 type StoredRun = {
@@ -73,7 +102,9 @@ type FramingTakeoffSession = {
   userDecisions: UserDecision[];
   userDecisionArtifacts: string[];
   run1ReviewItemsById: Map<ReviewItemId, ReviewItem>;
-  readOnly: boolean;
+  sessionSource: SessionSource;
+  replayCapable: boolean;
+  sourceArtifactDir: string | null;
 };
 
 function stageByName(result: PipelineRunResult, name: string) {
@@ -84,12 +115,69 @@ function stageByName(result: PipelineRunResult, name: string) {
   return stage;
 }
 
+function buildPackages(
+  packageProductState: FramingPackageProductState | null,
+): ProductPackageViewRow[] {
+  if (!packageProductState) {
+    return [];
+  }
+  return deriveProductPackageViewRows(packageProductState);
+}
+
+function buildRunLineage(session: FramingTakeoffSession): RunLineageView {
+  const runs: RunSnapshot[] = [
+    {
+      runNumber: 1,
+      pipelineRunId: session.run1.result.pipelineRunId,
+      label: "automatic",
+      artifactRoot: session.run1.artifactRoot,
+    },
+  ];
+
+  if (session.run2) {
+    runs.push({
+      runNumber: 2,
+      pipelineRunId: session.run2.result.pipelineRunId,
+      label: "recalculated",
+      artifactRoot: session.run2.artifactRoot,
+    });
+  }
+
+  return {
+    runs,
+    activeRun: session.run2 ? 2 : 1,
+    userDecisionIds: session.userDecisions.map((decision) => decision.id),
+  };
+}
+
+function buildLimitations(session: FramingTakeoffSession): string[] {
+  const limitations = ["In-memory session only — lost on server restart."];
+  limitations.push("Single Run 2 per session (MVP limitation).");
+
+  if (!session.replayCapable) {
+    limitations.push(
+      "Run 2 replay unavailable — extractedEvidence or other replay-required artifacts are missing.",
+    );
+  }
+
+  const activeRun = session.run2 ?? session.run1;
+  if (!activeRun.loaded.packageProductState) {
+    limitations.push(
+      "Package product-state companion artifact not found — package dashboard unavailable for this run.",
+    );
+  }
+
+  return limitations;
+}
+
 function toViewState(session: FramingTakeoffSession): TakeoffViewState {
   const activeRun = session.run2 ?? session.run1;
   const materialComparison =
     session.run2 != null
       ? compareMaterialQuantities(session.run1.loaded, session.run2.loaded)
       : null;
+
+  const packageProductState = activeRun.loaded.packageProductState;
 
   return {
     sessionId: session.id,
@@ -103,6 +191,13 @@ function toViewState(session: FramingTakeoffSession): TakeoffViewState {
     materialComparison,
     run1PipelineRunId: session.run1.result.pipelineRunId,
     run2PipelineRunId: session.run2?.result.pipelineRunId ?? null,
+    sessionSource: session.sessionSource,
+    replayCapable: session.replayCapable,
+    packageProductState,
+    packages: buildPackages(packageProductState),
+    runLineage: buildRunLineage(session),
+    limitations: buildLimitations(session),
+    sourceArtifactDir: session.sourceArtifactDir,
   };
 }
 
@@ -128,29 +223,33 @@ export class FramingTakeoffService {
       options.pdfPath ?? process.env.TAKEOFF_UI_PDF_PATH?.trim() ?? null;
   }
 
-  async startSession(): Promise<TakeoffViewState> {
-    if (this.artifactDir) {
-      return this.startFromArtifactDir(this.artifactDir);
+  async startSession(input: { artifactDir?: string } = {}): Promise<TakeoffViewState> {
+    const artifactDir = input.artifactDir?.trim() || this.artifactDir;
+    if (artifactDir) {
+      return this.startFromArtifactDir(artifactDir);
     }
     return this.startDemoRun();
   }
 
-  async startFromArtifactDir(artifactDir: string): Promise<TakeoffViewState> {
-    const { result, projectId, pdfPath } =
-      await loadPipelineRunResultFromArtifactDir(artifactDir);
+  async startFromArtifactDir(sourceArtifactDir: string): Promise<TakeoffViewState> {
+    const sessionId = generateUiSessionId();
+    const run1ArtifactRoot = path.join(this.artifactRoot, sessionId, "run1");
+    await copyArtifactDirectory(sourceArtifactDir, run1ArtifactRoot);
+
+    const { result, projectId, pdfPath, replayCapable } =
+      await loadPipelineRunResultFromArtifactDir(run1ArtifactRoot);
     const loaded = await loadFramingRunState(result);
     const run1ValidationStage = stageByName(result, "validation");
     const run1ValidationArtifact = validationArtifactSchema.parse(
       JSON.parse(await readFile(run1ValidationStage.artifactPath, "utf8")),
     );
 
-    const sessionId = generateUiSessionId();
     const session: FramingTakeoffSession = {
       id: sessionId,
       projectId,
       pdfPath: this.pdfPathOverride ?? pdfPath ?? "",
       run1: {
-        artifactRoot: path.resolve(artifactDir),
+        artifactRoot: run1ArtifactRoot,
         result,
         loaded,
       },
@@ -159,7 +258,9 @@ export class FramingTakeoffService {
       run1ReviewItemsById: new Map<ReviewItemId, ReviewItem>(
         run1ValidationArtifact.payload.reviewItems.map((item) => [item.id, item]),
       ),
-      readOnly: true,
+      sessionSource: "artifact-load",
+      replayCapable,
+      sourceArtifactDir: path.resolve(sourceArtifactDir),
     };
 
     this.sessions.set(sessionId, session);
@@ -207,7 +308,9 @@ export class FramingTakeoffService {
       userDecisions: [],
       userDecisionArtifacts: [],
       run1ReviewItemsById,
-      readOnly: false,
+      sessionSource: "demo-run",
+      replayCapable: true,
+      sourceArtifactDir: null,
     };
 
     this.sessions.set(sessionId, session);
@@ -219,7 +322,7 @@ export class FramingTakeoffService {
     return session ? toViewState(session) : null;
   }
 
-  async submitValueProvidedDecision(input: {
+  async submitReviewDecision(input: {
     sessionId: string;
     reviewItemId: ReviewItemId;
     value: string | number | boolean;
@@ -234,15 +337,14 @@ export class FramingTakeoffService {
       throw new Error("This session already completed Run 2.");
     }
 
-    if (session.readOnly) {
+    if (!session.replayCapable) {
       throw new Error(
-        "This session loaded completed artifacts for inspection and does not support Run 2 replay.",
+        "This session is missing replay-required artifacts and does not support Run 2.",
       );
     }
 
     const reviewItem = session.run1.loaded.reviewWorkspace.items.find(
-      (item: { reviewItemId: ReviewItemId }) =>
-        item.reviewItemId === input.reviewItemId,
+      (item) => item.reviewItemId === input.reviewItemId,
     );
     if (!reviewItem) {
       throw new Error(`Review Item '${input.reviewItemId}' is not active.`);
@@ -251,6 +353,12 @@ export class FramingTakeoffService {
     if (reviewItem.action.type !== "provide-value") {
       throw new Error(
         `Review Item '${input.reviewItemId}' does not accept value-provided decisions.`,
+      );
+    }
+
+    if (!reviewItem.action.targetProperty) {
+      throw new Error(
+        `Review Item '${input.reviewItemId}' has no target property for value-provided decisions.`,
       );
     }
 
@@ -301,6 +409,12 @@ export class FramingTakeoffService {
         stageByName(session.run1.result, "extractedEvidence").artifactPath,
       ),
     );
+
+    const stages =
+      session.sessionSource === "artifact-load"
+        ? createFramingStages()
+        : createUiDemoFramingStages();
+
     const runner = new PipelineRunner(new ArtifactStore(run2ArtifactRoot));
     const run2Result = await runner.run({
       projectId: session.projectId,
@@ -308,7 +422,7 @@ export class FramingTakeoffService {
       scopeName: "framing",
       planIndex,
       useMockAi: true,
-      stages: createUiDemoFramingStages(),
+      stages,
       userDecisionRunInput: {
         userDecisions: [loadedDecisionArtifact.payload as UserDecision],
         reviewItemsById,
@@ -336,5 +450,15 @@ export class FramingTakeoffService {
     };
 
     return toViewState(session);
+  }
+
+  /** @deprecated Use submitReviewDecision — kept for existing callers/tests. */
+  async submitValueProvidedDecision(input: {
+    sessionId: string;
+    reviewItemId: ReviewItemId;
+    value: string | number | boolean;
+    rationale: string;
+  }): Promise<TakeoffViewState> {
+    return this.submitReviewDecision(input);
   }
 }

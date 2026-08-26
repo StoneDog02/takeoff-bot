@@ -129,7 +129,10 @@ export function createUiServer(service = new FramingTakeoffService()) {
       }
 
       if (request.method === "POST" && pathname === "/api/sessions") {
-        const state = await service.startSession();
+        const body = await readJsonBody(request);
+        const artifactDir =
+          typeof body.artifactDir === "string" ? body.artifactDir : undefined;
+        const state = await service.startSession({ artifactDir });
         sendJson(response, 201, state);
         return;
       }
@@ -150,7 +153,7 @@ export function createUiServer(service = new FramingTakeoffService()) {
       if (request.method === "POST" && decisionMatch) {
         const sessionId = decodeURIComponent(decisionMatch[1]!);
         const body = parseSubmitDecisionBody(await readJsonBody(request));
-        const state: TakeoffViewState = await service.submitValueProvidedDecision({
+        const state: TakeoffViewState = await service.submitReviewDecision({
           sessionId,
           reviewItemId: body.reviewItemId as ReviewItemId,
           value: body.value,

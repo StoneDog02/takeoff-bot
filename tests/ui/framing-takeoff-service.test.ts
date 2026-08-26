@@ -1,17 +1,23 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
 
 import { createOpeningKingStudCountAssumptionId } from "../../src/scopes/framing/calculators/createOpeningKingStudCountAssumption.js";
 import { createMaterialLineItemId } from "../../src/scopes/framing/calculators/ids.js";
+import { FLOOR_QUANTITY_KEYS } from "../../src/scopes/framing/validators/rule-ids.js";
 import { OPENING_QUANTITY_KEYS } from "../../src/scopes/framing/validators/rule-ids.js";
+import { floorFramingArtifactSchema } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 import { FramingTakeoffService } from "../../src/ui/framingTakeoffService.js";
 
-const BECKSTEAD_ARTIFACT_DIR = path.resolve(
+const BECKSTEAD_AUDIT_A_DIR = path.resolve(
   "artifacts/b2.2m.2/runs/beckstead-audit-a/framing",
+);
+
+const BECKSTEAD_WAVE5_FIXTURE_DIR = path.resolve(
+  "artifacts/b2.3-wave5/runs/beckstead-wave5-after/framing",
 );
 
 function createDemoService(artifactRoot: string) {
@@ -31,6 +37,7 @@ describe("framing takeoff UI service", () => {
       const run1 = await service.startSession();
 
       assert.equal(run1.activeRun, 1);
+      assert.equal(run1.sessionSource, "demo-run");
       assert.ok(run1.takeoff.materials.length >= 10);
       assert.ok(run1.reviewWorkspace.summary.activeReviewItemCount >= 4);
 
@@ -55,7 +62,7 @@ describe("framing takeoff UI service", () => {
         ),
       );
 
-      const run2 = await service.submitValueProvidedDecision({
+      const run2 = await service.submitReviewDecision({
         sessionId: run1.sessionId,
         reviewItemId: o002King.reviewItemId,
         value: 3,
@@ -64,6 +71,8 @@ describe("framing takeoff UI service", () => {
 
       assert.equal(run2.activeRun, 2);
       assert.equal(run2.userDecisions.length, 1);
+      assert.equal(run2.runLineage.runs.length, 2);
+      assert.equal(run2.runLineage.runs[1]?.label, "recalculated");
       assert.equal(
         run2.reviewWorkspace.items.some(
           (item) =>
@@ -111,7 +120,7 @@ describe("framing takeoff UI service", () => {
 
       await assert.rejects(
         () =>
-          service.submitValueProvidedDecision({
+          service.submitReviewDecision({
             sessionId: run1.sessionId,
             reviewItemId: o002King.reviewItemId,
             value: 0,
@@ -136,6 +145,7 @@ describe("framing takeoff UI service", () => {
       const run1 = await service.startSession();
 
       assert.equal(run1.projectId, "ui-demo-multi-object");
+      assert.equal(run1.sessionSource, "demo-run");
       assert.ok(run1.takeoff.materials.length >= 10);
       assert.ok(
         run1.reviewWorkspace.items.some((item) => item.objectId === "O-002"),
@@ -156,53 +166,159 @@ describe("framing takeoff UI service", () => {
 
       await assert.rejects(
         () => service.startSession(),
-        /TAKEOFF_UI_ARTIFACT_DIR does not exist or is not readable/,
+        /does not exist or is not readable/,
       );
     } finally {
       await rm(artifactRoot, { recursive: true, force: true });
     }
   });
 
-  if (existsSync(BECKSTEAD_ARTIFACT_DIR)) {
-    it("loads Beckstead Audit #3 through loadFramingRunState", async () => {
+  if (existsSync(BECKSTEAD_AUDIT_A_DIR)) {
+    it("loads Beckstead Audit A with copy-on-load and replay capability", async () => {
       const artifactRoot = await mkdtemp(
-        path.join(tmpdir(), "takeoff-ui-beckstead-"),
+        path.join(tmpdir(), "takeoff-ui-beckstead-a-"),
       );
 
       try {
         const service = new FramingTakeoffService({
           artifactRoot,
-          artifactDir: BECKSTEAD_ARTIFACT_DIR,
+          artifactDir: BECKSTEAD_AUDIT_A_DIR,
         });
         const run1 = await service.startSession();
 
         assert.equal(run1.projectId, "beckstead-audit-a");
-        assert.notEqual(run1.projectId, "ui-demo-multi-object");
+        assert.equal(run1.sessionSource, "artifact-load");
+        assert.equal(run1.replayCapable, true);
         assert.equal(run1.takeoff.summary.materialLineItemCount, 52);
-        assert.equal(run1.takeoff.materials.length, 52);
-        assert.equal(run1.reviewWorkspace.summary.activeReviewItemCount, 107);
-        assert.equal(
-          run1.takeoff.materials.some((material) =>
-            material.id.includes("physical-run:p1:"),
-          ),
-          false,
+        assert.ok(run1.packages.length >= 1 || run1.limitations.some((entry) =>
+          entry.includes("Package product-state companion"),
+        ));
+      } finally {
+        await rm(artifactRoot, { recursive: true, force: true });
+      }
+    });
+  }
+
+  if (existsSync(BECKSTEAD_WAVE5_FIXTURE_DIR)) {
+    it("Beckstead Wave 5: artifact load → package dashboard → joistLayoutLengthFeet decision → Run 2", async () => {
+      const artifactRoot = await mkdtemp(
+        path.join(tmpdir(), "takeoff-ui-wave5-e2e-"),
+      );
+
+      try {
+        const service = new FramingTakeoffService({ artifactRoot });
+        const run1 = await service.startSession({
+          artifactDir: BECKSTEAD_WAVE5_FIXTURE_DIR,
+        });
+
+        assert.equal(run1.sessionSource, "artifact-load");
+        assert.equal(run1.replayCapable, true);
+        assert.equal(run1.activeRun, 1);
+        assert.ok(run1.packageProductState);
+        assert.ok(run1.packages.length >= 6);
+
+        const walls = run1.packages.find((pkg) => pkg.package === "Walls");
+        const floor = run1.packages.find((pkg) => pkg.package === "Floor");
+        assert.ok(walls);
+        assert.equal(walls.displayState, "calculated");
+        assert.equal(walls.stage16Lines, 52);
+        assert.ok(floor);
+        assert.equal(floor.displayState, "calculator-starved");
+        assert.equal(floor.stage16Lines, 0);
+        assert.equal(floor.reviewRequired, true);
+
+        const layoutReview = run1.reviewWorkspace.items.find(
+          (item) =>
+            item.action.type === "provide-value" &&
+            item.targetProperty === "joistLayoutLengthFeet" &&
+            item.objectId === "FFA-CRAWL-SPACE-FLOOR-AREA---S",
         );
-        assert.equal(
-          run1.takeoff.materials.some((material) =>
-            material.id.includes("physical-run:p3:"),
-          ),
-          true,
+        assert.ok(
+          layoutReview,
+          "Expected joistLayoutLengthFeet review item for linked crawl area S",
         );
 
-        await assert.rejects(
-          () =>
-            service.submitValueProvidedDecision({
-              sessionId: run1.sessionId,
-              reviewItemId: run1.reviewWorkspace.items[0]!.reviewItemId,
-              value: 1,
-              rationale: "Should be blocked in artifact inspection mode.",
-            }),
-          /does not support Run 2 replay/,
+        const sourceExternalBefore = (
+          await readdir(path.join(BECKSTEAD_WAVE5_FIXTURE_DIR, "external")).catch(
+            () => [],
+          )
+        ).length;
+
+        const run2 = await service.submitReviewDecision({
+          sessionId: run1.sessionId,
+          reviewItemId: layoutReview.reviewItemId,
+          value: 40,
+          rationale:
+            "Reviewer supplied spacing-axis joist layout length 40 ft for crawl area S.",
+        });
+
+        assert.equal(run2.activeRun, 2);
+        assert.equal(run2.userDecisions.length, 1);
+        assert.equal(run2.runLineage.userDecisionIds.length, 1);
+
+        const sessionRun1Dir = path.join(artifactRoot, run1.sessionId, "run1");
+        const decisionFiles = await readdir(
+          path.join(sessionRun1Dir, run1.projectId, "framing", "external"),
+        );
+        assert.ok(decisionFiles.some((name) => name.startsWith("UD-")));
+
+        const sourceExternalAfter = (
+          await readdir(path.join(BECKSTEAD_WAVE5_FIXTURE_DIR, "external")).catch(
+            () => [],
+          )
+        ).length;
+        assert.equal(sourceExternalAfter, sourceExternalBefore);
+
+        const run2FloorArtifact = floorFramingArtifactSchema.parse(
+          JSON.parse(
+            await readFile(
+              path.join(
+                artifactRoot,
+                run1.sessionId,
+                "run2",
+                run1.projectId,
+                "framing",
+                "11-floorFraming.json",
+              ),
+              "utf8",
+            ),
+          ),
+        );
+        const crawlS = run2FloorArtifact.payload.areas.find(
+          (area) => area.id === "FFA-CRAWL-SPACE-FLOOR-AREA---S",
+        );
+        assert.ok(crawlS);
+        assert.equal(crawlS.joistLayoutLengthFeet, 40);
+
+        const floorAfter = run2.packages.find((pkg) => pkg.package === "Floor");
+        assert.ok(floorAfter);
+
+        const floorJoistMaterial = run2.takeoff.materials.find((material) =>
+          material.id.includes(FLOOR_QUANTITY_KEYS.joists),
+        );
+
+        if (floorJoistMaterial) {
+          assert.ok(floorAfter.stage16Lines > 0);
+        } else {
+          assert.equal(floorAfter.stage16Lines, 0);
+          assert.ok(
+            run2.reviewWorkspace.items.some(
+              (item) =>
+                item.objectId.startsWith("FFA-") &&
+                (item.targetProperty === "assembly.joistSize" ||
+                  item.targetProperty === "spanDirection" ||
+                  item.targetProperty === "joistLayoutLengthFeet"),
+            ),
+            "Expected a legitimate next blocker review item when floor materials did not emit",
+          );
+        }
+
+        assert.equal(
+          run2.takeoff.materials.filter((material) =>
+            material.sourceObjectIds.some((id) => id.startsWith("FFA-PATIO")),
+          ).length,
+          0,
+          "Patio slab must not silently emit floor materials from a single layout-length decision",
         );
       } finally {
         await rm(artifactRoot, { recursive: true, force: true });

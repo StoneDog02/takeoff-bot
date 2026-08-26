@@ -4,12 +4,18 @@
 let currentState = null;
 /** @type {string | null} */
 let selectedReviewItemId = null;
+/** @type {string | null} */
+let selectedPackageName = null;
 
 const runButton = document.querySelector("#run-takeoff-btn");
 const statusBanner = document.querySelector("#status-banner");
 const workspace = document.querySelector("#workspace");
 const emptyState = document.querySelector("#empty-state");
 const runMeta = document.querySelector("#run-meta");
+const runLineage = document.querySelector("#run-lineage");
+const limitationsList = document.querySelector("#limitations");
+const packageSummary = document.querySelector("#package-summary");
+const packageDashboard = document.querySelector("#package-dashboard");
 const materialSummary = document.querySelector("#material-summary");
 const materialsTableBody = document.querySelector("#materials-table tbody");
 const reviewSummary = document.querySelector("#review-summary");
@@ -31,8 +37,13 @@ async function startTakeoff() {
     }
     currentState = payload;
     selectedReviewItemId = null;
+    selectedPackageName = null;
     renderState();
-    showBanner("Run 1 complete. Review items are loaded from the engine projection.");
+    const runLabel =
+      currentState.sessionSource === "artifact-load"
+        ? "Artifact-loaded Run 1 ready."
+        : "Demo Run 1 complete.";
+    showBanner(`${runLabel} Review items are loaded from the engine projection.`);
   } catch (error) {
     showBanner(error instanceof Error ? error.message : String(error), true);
   } finally {
@@ -54,18 +65,128 @@ function renderState(state = currentState) {
   runMeta.innerHTML = "";
   appendMeta("Session", state.sessionId);
   appendMeta("Project", state.projectId);
+  appendMeta("Source", state.sessionSource);
   appendMeta("Active Run", String(state.activeRun));
   appendMeta("Pipeline Run", state.pipelineRunId);
   appendMeta("Run 1 ID", state.run1PipelineRunId);
   if (state.run2PipelineRunId) {
     appendMeta("Run 2 ID", state.run2PipelineRunId);
   }
+  appendMeta("Replay capable", state.replayCapable ? "yes" : "no");
+  if (state.sourceArtifactDir) {
+    appendMeta("Loaded from", state.sourceArtifactDir);
+  }
+
+  renderRunLineage(state);
+  renderLimitations(state);
+  renderPackages(state);
 
   const summary = state.takeoff.summary;
   materialSummary.textContent = `${summary.materialLineItemCount} material lines · ${summary.openingCount} openings · ${summary.wallCount} walls`;
   renderMaterials(state);
   renderReviewItems(state);
   renderReviewDetail(state);
+}
+
+/**
+ * @param {TakeoffViewState} state
+ */
+function renderRunLineage(state) {
+  if (!runLineage) {
+    return;
+  }
+
+  runLineage.innerHTML = "<h3>Run lineage</h3>";
+  const list = document.createElement("ul");
+  for (const run of state.runLineage.runs) {
+    const li = document.createElement("li");
+    li.textContent = `Run ${run.runNumber} (${run.label}): ${run.pipelineRunId}`;
+    list.append(li);
+  }
+  runLineage.append(list);
+
+  if (state.userDecisions.length > 0) {
+    const decisions = document.createElement("p");
+    decisions.textContent = `User decisions: ${state.userDecisions
+      .map((decision) => `${decision.id} → review ${decision.reviewItemId}`)
+      .join("; ")}`;
+    runLineage.append(decisions);
+  }
+}
+
+/**
+ * @param {TakeoffViewState} state
+ */
+function renderLimitations(state) {
+  if (!limitationsList) {
+    return;
+  }
+  limitationsList.innerHTML = "";
+  for (const limitation of state.limitations) {
+    const li = document.createElement("li");
+    li.textContent = limitation;
+    limitationsList.append(li);
+  }
+}
+
+/**
+ * @param {TakeoffViewState} state
+ */
+function renderPackages(state) {
+  if (!packageDashboard || !packageSummary) {
+    return;
+  }
+
+  packageDashboard.innerHTML = "";
+
+  if (state.packages.length === 0) {
+    packageSummary.textContent =
+      "Package product-state companion not available for this run.";
+    return;
+  }
+
+  const wiredCount = state.packages.filter(
+    (pkg) => pkg.productionState === "WIRED",
+  ).length;
+  packageSummary.textContent = `${wiredCount} wired packages · ${state.packages.length} total tracked`;
+
+  for (const pkg of state.packages) {
+    const card = document.createElement("article");
+    card.className = `package-card${selectedPackageName === pkg.package ? " selected" : ""}`;
+    card.innerHTML = `
+      <h3>${escapeHtml(pkg.package)}</h3>
+      <div class="package-badges">
+        <span class="badge ${escapeHtml(pkg.displayState)}">${escapeHtml(formatDisplayState(pkg.displayState))}</span>
+        ${pkg.reviewRequired ? '<span class="badge review-required">review required</span>' : ""}
+      </div>
+      <div class="package-stats">
+        <span>Materials: ${formatCount(pkg.stage16Lines)}</span>
+        <span>Objects: ${formatCount(pkg.materialized)}</span>
+        <span>Resolved: ${formatCount(pkg.resolved)}</span>
+        <span>Calc eligible: ${formatCount(pkg.calcEligible)}</span>
+        <span>Review items: ${formatCount(pkg.review)}</span>
+        <span>Blocker: ${escapeHtml(pkg.firstBrokenHandoff ?? "—")}</span>
+      </div>
+    `;
+    card.addEventListener("click", () => {
+      selectedPackageName =
+        selectedPackageName === pkg.package ? null : pkg.package;
+      renderPackages(state);
+      renderReviewItems(state);
+    });
+    packageDashboard.append(card);
+  }
+}
+
+function formatDisplayState(value) {
+  return String(value).replaceAll("-", " ");
+}
+
+/**
+ * @param {number | "N/A"} value
+ */
+function formatCount(value) {
+  return value === "N/A" ? "N/A" : String(value);
 }
 
 function appendMeta(label, value) {
@@ -118,6 +239,25 @@ function formatQuantity(quantity, comparison) {
 
 /**
  * @param {TakeoffViewState} state
+ * @param {import('../src/ui/projectProductState.js').ProductPackageViewRow} pkg
+ */
+function reviewItemInPackage(item, pkg) {
+  const prefixes = {
+    Walls: ["WALL-", "SEG-"],
+    Openings: ["O-"],
+    Floor: ["FFA-", "FFS-"],
+    Structural: ["SM-"],
+    Sheathing: ["SHA-", "SHS-"],
+    Roof: ["RFP-", "RFS-"],
+  }[pkg.package];
+  if (!prefixes) {
+    return false;
+  }
+  return prefixes.some((prefix) => item.objectId.startsWith(prefix));
+}
+
+/**
+ * @param {TakeoffViewState} state
  */
 function renderReviewItems(state) {
   const workspaceSummary = state.reviewWorkspace.summary;
@@ -129,17 +269,24 @@ function renderReviewItems(state) {
     primaryCount == null
       ? `${rawCount} active`
       : `${primaryCount} primary · ${rawCount} raw`;
-  reviewSummary.textContent = `${queueLabel} · ${workspaceSummary.calculatedUnderAssumptionCount} under assumption · ${workspaceSummary.resolvedByUserDecisionCount} resolved`;
+  const packageFilter = selectedPackageName
+    ? ` · filtered: ${selectedPackageName}`
+    : "";
+  reviewSummary.textContent = `${queueLabel} · ${workspaceSummary.calculatedUnderAssumptionCount} under assumption · ${workspaceSummary.resolvedByUserDecisionCount} resolved${packageFilter}`;
 
   reviewList.innerHTML = "";
+
+  const selectedPackage = selectedPackageName
+    ? state.packages.find((pkg) => pkg.package === selectedPackageName)
+    : null;
 
   const primaryQueue = state.reviewWorkspace.primaryQueue ?? [];
   if (primaryQueue.length > 0) {
     for (const entry of primaryQueue) {
-      const li = document.createElement("li");
-      const button = document.createElement("button");
-      button.type = "button";
       if (entry.kind === "governing-issue") {
+        const li = document.createElement("li");
+        const button = document.createElement("button");
+        button.type = "button";
         const selected =
           selectedReviewItemId === `governing:${entry.governingGroupId}`;
         button.className = selected ? "selected" : "";
@@ -152,25 +299,42 @@ function renderReviewItems(state) {
           renderReviewItems(state);
           renderReviewDetail(state);
         });
-      } else {
-        const selected = selectedReviewItemId === entry.reviewItemId;
-        button.className = selected ? "selected" : "";
-        button.innerHTML = `
-          <strong>${escapeHtml(entry.title)}</strong><br />
-          <span>${escapeHtml(entry.objectId)} · ${escapeHtml(entry.targetProperty ?? "—")}</span><br />
-          <span>object-specific · ${escapeHtml(entry.blockingStatus)}</span>
-        `;
-        button.addEventListener("click", () => {
-          selectedReviewItemId = entry.reviewItemId;
-          renderReviewItems(state);
-          renderReviewDetail(state);
-        });
+        li.append(button);
+        reviewList?.append(li);
+        continue;
       }
+
+      if (
+        selectedPackage &&
+        !reviewItemInPackage(entry, selectedPackage)
+      ) {
+        continue;
+      }
+
+      const li = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      const selected = selectedReviewItemId === entry.reviewItemId;
+      button.className = selected ? "selected" : "";
+      button.innerHTML = `
+        <strong>${escapeHtml(entry.title)}</strong><br />
+        <span>${escapeHtml(entry.objectId)} · ${escapeHtml(entry.targetProperty ?? "—")}</span><br />
+        <span>object-specific · ${escapeHtml(entry.blockingStatus)}</span>
+      `;
+      button.addEventListener("click", () => {
+        selectedReviewItemId = entry.reviewItemId;
+        renderReviewItems(state);
+        renderReviewDetail(state);
+      });
       li.append(button);
       reviewList?.append(li);
     }
   } else {
     for (const item of state.reviewWorkspace.items) {
+      if (selectedPackage && !reviewItemInPackage(item, selectedPackage)) {
+        continue;
+      }
+
       const li = document.createElement("li");
       const button = document.createElement("button");
       button.type = "button";
@@ -251,11 +415,6 @@ function renderReviewDetail(state) {
       "Dependent review items",
       group.affectedReviewItemIds.join(", "),
     );
-    appendDetailBlock(
-      reviewDetail,
-      "Note",
-      "Raw review items remain in the engine inventory; this queue entry consolidates the contractor-facing decision.",
-    );
     return;
   }
 
@@ -290,6 +449,14 @@ function renderReviewDetail(state) {
   );
   appendDetailBlock(reviewDetail, "Explanation", item.currentState.explanation);
 
+  if (item.evidenceIds.length > 0) {
+    appendDetailBlock(
+      reviewDetail,
+      "Evidence references",
+      `${item.evidenceIds.length} record(s): ${item.evidenceIds.slice(0, 3).join(", ")}${item.evidenceIds.length > 3 ? "…" : ""}`,
+    );
+  }
+
   if (item.calculationImpact.materialLines.length > 0) {
     const lines = item.calculationImpact.materialLines
       .map(
@@ -300,8 +467,14 @@ function renderReviewDetail(state) {
     appendDetailBlock(reviewDetail, "Affected Materials", lines);
   }
 
-  if (item.action.type === "provide-value" && state.activeRun === 1) {
+  if (item.action.type === "provide-value" && state.activeRun === 1 && state.replayCapable) {
     renderCorrectionForm(reviewDetail, item);
+  } else if (item.action.type === "provide-value" && !state.replayCapable) {
+    appendDetailBlock(
+      reviewDetail,
+      "Replay unavailable",
+      "This session cannot run deterministic recalculation — replay-required artifacts are missing.",
+    );
   } else if (item.action.type !== "provide-value") {
     appendDetailBlock(
       reviewDetail,
@@ -316,6 +489,12 @@ function renderReviewDetail(state) {
  * @param {import('../src/core/schemas/review-workspace.schema.js').ReviewWorkspaceItem} item
  */
 function renderCorrectionForm(container, item) {
+  const inputType =
+    item.targetProperty === "joistLayoutLengthFeet" ||
+    typeof item.currentState.resolvedPropertyValue === "number"
+      ? "number"
+      : "text";
+
   const form = document.createElement("form");
   form.className = "correction-form";
   form.innerHTML = `
@@ -323,7 +502,7 @@ function renderCorrectionForm(container, item) {
     <p>${escapeHtml(item.action.instruction)}</p>
     <label>
       Value for ${escapeHtml(item.targetProperty ?? "property")}
-      <input name="value" type="number" min="1" step="1" required />
+      <input name="value" type="${inputType}" ${inputType === "number" ? 'min="0" step="any" required' : "required"} />
     </label>
     <label>
       Rationale
@@ -341,10 +520,11 @@ function renderCorrectionForm(container, item) {
     const formData = new FormData(form);
     const rawValue = formData.get("value");
     const rationale = String(formData.get("rationale") ?? "").trim();
-    const value = Number(rawValue);
+    const value =
+      inputType === "number" ? Number(rawValue) : String(rawValue ?? "").trim();
 
-    if (!Number.isFinite(value)) {
-      showBanner("Enter a numeric value.", true);
+    if (inputType === "number" && !Number.isFinite(value)) {
+      showBanner("Enter a valid numeric value.", true);
       return;
     }
 
@@ -372,8 +552,13 @@ function renderCorrectionForm(container, item) {
       selectedReviewItemId = null;
       renderState();
       const changedCount = currentState.materialComparison?.length ?? 0;
+      const floorPkg = currentState.packages.find((pkg) => pkg.package === "Floor");
+      const floorLines =
+        floorPkg && typeof floorPkg.stage16Lines === "number"
+          ? floorPkg.stage16Lines
+          : 0;
       showBanner(
-        `Run 2 complete. ${changedCount} material line(s) changed. O-002 king stud review resolved.`,
+        `Run 2 complete. ${changedCount} material line(s) changed. Floor package now shows ${floorLines} material line(s).`,
       );
     } catch (error) {
       showBanner(error instanceof Error ? error.message : String(error), true);

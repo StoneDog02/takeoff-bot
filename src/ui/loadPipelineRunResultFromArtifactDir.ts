@@ -24,6 +24,12 @@ const REQUIRED_STAGES_FOR_UI = [
   "report",
 ] as const;
 
+/** Stages required for deterministic User Decision Run 2 with evidence replay. */
+const REQUIRED_STAGES_FOR_REPLAY = [
+  ...REQUIRED_STAGES_FOR_UI,
+  "extractedEvidence",
+] as const;
+
 type ArtifactEnvelopeMeta = {
   artifactId: string;
   artifactType: string;
@@ -33,6 +39,8 @@ export type LoadedArtifactDirectoryRun = {
   result: PipelineRunResult;
   projectId: string;
   pdfPath: string | null;
+  replayCapable: boolean;
+  missingReplayStages: string[];
 };
 
 /**
@@ -84,12 +92,17 @@ export async function loadPipelineRunResultFromArtifactDir(
   stageResults.sort((left, right) => left.order - right.order);
 
   const byName = new Map(stageResults.map((stage) => [stage.name, stage]));
-  const missing = REQUIRED_STAGES_FOR_UI.filter((name) => !byName.has(name));
-  if (missing.length > 0) {
+  const missingUi = REQUIRED_STAGES_FOR_UI.filter((name) => !byName.has(name));
+  if (missingUi.length > 0) {
     throw new Error(
-      `TAKEOFF_UI_ARTIFACT_DIR is missing required framing stage artifacts: ${missing.join(", ")} (${resolvedDir})`,
+      `Artifact directory is missing required framing stage artifacts: ${missingUi.join(", ")} (${resolvedDir})`,
     );
   }
+
+  const missingReplayStages = REQUIRED_STAGES_FOR_REPLAY.filter(
+    (name) => !byName.has(name),
+  );
+  const replayCapable = missingReplayStages.length === 0;
 
   const reportStage = byName.get("report")!;
   const reportEnvelope = finalFramingTakeoffArtifactSchema.parse(
@@ -127,5 +140,7 @@ export async function loadPipelineRunResultFromArtifactDir(
     result,
     projectId,
     pdfPath,
+    replayCapable,
+    missingReplayStages: [...missingReplayStages],
   };
 }
