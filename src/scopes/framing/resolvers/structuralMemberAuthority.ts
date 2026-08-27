@@ -6,8 +6,20 @@ import type { StructuralMember } from "../schemas/structural-member.schema.js";
 export const SCHEDULE_MARK_SIZE_PREFERENCE_MARKER =
   "Prefer schedule dimensional size over schedule-mark-as-size";
 
+export const NOTATION_EQUIVALENT_SIZE_MARKER =
+  "Notation-equivalent dimensional sizes converged";
+
 export const SINGLE_OCCURRENCE_QUANTITY_MARKER =
   "Explicit single-occurrence quantity established";
+
+/** Exact thousandths of an inch — avoids float drift in equivalence. */
+export type MilliInches = number;
+
+export type CanonicalDimensionalMemberSize = {
+  plyCount: number | null;
+  widthMilli: MilliInches;
+  heightMilli: MilliInches;
+};
 
 function compareIds(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -56,7 +68,147 @@ export function looksLikeDimensionalMemberSize(sizeValue: string): boolean {
     return false;
   }
 
+  if (parseCanonicalDimensionalMemberSize(trimmed) !== null) {
+    return true;
+  }
+
   return DIMENSIONAL_SIZE_PATTERN.test(trimmed);
+}
+
+const MATERIAL_SUFFIX_PATTERN =
+  /(?:\s+|\b)(?:LVL|PSL|LSL|GLULAM|GLU-LAM|DF|DF#2|DOUGLAS\s*FIR(?:-LARCH)?|SYP|SPF|HEM-?FIR|I-?JOIST|OSB|PLYWOOD)\s*$/i;
+
+/**
+ * Parse a single length token into exact milli-inches.
+ * Supports decimals (1.75), mixed fractions (1-3/4), and construction
+ * dot-fraction notation (1.3/4 = 1 + 3/4).
+ */
+export function parseInchMeasureToMilli(token: string): MilliInches | null {
+  const raw = token.trim().replace(/["'\s]/g, "");
+  if (raw.length === 0) {
+    return null;
+  }
+
+  // whole.numer/denom  e.g. 1.3/4, 11.7/8
+  const dotFraction = /^(\d+)\.(\d+)\/(\d+)$/.exec(raw);
+  if (dotFraction) {
+    const whole = Number(dotFraction[1]);
+    const numer = Number(dotFraction[2]);
+    const denom = Number(dotFraction[3]);
+    if (denom <= 0 || !Number.isInteger(whole + numer + denom)) {
+      return null;
+    }
+    return Math.round(((whole * denom + numer) * 1000) / denom);
+  }
+
+  // whole-numer/denom  e.g. 1-3/4, 11-7/8
+  const mixed = /^(\d+)-(\d+)\/(\d+)$/.exec(raw);
+  if (mixed) {
+    const whole = Number(mixed[1]);
+    const numer = Number(mixed[2]);
+    const denom = Number(mixed[3]);
+    if (denom <= 0) {
+      return null;
+    }
+    return Math.round(((whole * denom + numer) * 1000) / denom);
+  }
+
+  // numer/denom
+  const simple = /^(\d+)\/(\d+)$/.exec(raw);
+  if (simple) {
+    const numer = Number(simple[1]);
+    const denom = Number(simple[2]);
+    if (denom <= 0) {
+      return null;
+    }
+    return Math.round((numer * 1000) / denom);
+  }
+
+  // decimal or integer inches
+  if (!/^\d+(\.\d+)?$/.test(raw)) {
+    return null;
+  }
+  const inches = Number(raw);
+  if (!Number.isFinite(inches) || inches <= 0) {
+    return null;
+  }
+  return Math.round(inches * 1000);
+}
+
+function stripTrailingMaterialSuffix(value: string): string {
+  let next = value.trim();
+  // Repeat once or twice for "LVL DF" style tails; stop when unchanged.
+  for (let i = 0; i < 3; i += 1) {
+    const stripped = next.replace(MATERIAL_SUFFIX_PATTERN, "").trim();
+    if (stripped === next) {
+      break;
+    }
+    next = stripped;
+  }
+  return next;
+}
+
+/**
+ * Parse a structural member size string into canonical ply + W×H milli-inches.
+ * Returns null when the value is not a clear rectangular dimensional size.
+ */
+export function parseCanonicalDimensionalMemberSize(
+  sizeValue: string,
+): CanonicalDimensionalMemberSize | null {
+  let working = stripTrailingMaterialSuffix(sizeValue.trim());
+  if (working.length === 0) {
+    return null;
+  }
+
+  let plyCount: number | null = null;
+  const plyMatch = /^\(\s*(\d+)\s*\)\s*-?\s*/.exec(working);
+  if (plyMatch) {
+    plyCount = Number(plyMatch[1]);
+    if (!Number.isInteger(plyCount) || plyCount <= 0) {
+      return null;
+    }
+    working = working.slice(plyMatch[0].length).trim();
+  }
+
+  const dims = /^(.+?)\s*[x×]\s*(.+)$/i.exec(working);
+  if (!dims) {
+    return null;
+  }
+
+  const widthMilli = parseInchMeasureToMilli(dims[1]!);
+  const heightMilli = parseInchMeasureToMilli(dims[2]!);
+  if (widthMilli === null || heightMilli === null) {
+    return null;
+  }
+
+  return { plyCount, widthMilli, heightMilli };
+}
+
+export function canonicalDimensionalSizeKey(
+  size: CanonicalDimensionalMemberSize,
+): string {
+  return `${size.plyCount ?? 0}|${size.widthMilli}|${size.heightMilli}`;
+}
+
+function formatMilliInches(milli: MilliInches): string {
+  const inches = milli / 1000;
+  // Fixed-point trim: avoid float artifacts while keeping 1.75 / 11.875 form.
+  const fixed = inches.toFixed(4).replace(/\.?0+$/, "");
+  return fixed;
+}
+
+/**
+ * Deterministic display rendering for a canonical dimensional size.
+ * Identical for any notation-equivalent input set (permutation-safe).
+ */
+export function formatCanonicalDimensionalMemberSize(
+  size: CanonicalDimensionalMemberSize,
+): string {
+  const body = `${formatMilliInches(size.widthMilli)}"x${formatMilliInches(size.heightMilli)}"`;
+  if (size.plyCount === null) {
+    return body;
+  }
+  return `(${size.plyCount})-${body}`;
 }
 
 function createTrace(
@@ -155,6 +307,91 @@ export function resolveDimensionalSizeOverScheduleMark(
   };
 }
 
+/**
+ * When size candidates conflict only by notation-equivalent dimensional forms
+ * (e.g. 1.75" vs 1-3/4", 11.875" vs 11-7/8"), converge to one canonical size.
+ *
+ * Genuinely different normalized dimensions fail closed (returns null).
+ * Schedule-mark-as-size candidates are ignored. Unparseable non-mark strings
+ * among size candidates also fail closed.
+ */
+export function resolveNotationEquivalentDimensionalSizes(
+  subjectKey: string,
+  sizeRecords: readonly Evidence[],
+): SizeConflictResolution {
+  const usable: Array<{ value: string; id: EvidenceId }> = [];
+
+  for (const record of sizeRecords) {
+    if (record.propertyPath !== "size") {
+      continue;
+    }
+    if (typeof record.candidateValue !== "string") {
+      continue;
+    }
+    const value = record.candidateValue.trim();
+    if (value.length === 0) {
+      continue;
+    }
+    usable.push({ value, id: record.id });
+  }
+
+  if (usable.length === 0) {
+    return null;
+  }
+
+  const nonMark = usable.filter(
+    (entry) => !isScheduleMarkAsSize(entry.value, subjectKey),
+  );
+  if (nonMark.length === 0) {
+    return null;
+  }
+
+  const byCanonical = new Map<
+    string,
+    { canonical: CanonicalDimensionalMemberSize; evidenceIds: EvidenceId[] }
+  >();
+  const unparseable: string[] = [];
+
+  for (const entry of nonMark) {
+    const parsed = parseCanonicalDimensionalMemberSize(entry.value);
+    if (!parsed) {
+      unparseable.push(entry.value);
+      continue;
+    }
+    const key = canonicalDimensionalSizeKey(parsed);
+    const existing = byCanonical.get(key);
+    if (existing) {
+      existing.evidenceIds.push(entry.id);
+    } else {
+      byCanonical.set(key, {
+        canonical: parsed,
+        evidenceIds: [entry.id],
+      });
+    }
+  }
+
+  // Ambiguous non-dimensional strings that are not schedule marks → fail closed.
+  if (unparseable.length > 0) {
+    return null;
+  }
+
+  if (byCanonical.size !== 1) {
+    return null;
+  }
+
+  const only = [...byCanonical.values()][0]!;
+  const display = formatCanonicalDimensionalMemberSize(only.canonical);
+  const sourceForms = [
+    ...new Set(nonMark.map((entry) => entry.value)),
+  ].sort(compareIds);
+
+  return {
+    size: display,
+    evidenceIds: uniqueSortedIds(only.evidenceIds),
+    explanation: `${NOTATION_EQUIVALENT_SIZE_MARKER}: candidates (${sourceForms.join(", ")}) share one canonical dimensional meaning; resolved size "${display}".`,
+  };
+}
+
 export type SingleOccurrenceQuantityResolution = {
   quantity: 1;
   evidenceIds: EvidenceId[];
@@ -230,10 +467,9 @@ export function applyStructuralMemberAuthority(
   const traces = [...member.resolutionTraces];
 
   if (next.size === null) {
-    const sizeResolution = resolveDimensionalSizeOverScheduleMark(
-      subjectKey,
-      records,
-    );
+    const sizeResolution =
+      resolveDimensionalSizeOverScheduleMark(subjectKey, records) ??
+      resolveNotationEquivalentDimensionalSizes(subjectKey, records);
     if (sizeResolution) {
       // Drop the prior conflict unresolved trace so calculators see size as resolved.
       const withoutUnresolvedSize = traces.filter(

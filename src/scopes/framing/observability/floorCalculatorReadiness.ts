@@ -88,6 +88,7 @@ export function buildFloorProductFunnel(input: {
   materials?: readonly FramingMaterialLineItem[];
   stage16FloorLines?: number;
 }): {
+  kind: "floor";
   areas: number;
   parentLinked: number;
   calculatorReady: number;
@@ -126,6 +127,7 @@ export function buildFloorProductFunnel(input: {
     ) ?? [];
 
   return {
+    kind: "floor",
     areas: areas.length,
     parentLinked,
     calculatorReady,

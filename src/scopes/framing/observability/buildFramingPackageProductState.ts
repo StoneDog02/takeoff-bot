@@ -33,6 +33,7 @@ import {
   type PackageProductStateRow,
 } from "./framingPackageProductState.schema.js";
 import { buildFloorProductFunnel } from "./floorCalculatorReadiness.js";
+import { buildStructuralProductFunnel } from "./structuralCalculatorReadiness.js";
 
 export type LoadedFramingRunArtifacts = {
   evidence: Evidence[];
@@ -476,6 +477,16 @@ export function buildFramingPackageProductState(input: {
         })
       : null;
 
+  const structuralStage16Lines = stage16LinesByPackage.Structural ?? 0;
+  const structuralFunnel = sm
+    ? buildStructuralProductFunnel({
+        structuralMembers: sm,
+        validation: validation ?? undefined,
+        materials: calculations?.materials ?? [],
+        stage16StructuralLines: structuralStage16Lines,
+      })
+    : null;
+
   const packages: PackageProductStateRow[] = [
     buildPackageRow({
       package: "Walls",
@@ -547,11 +558,14 @@ export function buildFramingPackageProductState(input: {
         (sm?.structuralMembers.length ?? 0) -
         countUnresolvedObjects(sm?.structuralMembers ?? []),
       assumed: 0,
-      calcEligible: sm?.structuralMembers.filter((m) => m.lengthFeet != null)
-        .length ?? 0,
+      calcEligible: structuralFunnel?.calculatorReady ?? 0,
+      calculatorReady: structuralFunnel?.calculatorReady,
+      materialLines:
+        structuralFunnel?.stage16MaterialLines ?? structuralStage16Lines,
+      productFunnel: structuralFunnel ?? undefined,
       confidence: countConfidenceForTypes(confidence, ["structural-member"]),
       review: countReviewForPackage(validation, ["structural-member"]),
-      stage16Lines: stage16LinesByPackage.Structural ?? 0,
+      stage16Lines: structuralStage16Lines,
     }),
     buildPackageRow({
       package: "Sheathing",

@@ -157,16 +157,13 @@ function renderPackages(state) {
   packageSummary.textContent = `${wiredCount} wired packages · ${state.packages.length} total tracked`;
 
   for (const pkg of state.packages) {
-    const funnel =
-      pkg.productFunnel && pkg.package === "Floor"
-        ? `${formatCount(pkg.productFunnel.areas)} areas → ${formatCount(pkg.productFunnel.parentLinked)} linked → ${formatCount(pkg.productFunnel.calculatorReady)} ready → ${formatCount(pkg.productFunnel.stage16MaterialLines)} lines`
-        : null;
+    const funnel = formatPackageFunnel(pkg);
     const readinessLabel =
-      pkg.package === "Floor"
+      pkg.package === "Floor" || pkg.package === "Structural"
         ? "Calculator ready"
         : "Legacy calc eligible";
     const readinessValue =
-      pkg.package === "Floor"
+      pkg.package === "Floor" || pkg.package === "Structural"
         ? formatCount(pkg.calculatorReady ?? 0)
         : formatCount(pkg.calcEligible);
 
@@ -196,6 +193,31 @@ function renderPackages(state) {
     });
     packageDashboard.append(card);
   }
+}
+
+function formatPackageFunnel(pkg) {
+  const funnel = pkg.productFunnel;
+  if (!funnel) {
+    return null;
+  }
+  if (pkg.package === "Floor" || funnel.areas != null) {
+    return `${formatCount(funnel.areas)} areas → ${formatCount(funnel.parentLinked)} linked → ${formatCount(funnel.calculatorReady)} ready → ${formatCount(funnel.stage16MaterialLines)} lines`;
+  }
+  if (pkg.package === "Structural" || funnel.kind === "structural") {
+    return `${formatCount(funnel.members)} members → ${formatCount(funnel.resolvedIdentity)} identity → ${formatCount(funnel.calculatorReady)} ready → ${formatCount(funnel.stage16MaterialLines)} lines`;
+  }
+  return null;
+}
+
+function formatPackageFunnelCsv(pkg) {
+  const funnel = pkg.productFunnel;
+  if (funnel && (pkg.package === "Floor" || funnel.areas != null)) {
+    return `areas=${formatCount(funnel.areas)}; parent_linked=${formatCount(funnel.parentLinked)}; calculator_ready=${formatCount(funnel.calculatorReady)}; material_lines=${formatCount(funnel.stage16MaterialLines)}`;
+  }
+  if (funnel && (pkg.package === "Structural" || funnel.kind === "structural")) {
+    return `members=${formatCount(funnel.members)}; resolved_identity=${formatCount(funnel.resolvedIdentity)}; calculator_ready=${formatCount(funnel.calculatorReady)}; material_lines=${formatCount(funnel.stage16MaterialLines)}`;
+  }
+  return `materialized=${formatCount(pkg.materialized)}; resolved=${formatCount(pkg.resolved)}; calc_eligible=${formatCount(pkg.calcEligible)}; review=${formatCount(pkg.review)}`;
 }
 
 function formatDisplayState(value) {
@@ -771,10 +793,7 @@ function buildTakeoffExportCsv(state) {
   }
 
   for (const pkg of state.packages) {
-    const funnelMeta =
-      pkg.productFunnel && pkg.package === "Floor"
-        ? `areas=${formatCount(pkg.productFunnel.areas)}; parent_linked=${formatCount(pkg.productFunnel.parentLinked)}; calculator_ready=${formatCount(pkg.productFunnel.calculatorReady)}; material_lines=${formatCount(pkg.productFunnel.stage16MaterialLines)}`
-        : `materialized=${formatCount(pkg.materialized)}; resolved=${formatCount(pkg.resolved)}; calc_eligible=${formatCount(pkg.calcEligible)}; review=${formatCount(pkg.review)}`;
+    const funnelMeta = formatPackageFunnelCsv(pkg);
 
     lines.push(
       csvRow([

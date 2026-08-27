@@ -39,14 +39,26 @@ export const packageProductStateRowSchema = z.object({
     .union([z.number().int().nonnegative(), z.literal("N/A")])
     .optional(),
   productFunnel: z
-    .object({
-      areas: z.number().int().nonnegative(),
-      parentLinked: z.number().int().nonnegative(),
-      calculatorReady: z.number().int().nonnegative(),
-      calculatedAreas: z.number().int().nonnegative(),
-      stage14MaterialLines: z.number().int().nonnegative(),
-      stage16MaterialLines: z.number().int().nonnegative(),
-    })
+    .union([
+      z.object({
+        kind: z.literal("floor").optional(),
+        areas: z.number().int().nonnegative(),
+        parentLinked: z.number().int().nonnegative(),
+        calculatorReady: z.number().int().nonnegative(),
+        calculatedAreas: z.number().int().nonnegative(),
+        stage14MaterialLines: z.number().int().nonnegative(),
+        stage16MaterialLines: z.number().int().nonnegative(),
+      }),
+      z.object({
+        kind: z.literal("structural"),
+        members: z.number().int().nonnegative(),
+        resolvedIdentity: z.number().int().nonnegative(),
+        calculatorReady: z.number().int().nonnegative(),
+        calculatedMembers: z.number().int().nonnegative(),
+        stage14MaterialLines: z.number().int().nonnegative(),
+        stage16MaterialLines: z.number().int().nonnegative(),
+      }),
+    ])
     .optional(),
   confidence: z.union([z.number().int().nonnegative(), z.literal("N/A")]),
   review: z.union([z.number().int().nonnegative(), z.literal("N/A")]),
