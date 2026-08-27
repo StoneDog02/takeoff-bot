@@ -13,6 +13,7 @@ import {
   reviewStatusSchema,
 } from "../../../core/schemas/status.schema.js";
 import { framingMaterialLineItemSchema } from "./material.schema.js";
+import { pendingMaterialClaimSchema } from "./claim-outcome.schema.js";
 
 export const framingTakeoffStatusSchema = z.enum([
   "completed",
@@ -37,6 +38,7 @@ export const framingTakeoffSummarySchema = z.object({
   hardwareCount: z.number().int().nonnegative().default(0),
   fastenerCount: z.number().int().nonnegative().default(0),
   materialLineItemCount: z.number().int().nonnegative(),
+  pendingClaimCount: z.number().int().nonnegative().default(0),
   reviewItemCount: z.number().int().nonnegative(),
   validationIssueCount: z.number().int().nonnegative(),
   completion: completionSchema,
@@ -65,6 +67,7 @@ export const framingTakeoffSchema = z.object({
   hardwareIds: z.array(objectIdSchema).default([]),
   fastenerIds: z.array(objectIdSchema).default([]),
   materials: z.array(framingMaterialLineItemSchema).default([]),
+  pendingClaims: z.array(pendingMaterialClaimSchema).default([]),
   reviewItemIds: z.array(reviewItemIdSchema).default([]),
   validationIssueIds: z.array(validationIssueIdSchema).default([]),
   confidenceEvaluationId: confidenceEvaluationIdSchema,

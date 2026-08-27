@@ -377,6 +377,23 @@ describe("framing pipeline Run-2 opening user decision replay", () => {
         3,
       );
       assert.equal(
+        kingStudMaterialForOpening(run2Calculations.payload, "O-002")?.claimStatus,
+        "CONFIRMED",
+      );
+      assert.ok(
+        kingStudMaterialForOpening(run2Calculations.payload, "O-002")?.assumptionIds.includes(
+          createOpeningKingStudCountAssumptionId("O-002"),
+        ),
+      );
+      const replacedKingAssumption = run2Calculations.payload.assumptions.find(
+        (assumption) =>
+          assumption.id === createOpeningKingStudCountAssumptionId("O-002"),
+      );
+      assert.ok(replacedKingAssumption);
+      assert.equal(replacedKingAssumption.status, "replaced");
+      assert.equal(replacedKingAssumption.userDecisionId, "UD-O002-KING-001");
+
+      assert.equal(
         roughSillMaterialForOpening(run2Calculations.payload, "O-002")?.quantity,
         4,
       );
@@ -393,10 +410,6 @@ describe("framing pipeline Run-2 opening user decision replay", () => {
         8,
       );
 
-      assert.equal(
-        kingStudMaterialForOpening(run2Calculations.payload, "O-002")?.assumptionIds.length,
-        0,
-      );
       assert.ok(
         roughSillMaterialForOpening(run2Calculations.payload, "O-001")?.assumptionIds.includes(
           createOpeningRoughSillSizeAssumptionId("O-001"),
@@ -405,11 +418,6 @@ describe("framing pipeline Run-2 opening user decision replay", () => {
       assert.ok(
         kingStudMaterialForOpening(run2Calculations.payload, "O-003")?.assumptionIds.includes(
           createOpeningKingStudCountAssumptionId("O-003"),
-        ),
-      );
-      assert.ok(
-        !run2Calculations.payload.assumptions.some(
-          (assumption) => assumption.id === createOpeningKingStudCountAssumptionId("O-002"),
         ),
       );
 

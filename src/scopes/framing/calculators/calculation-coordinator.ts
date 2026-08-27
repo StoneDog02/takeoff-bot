@@ -11,6 +11,9 @@ import {
   type WallFramingPayload,
 } from "../schemas/framing-artifacts.schema.js";
 import type { FramingMaterialLineItem } from "../schemas/material.schema.js";
+import type { PendingMaterialClaim } from "../schemas/claim-outcome.schema.js";
+import { collectPendingClaims } from "../claims/collectPendingClaims.js";
+import { deriveMaterialClaimStatus } from "../claims/deriveClaimStatus.js";
 import { calculateFasteners } from "./calculateFasteners.js";
 import { calculateFloorFraming } from "./calculateFloorFraming.js";
 import { calculateOpeningFraming } from "./calculateOpeningFraming.js";
@@ -37,12 +40,16 @@ export type FramingCalculationInput = {
  * Order: Wall Framing, Opening Framing, Structural Members, Floor Framing,
  * Roof Framing, Sheathing, then specified Fasteners. Connector and Hardware
  * objects are not calculated here.
+ *
+ * Pending claims are collected horizontally from calculator-explicit rows and
+ * validation quantity blocks without inventing quantities.
  */
 export function coordinateFramingCalculations(
   input: FramingCalculationInput,
 ): FramingCalculationsPayload {
   const materials: FramingMaterialLineItem[] = [];
   const assumptions: FramingCalculationsPayload["assumptions"] = [];
+  const explicitPendingClaims: PendingMaterialClaim[] = [];
 
   if (input.wallFraming) {
     materials.push(
@@ -62,6 +69,7 @@ export function coordinateFramingCalculations(
     );
     materials.push(...openingResult.materials);
     assumptions.push(...openingResult.assumptions);
+    explicitPendingClaims.push(...openingResult.pendingClaims);
   }
 
   if (input.structuralMembers) {
@@ -92,5 +100,31 @@ export function coordinateFramingCalculations(
     );
   }
 
-  return framingCalculationsPayloadSchema.parse({ materials, assumptions });
+  const pendingClaims = collectPendingClaims({
+    validation: input.validation,
+    materials,
+    explicitPendingClaims,
+  });
+
+  const materialsWithStatus = materials.map((material) => {
+    if (material.claimStatus) {
+      return material;
+    }
+    const relatedAssumptions = assumptions.filter((assumption) =>
+      material.assumptionIds.includes(assumption.id),
+    );
+    return {
+      ...material,
+      claimStatus: deriveMaterialClaimStatus({
+        assumptions: relatedAssumptions,
+        assumptionIds: material.assumptionIds,
+      }),
+    };
+  });
+
+  return framingCalculationsPayloadSchema.parse({
+    materials: materialsWithStatus,
+    assumptions,
+    pendingClaims,
+  });
 }

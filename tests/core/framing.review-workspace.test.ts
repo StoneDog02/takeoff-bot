@@ -383,12 +383,13 @@ describe("framing review workspace projection", () => {
       assert.ok(kingMaterial);
       assert.equal(kingMaterial.quantity, 3);
 
-      assert.ok(
-        !run2Artifacts.calculations.assumptions.some(
-          (assumption) =>
-            assumption.id === createOpeningKingStudCountAssumptionId("O-002"),
-        ),
+      const replacedKingAssumption = run2Artifacts.calculations.assumptions.find(
+        (assumption) =>
+          assumption.id === createOpeningKingStudCountAssumptionId("O-002"),
       );
+      assert.ok(replacedKingAssumption);
+      assert.equal(replacedKingAssumption.status, "replaced");
+      assert.equal(replacedKingAssumption.userDecisionId, "UD-O002-KING-001");
 
       const o003King = findItem(run2Workspace, "O-003", "kingStudCount");
       assert.ok(o003King);

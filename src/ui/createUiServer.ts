@@ -75,33 +75,46 @@ async function serveStaticFile(
 
 function parseSubmitDecisionBody(body: JsonRecord): {
   reviewItemId: string;
-  value: string | number | boolean;
+  value?: string | number | boolean;
   rationale: string;
+  decisionType: "value-provided" | "confirmed";
 } {
   const reviewItemId = body.reviewItemId;
   const value = body.value;
   const rationale = body.rationale;
+  const decisionTypeRaw = body.decisionType;
 
   if (typeof reviewItemId !== "string" || reviewItemId.trim().length === 0) {
     throw new Error("reviewItemId is required.");
-  }
-
-  if (
-    typeof value !== "string" &&
-    typeof value !== "number" &&
-    typeof value !== "boolean"
-  ) {
-    throw new Error("value must be a string, number, or boolean.");
   }
 
   if (typeof rationale !== "string" || rationale.trim().length === 0) {
     throw new Error("rationale is required.");
   }
 
+  const decisionType =
+    decisionTypeRaw === "confirmed" ? "confirmed" : "value-provided";
+
+  if (decisionType === "value-provided") {
+    if (
+      typeof value !== "string" &&
+      typeof value !== "number" &&
+      typeof value !== "boolean"
+    ) {
+      throw new Error("value must be a string, number, or boolean.");
+    }
+    return {
+      reviewItemId,
+      value,
+      rationale: rationale.trim(),
+      decisionType,
+    };
+  }
+
   return {
     reviewItemId,
-    value,
     rationale: rationale.trim(),
+    decisionType,
   };
 }
 
@@ -158,6 +171,7 @@ export function createUiServer(service = new FramingTakeoffService()) {
           reviewItemId: body.reviewItemId as ReviewItemId,
           value: body.value,
           rationale: body.rationale,
+          decisionType: body.decisionType,
         });
         sendJson(response, 200, state);
         return;

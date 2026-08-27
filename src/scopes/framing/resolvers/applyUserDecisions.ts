@@ -52,6 +52,8 @@ import {
   normalizeWallFramingCandidate,
   type WallFramingPropertyPath,
 } from "./wallFramingPropertyPaths.js";
+import { lookupAssumptionRegistryEntry } from "../claims/assumptionRegistry.js";
+import { OPENING_QUANTITY_KEYS } from "../validators/rule-ids.js";
 
 export type UserDecisionPropertyPath =
   | WallFramingPropertyPath
@@ -82,7 +84,7 @@ export type AppliedUserDecision = {
   propertyPath: UserDecisionPropertyPath;
   subjectKey: string;
   value: string | number | boolean;
-  resolutionKind: "conflict-resolved" | "value-provided";
+  resolutionKind: "conflict-resolved" | "value-provided" | "confirmed";
   acceptedEvidenceIds: EvidenceId[];
   rejectedEvidenceIds: EvidenceId[];
 };
@@ -420,6 +422,67 @@ function validateValueProvidedDecision(
 }
 
 /**
+ * Confirm an industry-default assumption: apply the registry's fixed value.
+ * Only properties with an explicit registry entry may be confirmed this way.
+ */
+function validateConfirmedDecision(
+  decision: UserDecision,
+  reviewItem: ReviewItem,
+  objectId: ObjectId,
+  propertyPath: UserDecisionPropertyPath,
+  binding: SubjectBinding,
+): AppliedUserDecision {
+  userDecisionSchema.parse(decision);
+  validateReviewItemTarget(reviewItem, objectId, propertyPath);
+
+  if (decision.result.type !== "confirmed") {
+    throw new Error(
+      `User Decision ${decision.id} must use result.type "confirmed".`,
+    );
+  }
+
+  const quantityKey =
+    reviewItem.quantityImpacts.find((impact) => impact.canCalculate)?.quantityKey ??
+    (propertyPath === "kingStudCount" ? OPENING_QUANTITY_KEYS.kingStuds : undefined);
+
+  if (!quantityKey) {
+    throw new Error(
+      `User Decision ${decision.id} cannot confirm ${propertyPath}: no quantityKey mapping for registry lookup.`,
+    );
+  }
+
+  const entry = lookupAssumptionRegistryEntry(quantityKey, propertyPath);
+  if (!entry) {
+    throw new Error(
+      `User Decision ${decision.id} cannot confirm ${propertyPath}: no assumption registry entry for ${quantityKey}.`,
+    );
+  }
+
+  const assumedValue = entry.resolveAssumedValue({ objectId });
+  const normalizedDecisionValue = normalizeUserDecisionCandidate(
+    propertyPath,
+    assumedValue,
+  );
+  if (normalizedDecisionValue === undefined) {
+    throw new Error(
+      `User Decision ${decision.id} confirmed value is not valid for property ${propertyPath}.`,
+    );
+  }
+
+  return {
+    decision,
+    reviewItem,
+    objectId,
+    propertyPath,
+    subjectKey: binding.subjectKey,
+    value: normalizedDecisionValue,
+    resolutionKind: "confirmed",
+    acceptedEvidenceIds: [],
+    rejectedEvidenceIds: [],
+  };
+}
+
+/**
  * Returns active User Decisions keyed by `${objectId}\0${propertyPath}`.
  *
  * Supersession: a decision referenced by another decision's
@@ -505,6 +568,14 @@ export function buildUserDecisionIndex(
         propertyPath,
         binding,
       );
+    } else if (decision.result.type === "confirmed") {
+      applied = validateConfirmedDecision(
+        decision,
+        reviewItem,
+        objectId,
+        propertyPath,
+        binding,
+      );
     } else {
       throw new Error(
         `User Decision ${decision.id} uses unsupported result type "${decision.result.type}" in this slice.`,
@@ -535,6 +606,19 @@ export function findAppliedUserDecision(
 export function createUserOverrideTrace(
   applied: AppliedUserDecision,
 ): PropertyResolutionTrace {
+  if (applied.resolutionKind === "confirmed") {
+    return {
+      propertyPath: applied.propertyPath,
+      method: "approved-default",
+      explanation: `Confirmed industry-default assumption via User Decision ${applied.decision.id}.`,
+      evidenceIds: [],
+      assumptionIds: [],
+      userDecisionIds: [applied.decision.id],
+      validationIssueIds: [],
+      reviewItemIds: [applied.reviewItem.id],
+    };
+  }
+
   const explanation =
     applied.resolutionKind === "value-provided"
       ? `Resolved from User Decision ${applied.decision.id} providing reviewer value without plan evidence.`

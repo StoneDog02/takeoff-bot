@@ -482,7 +482,56 @@ describe("framing pipeline", () => {
 
   it("honors Validation canCalculate: false without suppressing unrelated member quantity", async () => {
     const wallFraming = buildFixtureWallFraming({
-      wall: { wallType: null },
+      wall: {
+        wallType: null,
+        // Force wall-type blast to block studs/plates (assembly no longer independently calculable).
+        assembly: {
+          material: null,
+          studSize: null,
+          studSpacingInches: null,
+          heightFeet: null,
+          plateCount: null,
+          sheathing: null,
+        },
+        resolutionTraces: [
+          {
+            propertyPath: "assembly.studSpacingInches",
+            method: "unresolved",
+            explanation: "unresolved for blocked-quantity fixture",
+            evidenceIds: [],
+            assumptionIds: [],
+            validationIssueIds: [],
+            reviewItemIds: [],
+          },
+          {
+            propertyPath: "assembly.studSize",
+            method: "unresolved",
+            explanation: "unresolved for blocked-quantity fixture",
+            evidenceIds: [],
+            assumptionIds: [],
+            validationIssueIds: [],
+            reviewItemIds: [],
+          },
+          {
+            propertyPath: "assembly.plateCount",
+            method: "unresolved",
+            explanation: "unresolved for blocked-quantity fixture",
+            evidenceIds: [],
+            assumptionIds: [],
+            validationIssueIds: [],
+            reviewItemIds: [],
+          },
+          {
+            propertyPath: "assembly.heightFeet",
+            method: "unresolved",
+            explanation: "unresolved for blocked-quantity fixture",
+            evidenceIds: [],
+            assumptionIds: [],
+            validationIssueIds: [],
+            reviewItemIds: [],
+          },
+        ],
+      },
     });
     const stages = replaceStage(
       withCalculableMember(createFramingStages()),

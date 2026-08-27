@@ -6,6 +6,7 @@ import {
   objectIdSchema,
   reviewItemIdSchema,
 } from "../../../core/schemas/identity.schema.js";
+import { materialClaimStatusSchema } from "./claim-outcome.schema.js";
 
 export const framingMaterialCategorySchema = z.enum([
   "lumber",
@@ -32,6 +33,8 @@ export const materialQuantityUnitSchema = z.enum([
 
 export const framingMaterialLineItemSchema = z.object({
   id: identifierSchema,
+  quantityKey: z.string().trim().min(1).optional(),
+  claimStatus: materialClaimStatusSchema.optional(),
   category: framingMaterialCategorySchema,
   description: z.string().trim().min(1),
   canonicalClassification: z.string().trim().min(1),

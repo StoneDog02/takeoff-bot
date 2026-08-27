@@ -87,7 +87,7 @@ function renderState(state = currentState) {
   renderPackages(state);
 
   const summary = state.takeoff.summary;
-  materialSummary.textContent = `${summary.materialLineItemCount} material lines · ${summary.openingCount} openings · ${summary.wallCount} walls`;
+  materialSummary.textContent = `${summary.materialLineItemCount} material lines · ${summary.pendingClaimCount ?? state.takeoff.pendingClaims?.length ?? 0} pending claims · ${summary.openingCount} openings · ${summary.wallCount} walls`;
   renderMaterials(state);
   renderReviewItems(state);
   renderReviewDetail(state);
@@ -262,10 +262,38 @@ function renderMaterials(state) {
       <td>${escapeHtml(material.description)}</td>
       <td>${formatQuantity(material.quantity, comparison)}</td>
       <td>${escapeHtml(material.unit ?? "—")}</td>
+      <td>${escapeHtml(formatClaimStatus(material.claimStatus, material.assumptionIds))}</td>
       <td>${escapeHtml(material.sourceObjectIds.join(", "))}</td>
     `;
     materialsTableBody?.append(row);
   }
+
+  for (const pending of state.takeoff.pendingClaims ?? []) {
+    const row = document.createElement("tr");
+    row.classList.add("pending-claim");
+    row.innerHTML = `
+      <td>${escapeHtml(pending.description)}</td>
+      <td>—</td>
+      <td>${escapeHtml(pending.unit ?? "—")}</td>
+      <td>${escapeHtml(formatClaimStatus(pending.claimStatus))}</td>
+      <td>${escapeHtml(pending.sourceObjectIds.join(", "))}</td>
+    `;
+    materialsTableBody?.append(row);
+  }
+}
+
+/**
+ * @param {string | undefined} claimStatus
+ * @param {string[] | undefined} assumptionIds
+ */
+function formatClaimStatus(claimStatus, assumptionIds) {
+  if (claimStatus) {
+    return claimStatus;
+  }
+  if (assumptionIds && assumptionIds.length > 0) {
+    return "CALCULATED_WITH_ASSUMPTION";
+  }
+  return "CONFIRMED";
 }
 
 /**
@@ -538,11 +566,19 @@ function renderCorrectionForm(container, item) {
       ? "number"
       : "text";
 
+  const canConfirmAssumption =
+    item.currentState.valueSource === "industry-default-assumption";
+
   const form = document.createElement("form");
   form.className = "correction-form";
   form.innerHTML = `
     <h3>Provide Correction</h3>
     <p>${escapeHtml(item.action.instruction)}</p>
+    ${
+      canConfirmAssumption
+        ? `<button type="button" data-action="confirm">Confirm assumption &amp; Run 2</button>`
+        : ""
+    }
     <label>
       Value for ${escapeHtml(item.targetProperty ?? "property")}
       <input name="value" type="${inputType}" ${inputType === "number" ? 'min="0" step="any" required' : "required"} />
@@ -553,6 +589,43 @@ function renderCorrectionForm(container, item) {
     </label>
     <button type="submit">Save Decision &amp; Run 2</button>
   `;
+
+  const confirmButton = form.querySelector('[data-action="confirm"]');
+  confirmButton?.addEventListener("click", async () => {
+    if (!currentState) {
+      return;
+    }
+    const rationale =
+      String(form.querySelector("textarea[name='rationale']")?.value ?? "").trim() ||
+      "Confirmed industry-default assumption.";
+    setBusy(true);
+    hideBanner();
+    try {
+      const response = await fetch(
+        `/api/sessions/${encodeURIComponent(currentState.sessionId)}/decisions`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reviewItemId: item.reviewItemId,
+            decisionType: "confirmed",
+            rationale,
+          }),
+        },
+      );
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Decision failed.");
+      }
+      currentState = payload;
+      render(currentState);
+      showBanner("Assumption confirmed. Run 2 complete.");
+    } catch (error) {
+      showBanner(error instanceof Error ? error.message : String(error), true);
+    } finally {
+      setBusy(false);
+    }
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -581,6 +654,7 @@ function renderCorrectionForm(container, item) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             reviewItemId: item.reviewItemId,
+            decisionType: "value-provided",
             value,
             rationale,
           }),
@@ -819,16 +893,36 @@ function buildTakeoffExportCsv(state) {
       csvRow([
         "material",
         material.id,
-        "",
+        material.quantityKey ?? "",
         material.description,
         material.quantity,
         material.unit ?? "",
-        material.category,
+        material.claimStatus ??
+          (material.assumptionIds?.length ? "CALCULATED_WITH_ASSUMPTION" : "CONFIRMED"),
         "",
         "",
         material.sourceObjectIds.join("; "),
+        material.assumptionIds?.join("; ") ?? "",
+        material.reviewItemIds?.join("; ") ?? "",
+      ]),
+    );
+  }
+
+  for (const pending of state.takeoff.pendingClaims ?? []) {
+    lines.push(
+      csvRow([
+        "pending_claim",
+        pending.id,
+        pending.quantityKey,
+        pending.description,
         "",
+        pending.unit ?? "",
+        pending.claimStatus,
         "",
+        pending.missingPropertyPath ?? "",
+        pending.sourceObjectIds.join("; "),
+        "",
+        pending.basis,
       ]),
     );
   }

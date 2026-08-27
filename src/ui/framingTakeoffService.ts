@@ -325,8 +325,9 @@ export class FramingTakeoffService {
   async submitReviewDecision(input: {
     sessionId: string;
     reviewItemId: ReviewItemId;
-    value: string | number | boolean;
+    value?: string | number | boolean;
     rationale: string;
+    decisionType?: "value-provided" | "confirmed";
   }): Promise<TakeoffViewState> {
     const session = this.sessions.get(input.sessionId);
     if (!session) {
@@ -362,6 +363,11 @@ export class FramingTakeoffService {
       );
     }
 
+    const decisionType = input.decisionType ?? "value-provided";
+    if (decisionType === "value-provided" && input.value === undefined) {
+      throw new Error("value-provided decisions require a value.");
+    }
+
     const run1ValidationStage = stageByName(session.run1.result, "validation");
     const run1ValidationArtifact = validationArtifactSchema.parse(
       await new ArtifactStore(session.run1.artifactRoot).read(
@@ -369,16 +375,27 @@ export class FramingTakeoffService {
       ),
     );
 
-    const decision: UserDecision = {
-      id: generateUserDecisionId() as UserDecisionId,
-      reviewItemId: input.reviewItemId,
-      result: {
-        type: "value-provided",
-        value: input.value,
-        rationale: input.rationale,
-      },
-      supersedesUserDecisionId: null,
-    };
+    const decision: UserDecision =
+      decisionType === "confirmed"
+        ? {
+            id: generateUserDecisionId() as UserDecisionId,
+            reviewItemId: input.reviewItemId,
+            result: {
+              type: "confirmed",
+              rationale: input.rationale,
+            },
+            supersedesUserDecisionId: null,
+          }
+        : {
+            id: generateUserDecisionId() as UserDecisionId,
+            reviewItemId: input.reviewItemId,
+            result: {
+              type: "value-provided",
+              value: input.value!,
+              rationale: input.rationale,
+            },
+            supersedesUserDecisionId: null,
+          };
 
     const decisionArtifact = createUserDecisionArtifact({
       projectId: session.projectId,

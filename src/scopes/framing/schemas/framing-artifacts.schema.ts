@@ -26,6 +26,7 @@ import {
 } from "./floor-framing.schema.js";
 import { framingScopeSchema } from "./framing-scope.schema.js";
 import { framingTakeoffSchema } from "./framing-takeoff.schema.js";
+import { pendingMaterialClaimSchema } from "./claim-outcome.schema.js";
 import { framingMaterialLineItemSchema } from "./material.schema.js";
 import { openingSchema } from "./opening.schema.js";
 import {
@@ -207,6 +208,7 @@ export const framingObjectsPayloadSchema = z.object({
 export const framingCalculationsPayloadSchema = z.object({
   materials: z.array(framingMaterialLineItemSchema),
   assumptions: z.array(assumptionSchema).default([]),
+  pendingClaims: z.array(pendingMaterialClaimSchema).default([]),
 });
 
 export const validationConfidencePayloadSchema = z.object({

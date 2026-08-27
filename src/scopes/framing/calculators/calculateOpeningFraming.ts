@@ -1,14 +1,19 @@
 import type { Assumption } from "../../../core/schemas/assumption.schema.js";
 import type {
-  AssumptionId,
   ObjectId,
   ReviewItemId,
+  UserDecisionId,
 } from "../../../core/schemas/identity.schema.js";
+import { applyAssumptionUserDecisionLifecycle } from "../claims/applyAssumptionLifecycle.js";
+import { consultAssumptionRegistry } from "../claims/assumptionRegistry.js";
+import { createBlockedMissingInputPendingClaim } from "../claims/collectPendingClaims.js";
+import { deriveMaterialClaimStatus } from "../claims/deriveClaimStatus.js";
 import type {
   OpeningsPayload,
   ValidationPayload,
   WallFramingPayload,
 } from "../schemas/framing-artifacts.schema.js";
+import type { PendingMaterialClaim } from "../schemas/claim-outcome.schema.js";
 import {
   framingMaterialLineItemSchema,
   type FramingMaterialLineItem,
@@ -22,14 +27,10 @@ import {
   OPENINGS_RULE_IDS,
 } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
-import {
-  createOpeningCrippleLayoutAssumption,
-} from "./createOpeningCrippleLayoutAssumption.js";
+import { createOpeningCrippleLayoutAssumption } from "./createOpeningCrippleLayoutAssumption.js";
 import {
   createOpeningKingStudCountAssumption,
-  KING_STUD_COUNT_DEFAULT,
 } from "./createOpeningKingStudCountAssumption.js";
-import { createOpeningRoughSillSizeAssumption } from "./createOpeningRoughSillSizeAssumption.js";
 import { createMaterialLineItemId } from "./ids.js";
 import { isQuantityBlocked } from "./isQuantityBlocked.js";
 import { isQuantityInputResolved } from "./isQuantityInputResolved.js";
@@ -47,11 +48,11 @@ const ROUGH_WIDTH_PROPERTY_PATH = "dimensions.roughWidthFeet";
 const ROUGH_HEIGHT_PROPERTY_PATH = "dimensions.roughHeightFeet";
 const STUD_SIZE_PROPERTY_PATH = "assembly.studSize";
 const STUD_SPACING_PROPERTY_PATH = "assembly.studSpacingInches";
-const HEIGHT_PROPERTY_PATH = "assembly.heightFeet";
 
 export type OpeningFramingCalculationResult = {
   materials: FramingMaterialLineItem[];
   assumptions: Assumption[];
+  pendingClaims: PendingMaterialClaim[];
 };
 
 function compareIds(left: string, right: string): number {
@@ -265,6 +266,8 @@ function buildCrippleLineItem(input: {
 
   return emitLineItem({
     id: createMaterialLineItemId(input.quantityKey, input.opening.id),
+    quantityKey: input.quantityKey,
+    claimStatus: "CALCULATED_WITH_ASSUMPTION",
     category: "lumber",
     description: input.description,
     canonicalClassification: input.canonicalClassification,
@@ -286,7 +289,7 @@ function calculateOpeningCripples(
   const belowEligible = opening.category === "window";
 
   if (!aboveEligible && !belowEligible) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   const abovePreconditions = aboveEligible
@@ -309,12 +312,12 @@ function calculateOpeningCripples(
     : null;
 
   if (!abovePreconditions && !belowPreconditions) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   const preconditions = abovePreconditions ?? belowPreconditions;
   if (!preconditions) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   const perOccurrenceCount = crippleCountPerOccurrence(
@@ -341,7 +344,6 @@ function calculateOpeningCripples(
         ROUGH_WIDTH_PROPERTY_PATH,
         STUD_SIZE_PROPERTY_PATH,
         STUD_SPACING_PROPERTY_PATH,
-        HEIGHT_PROPERTY_PATH,
         ...(opening.category === "cased" ? [ROUGH_HEIGHT_PROPERTY_PATH] : []),
       ],
       assumption: null,
@@ -366,7 +368,6 @@ function calculateOpeningCripples(
         ROUGH_WIDTH_PROPERTY_PATH,
         STUD_SIZE_PROPERTY_PATH,
         STUD_SPACING_PROPERTY_PATH,
-        HEIGHT_PROPERTY_PATH,
       ],
       assumption: null,
     });
@@ -376,9 +377,20 @@ function calculateOpeningCripples(
   }
 
   if (materials.length === 0) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
+  const quantityKeyForRegistry = affectedQuantityKeys[0]!;
+  const registered = consultAssumptionRegistry({
+    quantityKey: quantityKeyForRegistry,
+    propertyPath: "crippleStudLayout",
+    context: { objectId: opening.id },
+    reviewItemId: crippleLayoutDefaultReviewItemId(opening),
+  });
+  if (registered.outcome !== "assumed") {
+    return { materials: [], assumptions: [], pendingClaims: [] };
+  }
+  // Single assumption covering all emitted cripple quantityKeys for this opening.
   const assumption = createOpeningCrippleLayoutAssumption(
     opening.id,
     crippleLayoutDefaultReviewItemId(opening),
@@ -386,12 +398,20 @@ function calculateOpeningCripples(
   );
 
   return {
-    materials: materials.map((material) => ({
-      ...material,
-      assumptionIds: [assumption.id],
-      reviewItemIds: [...assumption.reviewItemIds],
-    })),
+    materials: materials.map((material) =>
+      framingMaterialLineItemSchema.parse({
+        ...material,
+        quantityKey: material.quantityKey,
+        claimStatus: deriveMaterialClaimStatus({
+          assumptions: [assumption],
+          assumptionIds: [assumption.id],
+        }),
+        assumptionIds: [assumption.id],
+        reviewItemIds: [...assumption.reviewItemIds],
+      }),
+    ),
     assumptions: [assumption],
+    pendingClaims: [],
   };
 }
 
@@ -426,16 +446,8 @@ function isOpeningEligibleForWallFraming(
     return false;
   }
 
-  if (
-    !isQuantityInputResolved(
-      wall.assembly.heightFeet,
-      wall.resolutionTraces,
-      HEIGHT_PROPERTY_PATH,
-    )
-  ) {
-    return false;
-  }
-
+  // Wall height is review-only for opening COUNT / sill LF / cripple COUNT
+  // (claim-critical contracts). Do not gate these quantities on heightFeet.
   return true;
 }
 
@@ -465,13 +477,48 @@ function resolveKingStudCountPerOccurrence(
       KING_STUD_COUNT_PROPERTY_PATH,
     )
   ) {
+    const trace = opening.resolutionTraces.find(
+      (entry) => entry.propertyPath === KING_STUD_COUNT_PROPERTY_PATH,
+    );
+    if (
+      (trace?.method === "user-override" ||
+        trace?.method === "approved-default") &&
+      trace.userDecisionIds.length > 0 &&
+      opening.kingStudCount !== null
+    ) {
+      const reviewItemId = kingStudDefaultReviewItemId(opening);
+      const active = createOpeningKingStudCountAssumption(
+        opening.id,
+        reviewItemId,
+      );
+      return {
+        count: opening.kingStudCount,
+        assumption: applyAssumptionUserDecisionLifecycle(active, {
+          status:
+            trace.method === "approved-default" ? "confirmed" : "replaced",
+          userDecisionId: trace.userDecisionIds[0] as UserDecisionId,
+        }),
+      };
+    }
     return { count: opening.kingStudCount, assumption: null };
   }
 
   const reviewItemId = kingStudDefaultReviewItemId(opening);
+  const consulted = consultAssumptionRegistry({
+    quantityKey: OPENING_QUANTITY_KEYS.kingStuds,
+    propertyPath: KING_STUD_COUNT_PROPERTY_PATH,
+    context: { objectId: opening.id },
+    reviewItemId,
+  });
+  if (consulted.outcome !== "assumed") {
+    return null;
+  }
+  if (typeof consulted.assumedValue !== "number") {
+    return null;
+  }
   return {
-    count: KING_STUD_COUNT_DEFAULT,
-    assumption: createOpeningKingStudCountAssumption(opening.id, reviewItemId),
+    count: consulted.assumedValue,
+    assumption: consulted.assumption,
   };
 }
 
@@ -496,11 +543,11 @@ function calculateOpeningJackStuds(
       OPENING_QUANTITY_KEYS.framing,
     )
   ) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   if (!isOpeningEligibleForJackStuds(opening, wall, segment)) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   if (
@@ -510,7 +557,7 @@ function calculateOpeningJackStuds(
       QUANTITY_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   if (
@@ -520,7 +567,19 @@ function calculateOpeningJackStuds(
       JACK_STUD_COUNT_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [] };
+    const pending = createBlockedMissingInputPendingClaim({
+      quantityKey,
+      objectId: opening.id,
+      missingPropertyPath: JACK_STUD_COUNT_PROPERTY_PATH,
+      description: "Jack stud quantity pending explicit jackStudCount",
+      basis:
+        "Jack stud count has no Construction Brain–authorized assumption registry entry and must not be invented from opening width or code tables.",
+    });
+    return {
+      materials: [],
+      assumptions: [],
+      pendingClaims: pending ? [pending] : [],
+    };
   }
 
   const quantity = opening.jackStudCount * opening.quantity;
@@ -528,11 +587,12 @@ function calculateOpeningJackStuds(
     QUANTITY_PROPERTY_PATH,
     JACK_STUD_COUNT_PROPERTY_PATH,
     STUD_SIZE_PROPERTY_PATH,
-    HEIGHT_PROPERTY_PATH,
   ]);
 
   const lineItem = emitLineItem({
     id: createMaterialLineItemId(quantityKey, opening.id),
+    quantityKey,
+    claimStatus: "CONFIRMED",
     category: "lumber",
     description: `${wall.assembly.studSize} jack studs`,
     canonicalClassification: `jack-stud-${wall.assembly.studSize}`,
@@ -544,10 +604,10 @@ function calculateOpeningJackStuds(
   });
 
   if (!lineItem) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
-  return { materials: [lineItem], assumptions: [] };
+  return { materials: [lineItem], assumptions: [], pendingClaims: [] };
 }
 
 function calculateOpeningKingStuds(
@@ -571,11 +631,11 @@ function calculateOpeningKingStuds(
       OPENING_QUANTITY_KEYS.framing,
     )
   ) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   if (!isOpeningEligibleForKingStuds(opening, wall, segment)) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   if (
@@ -585,19 +645,18 @@ function calculateOpeningKingStuds(
       QUANTITY_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   const kingStudCount = resolveKingStudCountPerOccurrence(opening);
   if (!kingStudCount) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   const quantity = kingStudCount.count * opening.quantity;
   const usedPropertyPaths = [
     QUANTITY_PROPERTY_PATH,
     STUD_SIZE_PROPERTY_PATH,
-    HEIGHT_PROPERTY_PATH,
   ];
 
   if (kingStudCount.assumption === null) {
@@ -616,8 +675,14 @@ function calculateOpeningKingStuds(
       : []),
   ];
 
+  const assumptions = kingStudCount.assumption ? [kingStudCount.assumption] : [];
   const lineItem = emitLineItem({
     id: createMaterialLineItemId(quantityKey, opening.id),
+    quantityKey,
+    claimStatus: deriveMaterialClaimStatus({
+      assumptions,
+      assumptionIds,
+    }),
     category: "lumber",
     description: `${wall.assembly.studSize} king studs`,
     canonicalClassification: `king-stud-${wall.assembly.studSize}`,
@@ -629,12 +694,21 @@ function calculateOpeningKingStuds(
   });
 
   if (!lineItem) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
+
+  // Replaced assumptions are retained for lifecycle provenance but are not "active".
+  const emittedAssumptions =
+    kingStudCount.assumption && kingStudCount.assumption.status === "active"
+      ? [kingStudCount.assumption]
+      : kingStudCount.assumption
+        ? [kingStudCount.assumption]
+        : [];
 
   return {
     materials: [lineItem],
-    assumptions: kingStudCount.assumption ? [kingStudCount.assumption] : [],
+    assumptions: emittedAssumptions,
+    pendingClaims: [],
   };
 }
 
@@ -659,15 +733,15 @@ function calculateOpeningRoughSill(
       OPENING_QUANTITY_KEYS.framing,
     )
   ) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   if (opening.category !== "window") {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   if (!isOpeningEligibleForWallFraming(opening, wall, segment)) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   if (
@@ -677,7 +751,7 @@ function calculateOpeningRoughSill(
       QUANTITY_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   if (
@@ -687,28 +761,35 @@ function calculateOpeningRoughSill(
       ROUGH_WIDTH_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   const roughSillLinearFeet =
     opening.dimensions.roughWidthFeet * opening.quantity;
   const studSize = wall.assembly.studSize;
   if (studSize === null) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   const reviewItemId = roughSillSizeDefaultReviewItemId(opening);
-  const sillSizeAssumption = createOpeningRoughSillSizeAssumption(
-    opening.id,
-    studSize,
+  const consulted = consultAssumptionRegistry({
+    quantityKey,
+    propertyPath: "roughSillSize",
+    context: {
+      objectId: opening.id,
+      derivationInputs: { wallStudSize: studSize },
+    },
     reviewItemId,
-  );
+  });
+  if (consulted.outcome !== "assumed") {
+    return { materials: [], assumptions: [], pendingClaims: [] };
+  }
+  const sillSizeAssumption = consulted.assumption;
 
   const usedPropertyPaths = [
     QUANTITY_PROPERTY_PATH,
     ROUGH_WIDTH_PROPERTY_PATH,
     STUD_SIZE_PROPERTY_PATH,
-    HEIGHT_PROPERTY_PATH,
   ];
 
   const provenance = collectLineItemProvenance(contributingObjects, usedPropertyPaths);
@@ -723,6 +804,11 @@ function calculateOpeningRoughSill(
 
   const lineItem = emitLineItem({
     id: createMaterialLineItemId(quantityKey, opening.id),
+    quantityKey,
+    claimStatus: deriveMaterialClaimStatus({
+      assumptions: [sillSizeAssumption],
+      assumptionIds,
+    }),
     category: "lumber",
     description: `${studSize} rough sill`,
     canonicalClassification: `rough-sill-${studSize}`,
@@ -734,12 +820,13 @@ function calculateOpeningRoughSill(
   });
 
   if (!lineItem) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   return {
     materials: [lineItem],
     assumptions: [sillSizeAssumption],
+    pendingClaims: [],
   };
 }
 
@@ -764,6 +851,7 @@ export function calculateOpeningFraming(
 
   const materials: FramingMaterialLineItem[] = [];
   const assumptions: Assumption[] = [];
+  const pendingClaims: PendingMaterialClaim[] = [];
 
   for (const opening of sortedOpenings) {
     const segment = resolveParentSegment(opening, segmentsById);
@@ -792,7 +880,13 @@ export function calculateOpeningFraming(
       ...sillResult.assumptions,
       ...crippleResult.assumptions,
     );
+    pendingClaims.push(
+      ...kingResult.pendingClaims,
+      ...jackResult.pendingClaims,
+      ...sillResult.pendingClaims,
+      ...crippleResult.pendingClaims,
+    );
   }
 
-  return { materials, assumptions };
+  return { materials, assumptions, pendingClaims };
 }

@@ -90,7 +90,12 @@ describe("framing takeoff UI service", () => {
       );
       assert.ok(kingMaterialRun2);
       assert.equal(kingMaterialRun2.quantity, 3);
-      assert.equal(kingMaterialRun2.assumptionIds.length, 0);
+      assert.equal(kingMaterialRun2.claimStatus, "CONFIRMED");
+      assert.equal(kingMaterialRun2.assumptionIds.length, 1);
+      assert.equal(
+        kingMaterialRun2.assumptionIds[0],
+        createOpeningKingStudCountAssumptionId("O-002"),
+      );
 
       assert.ok(run2.materialComparison);
       assert.equal(run2.materialComparison.length, 1);
