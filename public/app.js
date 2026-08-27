@@ -157,6 +157,19 @@ function renderPackages(state) {
   packageSummary.textContent = `${wiredCount} wired packages · ${state.packages.length} total tracked`;
 
   for (const pkg of state.packages) {
+    const funnel =
+      pkg.productFunnel && pkg.package === "Floor"
+        ? `${formatCount(pkg.productFunnel.areas)} areas → ${formatCount(pkg.productFunnel.parentLinked)} linked → ${formatCount(pkg.productFunnel.calculatorReady)} ready → ${formatCount(pkg.productFunnel.stage16MaterialLines)} lines`
+        : null;
+    const readinessLabel =
+      pkg.package === "Floor"
+        ? "Calculator ready"
+        : "Legacy calc eligible";
+    const readinessValue =
+      pkg.package === "Floor"
+        ? formatCount(pkg.calculatorReady ?? 0)
+        : formatCount(pkg.calcEligible);
+
     const card = document.createElement("article");
     card.className = `package-card${selectedPackageName === pkg.package ? " selected" : ""}`;
     card.innerHTML = `
@@ -166,12 +179,13 @@ function renderPackages(state) {
         ${pkg.reviewRequired ? '<span class="badge review-required">review required</span>' : ""}
       </div>
       <div class="package-stats">
-        <span>Materials: ${formatCount(pkg.stage16Lines)}</span>
+        <span>Material lines: ${formatCount(pkg.materialLines ?? pkg.stage16Lines)}</span>
         <span>Objects: ${formatCount(pkg.materialized)}</span>
         <span>Resolved: ${formatCount(pkg.resolved)}</span>
-        <span>Calc eligible: ${formatCount(pkg.calcEligible)}</span>
+        <span>${readinessLabel}: ${readinessValue}</span>
         <span>Review items: ${formatCount(pkg.review)}</span>
         <span>Blocker: ${escapeHtml(pkg.firstBrokenHandoff ?? "—")}</span>
+        ${funnel ? `<span class="package-funnel">${escapeHtml(funnel)}</span>` : ""}
       </div>
     `;
     card.addEventListener("click", () => {
@@ -757,20 +771,25 @@ function buildTakeoffExportCsv(state) {
   }
 
   for (const pkg of state.packages) {
+    const funnelMeta =
+      pkg.productFunnel && pkg.package === "Floor"
+        ? `areas=${formatCount(pkg.productFunnel.areas)}; parent_linked=${formatCount(pkg.productFunnel.parentLinked)}; calculator_ready=${formatCount(pkg.productFunnel.calculatorReady)}; material_lines=${formatCount(pkg.productFunnel.stage16MaterialLines)}`
+        : `materialized=${formatCount(pkg.materialized)}; resolved=${formatCount(pkg.resolved)}; calc_eligible=${formatCount(pkg.calcEligible)}; review=${formatCount(pkg.review)}`;
+
     lines.push(
       csvRow([
         "package",
         pkg.package,
         pkg.package,
         pkg.firstBrokenHandoff ?? "",
-        pkg.stage16Lines,
+        pkg.materialLines ?? pkg.stage16Lines,
         "",
         pkg.displayState,
         pkg.productionState,
         "",
         "",
         pkg.reviewRequired ? "yes" : "no",
-        `materialized=${formatCount(pkg.materialized)}; resolved=${formatCount(pkg.resolved)}; calc_eligible=${formatCount(pkg.calcEligible)}; review=${formatCount(pkg.review)}`,
+        funnelMeta,
       ]),
     );
   }

@@ -31,6 +31,7 @@ export type ConstructionSemanticRejectionReason =
   | "CS-CONFLICT-ASSEMBLY"
   | "CS-CONFLICT-SYSTEM"
   | "CS-CONFLICT-AREA"
+  | "CS-INCOMPATIBLE-AREA-MATERIAL"
   | "AMBIGUOUS_AUTHORITY"
   | "ALREADY-LINKED";
 

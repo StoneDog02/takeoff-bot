@@ -32,6 +32,22 @@ export const packageProductStateRowSchema = z.object({
   resolved: z.union([z.number().int().nonnegative(), z.literal("N/A")]),
   assumed: z.union([z.number().int().nonnegative(), z.literal("N/A")]),
   calcEligible: z.union([z.number().int().nonnegative(), z.literal("N/A")]),
+  calculatorReady: z
+    .union([z.number().int().nonnegative(), z.literal("N/A")])
+    .optional(),
+  materialLines: z
+    .union([z.number().int().nonnegative(), z.literal("N/A")])
+    .optional(),
+  productFunnel: z
+    .object({
+      areas: z.number().int().nonnegative(),
+      parentLinked: z.number().int().nonnegative(),
+      calculatorReady: z.number().int().nonnegative(),
+      calculatedAreas: z.number().int().nonnegative(),
+      stage14MaterialLines: z.number().int().nonnegative(),
+      stage16MaterialLines: z.number().int().nonnegative(),
+    })
+    .optional(),
   confidence: z.union([z.number().int().nonnegative(), z.literal("N/A")]),
   review: z.union([z.number().int().nonnegative(), z.literal("N/A")]),
   stage16Lines: z.union([z.number().int().nonnegative(), z.literal("N/A")]),

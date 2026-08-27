@@ -32,6 +32,7 @@ import {
   type FramingPackageProductState,
   type PackageProductStateRow,
 } from "./framingPackageProductState.schema.js";
+import { buildFloorProductFunnel } from "./floorCalculatorReadiness.js";
 
 export type LoadedFramingRunArtifacts = {
   evidence: Evidence[];
@@ -297,6 +298,7 @@ function inferFirstBrokenHandoff(input: {
   materialized: number;
   resolved: number;
   calcEligible: number;
+  calculatorReady?: number;
   stage16Lines: number;
   assumed: number;
 }): FirstBrokenHandoff | null {
@@ -315,10 +317,12 @@ function inferFirstBrokenHandoff(input: {
   if (input.resolved === 0) {
     return "MATERIALIZED_NOT_RESOLVED";
   }
-  if (input.calcEligible === 0 && input.assumed === 0) {
+  const readiness =
+    input.calculatorReady !== undefined ? input.calculatorReady : input.calcEligible;
+  if (readiness === 0 && input.assumed === 0) {
     return "CALCULATOR_STARVED";
   }
-  if (input.stage16Lines === 0 && input.calcEligible > 0) {
+  if (input.stage16Lines === 0 && readiness > 0) {
     return "CALCULATOR_STARVED";
   }
   if (input.stage16Lines > 0) {
@@ -336,6 +340,9 @@ function buildPackageRow(input: {
   resolved: number;
   assumed: number;
   calcEligible: number;
+  calculatorReady?: number;
+  materialLines?: number;
+  productFunnel?: PackageProductStateRow["productFunnel"];
   confidence: number;
   review: number;
   stage16Lines: number;
@@ -352,6 +359,19 @@ function buildPackageRow(input: {
     resolved: na ? "N/A" : input.resolved,
     assumed: na ? "N/A" : input.assumed,
     calcEligible: na ? "N/A" : input.calcEligible,
+    calculatorReady:
+      input.calculatorReady === undefined
+        ? undefined
+        : na
+          ? "N/A"
+          : input.calculatorReady,
+    materialLines:
+      input.materialLines === undefined
+        ? undefined
+        : na
+          ? "N/A"
+          : input.materialLines,
+    productFunnel: na ? undefined : input.productFunnel,
     confidence: na ? "N/A" : input.confidence,
     review: na ? "N/A" : input.review,
     stage16Lines: na ? "N/A" : input.stage16Lines,
@@ -445,6 +465,17 @@ export function buildFramingPackageProductState(input: {
         ),
     ).length ?? 0;
 
+  const floorStage16Lines = stage16LinesByPackage.Floor ?? 0;
+  const floorFunnel =
+    floor && calculations
+      ? buildFloorProductFunnel({
+          floorFraming: floor,
+          validation: validation ?? undefined,
+          materials: calculations.materials,
+          stage16FloorLines: floorStage16Lines,
+        })
+      : null;
+
   const packages: PackageProductStateRow[] = [
     buildPackageRow({
       package: "Walls",
@@ -496,12 +527,15 @@ export function buildFramingPackageProductState(input: {
         countUnresolvedObjects(floor?.areas ?? []),
       assumed: 0,
       calcEligible: floor?.areas.length ?? 0,
+      calculatorReady: floorFunnel?.calculatorReady,
+      materialLines: floorFunnel?.stage16MaterialLines ?? floorStage16Lines,
+      productFunnel: floorFunnel ?? undefined,
       confidence: countConfidenceForTypes(confidence, [
         "floor-framing-system",
         "floor-framing-area",
       ]),
       review: countReviewForPackage(validation, ["floor-framing"]),
-      stage16Lines: stage16LinesByPackage.Floor ?? 0,
+      stage16Lines: floorStage16Lines,
     }),
     buildPackageRow({
       package: "Structural",

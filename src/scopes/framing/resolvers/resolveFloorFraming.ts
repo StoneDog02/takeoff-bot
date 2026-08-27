@@ -55,6 +55,12 @@ import {
   type FloorSystemPropertyPath,
 } from "./floorFramingPropertyPaths.js";
 import {
+  applySiblingFloorSystemAssemblyMerge,
+  mergeBayFragmentEvidenceOntoLinkedAreas,
+} from "./floorFragmentConsolidation.js";
+import { isSlabOrNonWoodFloorArea } from "./floorAreaMaterialCompatibility.js";
+import { evaluateFloorScalarFeetCandidate } from "./normalizeFloorScalarFeet.js";
+import {
   inferJoistSizeFromJoistType,
   isSpacingAxisLayoutAuthorityEstablished,
   memberLengthFromMisassignedSpanEvidence,
@@ -134,6 +140,83 @@ function selectCandidate(
     kind: "conflict",
     evidenceIds: uniqueSortedIds(usable.map((entry) => entry.id)),
   };
+}
+
+const FLOOR_SCALAR_FEET_PROPERTY_PATHS = new Set<FloorAreaPropertyPath>([
+  "joistLayoutLengthFeet",
+  "joistMemberLengthFeet",
+  "areaSquareFeet",
+]);
+
+function selectScalarFeetCandidate(
+  records: readonly Evidence[],
+  propertyPath: FloorAreaPropertyPath,
+): CandidateDecision {
+  const usable: Array<{ value: number; id: EvidenceId }> = [];
+
+  for (const record of records) {
+    if (record.propertyPath !== propertyPath) {
+      continue;
+    }
+
+    const evaluation = evaluateFloorScalarFeetCandidate(record.candidateValue);
+    if (evaluation.kind === "multi-value") {
+      return {
+        kind: "conflict",
+        evidenceIds: [record.id],
+      };
+    }
+
+    if (evaluation.kind !== "resolved") {
+      continue;
+    }
+
+    usable.push({ value: evaluation.feet, id: record.id });
+  }
+
+  if (usable.length === 0) {
+    return { kind: "missing" };
+  }
+
+  const grouped = new Map<string, { value: number; ids: EvidenceId[] }>();
+  for (const entry of usable) {
+    const key = entry.value.toFixed(6);
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.ids.push(entry.id);
+    } else {
+      grouped.set(key, { value: entry.value, ids: [entry.id] });
+    }
+  }
+
+  if (grouped.size === 1) {
+    const only = [...grouped.values()][0]!;
+    return {
+      kind: "resolved",
+      value: only.value,
+      evidenceIds: uniqueSortedIds(only.ids),
+    };
+  }
+
+  return {
+    kind: "conflict",
+    evidenceIds: uniqueSortedIds(usable.map((entry) => entry.id)),
+  };
+}
+
+function selectAreaPropertyCandidate(
+  records: readonly Evidence[],
+  propertyPath: FloorAreaPropertyPath,
+  normalize: (
+    path: string,
+    candidateValue: Evidence["candidateValue"],
+  ) => string | number | undefined,
+): CandidateDecision {
+  if (FLOOR_SCALAR_FEET_PROPERTY_PATHS.has(propertyPath)) {
+    return selectScalarFeetCandidate(records, propertyPath);
+  }
+
+  return selectCandidate(records, propertyPath, normalize);
 }
 
 function formatValues(
@@ -231,6 +314,39 @@ function resolvePropertyAuthority(
   }
 
   const decision = selectCandidate(records, propertyPath, normalize);
+  return {
+    decision,
+    traces: tracesForDecision(propertyPath, decision, records),
+  };
+}
+
+function resolveAreaPropertyAuthority(
+  propertyPath: FloorAreaPropertyPath,
+  records: readonly Evidence[],
+  objectId: ObjectId,
+  userDecisionIndex: UserDecisionIndex,
+  normalize: (
+    path: string,
+    candidateValue: Evidence["candidateValue"],
+  ) => string | number | undefined,
+): { decision: CandidateDecision; traces: PropertyResolutionTrace[] } {
+  const applied = findAppliedUserDecision(
+    userDecisionIndex,
+    objectId,
+    propertyPath as UserDecisionPropertyPath,
+  );
+  if (applied) {
+    return {
+      decision: {
+        kind: "resolved",
+        value: applied.value as string | number,
+        evidenceIds: applied.acceptedEvidenceIds,
+      },
+      traces: [createUserOverrideTrace(applied)],
+    };
+  }
+
+  const decision = selectAreaPropertyCandidate(records, propertyPath, normalize);
   return {
     decision,
     traces: tracesForDecision(propertyPath, decision, records),
@@ -489,7 +605,7 @@ function resolveOneArea(
   const areaId = cluster.objectId;
   const propertyResults = Object.fromEntries(
     FLOOR_AREA_PROPERTY_PATHS.map((propertyPath) => {
-      const result = resolvePropertyAuthority(
+      const result = resolveAreaPropertyAuthority(
         propertyPath,
         records,
         areaId,
@@ -736,6 +852,101 @@ type ResolvedSubjectIdentity = {
   kind: "floor-framing-system" | "floor-framing-area";
 };
 
+function rejectSlabAreaWoodFloorParentLink(
+  area: FloorFramingArea,
+  areaRecords: readonly Evidence[],
+): FloorFramingArea {
+  if (!isSlabOrNonWoodFloorArea(areaRecords)) {
+    return area;
+  }
+
+  if (area.parentSystemId.endsWith("UNRESOLVED")) {
+    return area;
+  }
+
+  return {
+    ...area,
+    parentSystemId: createFloorFramingSystemObjectId("UNRESOLVED"),
+    resolutionTraces: [
+      ...area.resolutionTraces.filter(
+        (trace) => trace.propertyPath !== "parentSystemTag",
+      ),
+      createTrace(
+        "parentSystemTag",
+        "unresolved",
+        "Slab or non-wood floor surface cannot inherit a wood-joist floor system parent.",
+        area.evidenceIds,
+      ),
+    ],
+  };
+}
+
+function reapplyAreaScalarsFromRecords(
+  area: FloorFramingArea,
+  records: readonly Evidence[],
+  userDecisionIndex: UserDecisionIndex,
+): FloorFramingArea {
+  const areaId = area.id;
+  const scalarResults = Object.fromEntries(
+    FLOOR_AREA_PROPERTY_PATHS.map((propertyPath) => {
+      const result = resolveAreaPropertyAuthority(
+        propertyPath,
+        records,
+        areaId,
+        userDecisionIndex,
+        (path, candidateValue) =>
+          normalizeFloorAreaCandidate(
+            path as FloorAreaPropertyPath,
+            candidateValue,
+          ),
+      );
+      return [propertyPath, result];
+    }),
+  ) as Record<
+    FloorAreaPropertyPath,
+    { decision: CandidateDecision; traces: PropertyResolutionTrace[] }
+  >;
+
+  const decisions = Object.fromEntries(
+    FLOOR_AREA_PROPERTY_PATHS.map((propertyPath) => [
+      propertyPath,
+      scalarResults[propertyPath]!.decision,
+    ]),
+  ) as Record<FloorAreaPropertyPath, CandidateDecision>;
+
+  const scalarTraces = FLOOR_AREA_PROPERTY_PATHS.flatMap(
+    (propertyPath) => scalarResults[propertyPath]!.traces,
+  );
+
+  const nonScalarTraces = area.resolutionTraces.filter(
+    (trace) =>
+      !(FLOOR_AREA_PROPERTY_PATHS as readonly string[]).includes(
+        trace.propertyPath,
+      ),
+  );
+
+  return {
+    ...area,
+    layout: resolvedStringValue(decisions.layout, null),
+    framingDirection: resolvedStringValue(decisions.framingDirection, null),
+    spanDirection: resolvedStringValue(decisions.spanDirection, null),
+    joistLayoutLengthFeet: resolvedNumberValue(
+      decisions.joistLayoutLengthFeet,
+      null,
+    ),
+    joistMemberLengthFeet: resolvedNumberValue(
+      decisions.joistMemberLengthFeet,
+      null,
+    ),
+    areaSquareFeet: resolvedNumberValue(decisions.areaSquareFeet, null),
+    resolutionTraces: [...nonScalarTraces, ...scalarTraces],
+    evidenceIds: uniqueSortedIds([
+      ...area.evidenceIds,
+      ...records.map((record) => record.id),
+    ]),
+  };
+}
+
 function linkSystemAreaIds(
   systems: FloorFramingSystem[],
   areas: FloorFramingArea[],
@@ -808,8 +1019,10 @@ export function resolveFloorFraming(
     options,
   );
 
-  const systems = systemClusters.map((cluster) =>
-    applyJoistSizeInference(resolveOneSystem(cluster, userDecisionIndex)),
+  const systems = applySiblingFloorSystemAssemblyMerge(
+    systemClusters.map((cluster) =>
+      applyJoistSizeInference(resolveOneSystem(cluster, userDecisionIndex)),
+    ),
   );
 
   const systemCandidates = systemClusters.map((cluster) => ({
@@ -817,7 +1030,7 @@ export function resolveFloorFraming(
     records: cluster.records,
   }));
 
-  const areas = areaClusters.map((cluster) => {
+  let areas = areaClusters.map((cluster) => {
     const areaRecords = cluster.records;
     let area = resolveOneArea(cluster, userDecisionIndex);
     area = applyMemberLengthFromMisassignedSpan(area, areaRecords);
@@ -841,6 +1054,7 @@ export function resolveFloorFraming(
       explicitParentSystemTag,
       systemCandidates,
     );
+    area = rejectSlabAreaWoodFloorParentLink(area, areaRecords);
 
     const linkedSystemRecords =
       systemCandidates.find(
@@ -856,6 +1070,42 @@ export function resolveFloorFraming(
     );
 
     return area;
+  });
+
+  const linkedSystems = linkSystemAreaIds(systems, areas);
+  const mergedRecordsByAreaId = mergeBayFragmentEvidenceOntoLinkedAreas({
+    areaClusters,
+    areas,
+    systems: linkedSystems,
+  });
+
+  areas = areas.map((area) => {
+    const mergedRecords = mergedRecordsByAreaId.get(area.id);
+    if (!mergedRecords) {
+      return area;
+    }
+
+    let updated = reapplyAreaScalarsFromRecords(
+      area,
+      mergedRecords,
+      userDecisionIndex,
+    );
+    updated = applyMemberLengthFromMisassignedSpan(updated, mergedRecords);
+
+    const linkedSystemRecords =
+      systemCandidates.find(
+        (candidate) =>
+          createFloorFramingSystemObjectId(candidate.subjectKey) ===
+          updated.parentSystemId,
+      )?.records ?? [];
+
+    updated = applySpacingAxisLayoutAuthority(
+      updated,
+      mergedRecords,
+      linkedSystemRecords,
+    );
+
+    return updated;
   });
 
   return floorFramingPayloadSchema.parse({

@@ -11,6 +11,7 @@ import type {
   FloorFramingSystem,
 } from "../schemas/floor-framing.schema.js";
 import { isIJoistType } from "../resolvers/floorFramingPropertyPaths.js";
+import { isNonWoodFloorTakeoffAreaFromTraces } from "../resolvers/floorAreaMaterialCompatibility.js";
 import { hasJoistCountLayoutAxisAuthority } from "../resolvers/floorLayoutAuthority.js";
 import { FLOOR_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
@@ -226,6 +227,10 @@ export function calculateFloorFraming(
   const materials: FramingMaterialLineItem[] = [];
 
   for (const area of areas) {
+    if (isNonWoodFloorTakeoffAreaFromTraces(area)) {
+      continue;
+    }
+
     const system = systemsById.get(area.parentSystemId);
     if (!system) {
       continue;

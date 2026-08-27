@@ -4,6 +4,7 @@ import {
   type FloorConstructionPhase,
 } from "../schemas/floor-framing.schema.js";
 import { isValidSpanDirectionValue } from "./floorLayoutAuthority.js";
+import { normalizeFloorScalarFeetCandidate } from "./normalizeFloorScalarFeet.js";
 
 export const FLOOR_SYSTEM_PROPERTY_PATHS = [
   "name",
@@ -64,7 +65,9 @@ export function isIJoistType(joistType: string): boolean {
   return (
     token === "i-joist" ||
     token === "ijoist" ||
-    token.includes("i-joist")
+    token.includes("i-joist") ||
+    /\btji\b/.test(token) ||
+    token.includes("tji-")
   );
 }
 
@@ -149,7 +152,7 @@ export function normalizeFloorAreaCandidate(
     case "joistLayoutLengthFeet":
     case "joistMemberLengthFeet":
     case "areaSquareFeet":
-      return isPositiveNumber(candidateValue) ? candidateValue : undefined;
+      return normalizeFloorScalarFeetCandidate(candidateValue);
     case "layout":
     case "framingDirection":
       return typeof candidateValue === "string" && candidateValue.trim().length > 0

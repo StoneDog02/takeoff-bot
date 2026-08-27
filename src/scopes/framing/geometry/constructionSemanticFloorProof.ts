@@ -25,6 +25,7 @@ import {
   sheetRoleForPage,
   signalsForPageAndGroup,
 } from "./planRelationshipSignalIndex.js";
+import { isSlabOrNonWoodFloorArea, isWoodJoistFloorSystemCompatibleWithArea } from "../resolvers/floorAreaMaterialCompatibility.js";
 
 function compareIds(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -144,6 +145,13 @@ export function evaluateConstructionSemanticFloorProof(input: {
   const areaCluster = matchingAreas.find(
     (cluster) => cluster.subjectKey === areaSelection.value,
   )!;
+  if (isSlabOrNonWoodFloorArea(areaCluster.records)) {
+    return {
+      status: "rejected",
+      reason: "CS-INCOMPATIBLE-AREA-MATERIAL",
+      authorizingEvidenceIds: areaSelection.authorizingEvidenceIds,
+    };
+  }
   if (existingParentSystemTags(input.evidence, areaCluster.subjectKey)) {
     return { status: "rejected", reason: "ALREADY-LINKED" };
   }
@@ -242,6 +250,26 @@ export function evaluateConstructionSemanticFloorProof(input: {
       status: "rejected",
       reason: systemSelection.reason,
       conflictCandidates: systemSelection.candidates,
+      authorizingEvidenceIds: uniqueSortedIds([
+        ...areaSelection.authorizingEvidenceIds,
+        ...systemSelection.authorizingEvidenceIds,
+      ]),
+    };
+  }
+
+  const systemCluster = input.systemClusters.find(
+    (cluster) => cluster.subjectKey === systemSelection.value,
+  );
+  if (
+    systemCluster &&
+    !isWoodJoistFloorSystemCompatibleWithArea({
+      systemRecords: systemCluster.records,
+      areaRecords: areaCluster.records,
+    })
+  ) {
+    return {
+      status: "rejected",
+      reason: "CS-INCOMPATIBLE-AREA-MATERIAL",
       authorizingEvidenceIds: uniqueSortedIds([
         ...areaSelection.authorizingEvidenceIds,
         ...systemSelection.authorizingEvidenceIds,
