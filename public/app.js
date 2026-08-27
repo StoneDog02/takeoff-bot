@@ -8,6 +8,7 @@ let selectedReviewItemId = null;
 let selectedPackageName = null;
 
 const runButton = document.querySelector("#run-takeoff-btn");
+const exportButton = document.querySelector("#export-csv-btn");
 const statusBanner = document.querySelector("#status-banner");
 const workspace = document.querySelector("#workspace");
 const emptyState = document.querySelector("#empty-state");
@@ -24,6 +25,10 @@ const reviewDetail = document.querySelector("#review-detail");
 
 runButton?.addEventListener("click", async () => {
   await startTakeoff();
+});
+
+exportButton?.addEventListener("click", () => {
+  exportTakeoffCsv();
 });
 
 async function startTakeoff() {
@@ -86,6 +91,7 @@ function renderState(state = currentState) {
   renderMaterials(state);
   renderReviewItems(state);
   renderReviewDetail(state);
+  setExportEnabled(true);
 }
 
 /**
@@ -582,6 +588,319 @@ function setBusy(isBusy) {
     runButton.disabled = isBusy;
     runButton.textContent = isBusy ? "Running…" : "Run Takeoff";
   }
+  if (exportButton instanceof HTMLButtonElement) {
+    exportButton.disabled = isBusy || !currentState;
+  }
+}
+
+function setExportEnabled(enabled) {
+  if (exportButton instanceof HTMLButtonElement) {
+    exportButton.disabled = !enabled;
+  }
+}
+
+function exportTakeoffCsv() {
+  if (!currentState) {
+    showBanner("Run a takeoff before exporting.", true);
+    return;
+  }
+
+  const csv = buildTakeoffExportCsv(currentState);
+  downloadTextFile(
+    csv,
+    buildExportFilename(currentState),
+    "text/csv;charset=utf-8",
+  );
+  showBanner("CSV export downloaded.");
+}
+
+/**
+ * @param {TakeoffViewState} state
+ */
+function buildExportFilename(state) {
+  const safeProject = state.projectId.replace(/[^a-zA-Z0-9._-]+/g, "-");
+  return `${safeProject}-run${state.activeRun}-takeoff-export.csv`;
+}
+
+/**
+ * @param {string} content
+ * @param {string} filename
+ * @param {string} mimeType
+ */
+function downloadTextFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * @param {unknown} value
+ */
+function csvCell(value) {
+  if (value == null) {
+    return "";
+  }
+  const text = String(value);
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replaceAll('"', '""')}"`;
+  }
+  return text;
+}
+
+/**
+ * @param {readonly unknown[]} values
+ */
+function csvRow(values) {
+  return values.map(csvCell).join(",");
+}
+
+/**
+ * @param {TakeoffViewState} state
+ */
+function buildTakeoffExportCsv(state) {
+  const lines = [];
+  const header = [
+    "section",
+    "record_id",
+    "title",
+    "description",
+    "quantity",
+    "unit",
+    "status",
+    "blocking_status",
+    "property",
+    "object_id",
+    "value",
+    "details",
+  ];
+  lines.push(csvRow(header));
+
+  const runFields = [
+    ["session_id", state.sessionId],
+    ["project_id", state.projectId],
+    ["session_source", state.sessionSource],
+    ["active_run", state.activeRun],
+    ["pipeline_run_id", state.pipelineRunId],
+    ["run1_pipeline_run_id", state.run1PipelineRunId],
+    ["run2_pipeline_run_id", state.run2PipelineRunId ?? ""],
+    ["replay_capable", state.replayCapable ? "yes" : "no"],
+    ["source_artifact_dir", state.sourceArtifactDir ?? ""],
+    ["pdf_path", state.pdfPath],
+  ];
+  for (const [name, value] of runFields) {
+    lines.push(
+      csvRow(["run", "", name, "", "", "", "", "", "", "", String(value), ""]),
+    );
+  }
+
+  const summary = state.takeoff.summary;
+  lines.push(
+    csvRow([
+      "summary",
+      "",
+      "takeoff_summary",
+      "",
+      summary.materialLineItemCount,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      `openings=${summary.openingCount}; walls=${summary.wallCount}`,
+    ]),
+  );
+
+  const workspaceSummary = state.reviewWorkspace.summary;
+  lines.push(
+    csvRow([
+      "review_summary",
+      "",
+      "review_workspace_summary",
+      "",
+      workspaceSummary.activeReviewItemCount,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      `primary=${workspaceSummary.contractorPrimaryQueueCount ?? ""}; under_assumption=${workspaceSummary.calculatedUnderAssumptionCount}; resolved=${workspaceSummary.resolvedByUserDecisionCount}`,
+    ]),
+  );
+
+  for (const text of state.limitations) {
+    lines.push(csvRow(["limitation", "", "", text, "", "", "", "", "", "", "", ""]));
+  }
+
+  for (const run of state.runLineage.runs) {
+    lines.push(
+      csvRow([
+        "lineage",
+        run.pipelineRunId,
+        `run_${run.runNumber}`,
+        run.label,
+        run.runNumber,
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ]),
+    );
+  }
+
+  for (const pkg of state.packages) {
+    lines.push(
+      csvRow([
+        "package",
+        pkg.package,
+        pkg.package,
+        pkg.firstBrokenHandoff ?? "",
+        pkg.stage16Lines,
+        "",
+        pkg.displayState,
+        pkg.productionState,
+        "",
+        "",
+        pkg.reviewRequired ? "yes" : "no",
+        `materialized=${formatCount(pkg.materialized)}; resolved=${formatCount(pkg.resolved)}; calc_eligible=${formatCount(pkg.calcEligible)}; review=${formatCount(pkg.review)}`,
+      ]),
+    );
+  }
+
+  for (const material of state.takeoff.materials) {
+    lines.push(
+      csvRow([
+        "material",
+        material.id,
+        "",
+        material.description,
+        material.quantity,
+        material.unit ?? "",
+        material.category,
+        "",
+        "",
+        material.sourceObjectIds.join("; "),
+        "",
+        "",
+      ]),
+    );
+  }
+
+  for (const entry of state.materialComparison ?? []) {
+    lines.push(
+      csvRow([
+        "comparison",
+        entry.materialLineId,
+        "",
+        entry.description,
+        entry.run2Quantity ?? "",
+        entry.unit ?? "",
+        "",
+        "",
+        "",
+        "",
+        `run1=${entry.run1Quantity ?? ""}; run2=${entry.run2Quantity ?? ""}`,
+      ]),
+    );
+  }
+
+  for (const entry of state.reviewWorkspace.primaryQueue ?? []) {
+    if (entry.kind !== "governing-issue") {
+      continue;
+    }
+    lines.push(
+      csvRow([
+        "governing_review",
+        entry.governingGroupId,
+        entry.title,
+        "",
+        entry.affectedObjectCount,
+        "",
+        entry.decisionReadiness,
+        "",
+        "",
+        "",
+        "",
+        `dependent_reviews=${entry.dependentReviewItemCount}`,
+      ]),
+    );
+  }
+
+  for (const item of state.reviewWorkspace.items) {
+    lines.push(
+      csvRow([
+        "review",
+        item.reviewItemId,
+        item.title,
+        item.description,
+        "",
+        "",
+        item.status.reviewStatus,
+        item.status.blockingStatus,
+        item.targetProperty ?? "",
+        item.objectId,
+        formatValue(item.currentState.calculationValueUsed),
+        `reason=${item.status.reason}; value_source=${item.currentState.valueSource}; explanation=${item.currentState.explanation}`,
+      ]),
+    );
+  }
+
+  for (const item of state.reviewWorkspace.resolvedItems) {
+    lines.push(
+      csvRow([
+        "resolved_review",
+        item.reviewItemId,
+        item.title,
+        "",
+        "",
+        "",
+        "resolved",
+        "",
+        "",
+        item.objectId,
+        formatValue(item.calculationValueUsed),
+        `user_decision=${item.userDecisionId}`,
+      ]),
+    );
+  }
+
+  for (const decision of state.userDecisions) {
+    const result = decision.result;
+    let value = "";
+    let details = result.type;
+    if ("value" in result) {
+      value = formatValue(result.value);
+    }
+    if ("rationale" in result && result.rationale) {
+      details += `; rationale=${result.rationale}`;
+    }
+    lines.push(
+      csvRow([
+        "decision",
+        decision.id,
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        decision.reviewItemId,
+        value,
+        details,
+      ]),
+    );
+  }
+
+  return `${lines.join("\n")}\n`;
 }
 
 function showBanner(message, isError = false) {
