@@ -491,11 +491,12 @@ function renderReviewDetail(state) {
   );
   appendDetailBlock(reviewDetail, "Explanation", item.currentState.explanation);
 
-  if (item.evidenceIds.length > 0) {
+  const evidenceIds = item.provenance?.evidenceIds ?? [];
+  if (evidenceIds.length > 0) {
     appendDetailBlock(
       reviewDetail,
       "Evidence references",
-      `${item.evidenceIds.length} record(s): ${item.evidenceIds.slice(0, 3).join(", ")}${item.evidenceIds.length > 3 ? "…" : ""}`,
+      `${evidenceIds.length} record(s): ${evidenceIds.slice(0, 3).join(", ")}${evidenceIds.length > 3 ? "…" : ""}`,
     );
   }
 
