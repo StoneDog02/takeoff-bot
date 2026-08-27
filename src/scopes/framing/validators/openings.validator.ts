@@ -1,4 +1,8 @@
 import type { ObjectId } from "../../../core/schemas/identity.schema.js";
+import {
+  isOpeningCategoryEligibleForQuantityKey,
+  OPENING_WALL_FRAMING_ELIGIBLE_CATEGORIES,
+} from "../claims/openingClaimApplicability.js";
 import type { Opening } from "../schemas/opening.schema.js";
 import type { OpeningsPayload } from "../schemas/framing-artifacts.schema.js";
 import {
@@ -56,13 +60,9 @@ function isRoughHeightResolved(opening: Opening): boolean {
   );
 }
 
-const KING_STUD_ELIGIBLE_CATEGORIES = new Set<Opening["category"]>([
-  "door",
-  "window",
-  "cased",
-]);
-
-const ROUGH_SILL_ELIGIBLE_CATEGORIES = new Set<Opening["category"]>(["window"]);
+const KING_STUD_ELIGIBLE_CATEGORIES = new Set<Opening["category"]>(
+  OPENING_WALL_FRAMING_ELIGIBLE_CATEGORIES,
+);
 
 function crippleLayoutQuantityImpacts(
   opening: Opening,
@@ -114,7 +114,19 @@ function isCrippleLayoutEligible(opening: Opening): boolean {
   );
 }
 
-function roughSillQuantityImpact(widthResolved: boolean) {
+function roughSillQuantityImpact(
+  opening: Opening,
+  widthResolved: boolean,
+):
+  | {
+      quantityKey: string;
+      description: string;
+      canCalculate: boolean;
+    }
+  | null {
+  if (!isOpeningCategoryEligibleForQuantityKey(OPENING_QUANTITY_KEYS.roughSill, opening.category)) {
+    return null;
+  }
   return {
     quantityKey: OPENING_QUANTITY_KEYS.roughSill,
     description: widthResolved
@@ -122,6 +134,88 @@ function roughSillQuantityImpact(widthResolved: boolean) {
       : "Rough sill takeoff requires resolved rough opening width.",
     canCalculate: widthResolved,
   };
+}
+
+/**
+ * Emit-capable opening quantity impacts gated by category applicability.
+ * Always includes aggregate opening.framing for calculator gating.
+ */
+function categoryGatedOpeningEmitImpacts(
+  opening: Opening,
+  canCalculate: boolean,
+  descriptions: {
+    framing: string;
+    kingStuds: string;
+    roughSill: string;
+    cripplesAbove: string;
+    cripplesBelow: string;
+  },
+): Array<{
+  quantityKey: string;
+  description: string;
+  canCalculate: boolean;
+}> {
+  const impacts: Array<{
+    quantityKey: string;
+    description: string;
+    canCalculate: boolean;
+  }> = [
+    {
+      quantityKey: OPENING_QUANTITY_KEYS.framing,
+      description: descriptions.framing,
+      canCalculate,
+    },
+  ];
+
+  if (
+    isOpeningCategoryEligibleForQuantityKey(
+      OPENING_QUANTITY_KEYS.kingStuds,
+      opening.category,
+    )
+  ) {
+    impacts.push({
+      quantityKey: OPENING_QUANTITY_KEYS.kingStuds,
+      description: descriptions.kingStuds,
+      canCalculate,
+    });
+  }
+
+  const sill = roughSillQuantityImpact(opening, canCalculate);
+  if (sill) {
+    impacts.push({
+      ...sill,
+      description: descriptions.roughSill,
+      canCalculate,
+    });
+  }
+
+  if (
+    isOpeningCategoryEligibleForQuantityKey(
+      OPENING_QUANTITY_KEYS.cripplesAbove,
+      opening.category,
+    )
+  ) {
+    impacts.push({
+      quantityKey: OPENING_QUANTITY_KEYS.cripplesAbove,
+      description: descriptions.cripplesAbove,
+      canCalculate,
+    });
+  }
+
+  if (
+    isOpeningCategoryEligibleForQuantityKey(
+      OPENING_QUANTITY_KEYS.cripplesBelow,
+      opening.category,
+    )
+  ) {
+    impacts.push({
+      quantityKey: OPENING_QUANTITY_KEYS.cripplesBelow,
+      description: descriptions.cripplesBelow,
+      canCalculate,
+    });
+  }
+
+  return impacts;
 }
 
 function isQuantityResolved(opening: Opening): boolean {
@@ -492,6 +586,7 @@ function validateRoughDimensionsResolved(opening: Opening): ValidationBatch {
     missing.push("rough height");
   }
 
+  const sillImpact = roughSillQuantityImpact(opening, widthResolved);
   const quantityImpacts = nominalComplete
     ? [
         {
@@ -500,7 +595,7 @@ function validateRoughDimensionsResolved(opening: Opening): ValidationBatch {
             "Nominal dimensions may still support partial opening framing takeoff.",
           canCalculate: true,
         },
-        roughSillQuantityImpact(widthResolved),
+        ...(sillImpact ? [sillImpact] : []),
       ]
     : [
         {
@@ -509,7 +604,7 @@ function validateRoughDimensionsResolved(opening: Opening): ValidationBatch {
             "Rough opening dimensions remain unresolved without nominal fallback.",
           canCalculate: false,
         },
-        roughSillQuantityImpact(widthResolved),
+        ...(sillImpact ? [sillImpact] : []),
       ];
 
   const explanation = `Opening ${opening.id} is missing ${missing.join(" and ")}.`;
@@ -644,38 +739,15 @@ function validateQuantityResolved(opening: Opening): ValidationBatch {
     );
   }
 
-  const quantityImpacts = [
-    {
-      quantityKey: OPENING_QUANTITY_KEYS.framing,
-      description:
-        "Opening framing quantities require a resolved occurrence count.",
-      canCalculate: false,
-    },
-    {
-      quantityKey: OPENING_QUANTITY_KEYS.kingStuds,
-      description:
-        "King stud takeoff requires a resolved opening occurrence count.",
-      canCalculate: false,
-    },
-    {
-      quantityKey: OPENING_QUANTITY_KEYS.roughSill,
-      description:
-        "Rough sill takeoff requires a resolved opening occurrence count.",
-      canCalculate: false,
-    },
-    {
-      quantityKey: OPENING_QUANTITY_KEYS.cripplesAbove,
-      description:
-        "Cripple stud count above header requires a resolved opening occurrence count.",
-      canCalculate: false,
-    },
-    {
-      quantityKey: OPENING_QUANTITY_KEYS.cripplesBelow,
-      description:
-        "Cripple stud count below sill requires a resolved opening occurrence count.",
-      canCalculate: false,
-    },
-  ];
+  const quantityImpacts = categoryGatedOpeningEmitImpacts(opening, false, {
+    framing: "Opening framing quantities require a resolved occurrence count.",
+    kingStuds: "King stud takeoff requires a resolved opening occurrence count.",
+    roughSill: "Rough sill takeoff requires a resolved opening occurrence count.",
+    cripplesAbove:
+      "Cripple stud count above header requires a resolved opening occurrence count.",
+    cripplesBelow:
+      "Cripple stud count below sill requires a resolved opening occurrence count.",
+  });
 
   const explanation = `Opening ${opening.id} is missing quantity or occurrence count.`;
 
@@ -910,7 +982,12 @@ function validateRoughSillSizeDefault(opening: Opening): ValidationBatch {
   const ruleId = OPENINGS_RULE_IDS.roughSillSizeDefault;
   const evidenceIds = collectEvidenceIds(opening);
 
-  if (!ROUGH_SILL_ELIGIBLE_CATEGORIES.has(opening.category)) {
+  if (
+    !isOpeningCategoryEligibleForQuantityKey(
+      OPENING_QUANTITY_KEYS.roughSill,
+      opening.category,
+    )
+  ) {
     return buildSkippedBatch(
       ruleId,
       "object",

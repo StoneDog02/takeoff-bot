@@ -9,6 +9,7 @@ import {
   type ReviewRootCauseProjection,
 } from "../../../core/schemas/review-root-cause.schema.js";
 import type { ValidationIssue } from "../../../core/schemas/validation.schema.js";
+import { quantityKeyAffectsAdmittedEmitClaim } from "../claims/admitMaterialClaimCandidate.js";
 import type {
   FloorFramingPayload,
   OpeningsPayload,
@@ -209,9 +210,32 @@ function worstBlockingStatus(
   return "not-blocked";
 }
 
+function reviewAffectsAdmittedEmitClaim(entry: EnrichedReview): boolean {
+  return entry.reviewItem.quantityImpacts.some((impact) =>
+    quantityKeyAffectsAdmittedEmitClaim(impact.quantityKey),
+  );
+}
+
+/**
+ * Contractor-actionable reviews include:
+ * - blocked / partially-blocked reviews that affect material takeoff
+ * - non-blocking reviews that confirm/correct/change/govern an admitted emit claim
+ *   (REVIEW REQUIRED ≠ MATERIAL BLOCKED)
+ *
+ * Informational location/bearing without emit impacts stay out of the primary queue.
+ */
 function isPrimaryActionableReview(entry: EnrichedReview): boolean {
+  if (isInformationalReview(entry) && !reviewAffectsAdmittedEmitClaim(entry)) {
+    return false;
+  }
   const status = entry.reviewItem.blockingStatus;
-  return status === "blocked" || status === "partially-blocked";
+  if (status === "blocked" || status === "partially-blocked") {
+    return true;
+  }
+  if (status === "not-blocked" && reviewAffectsAdmittedEmitClaim(entry)) {
+    return true;
+  }
+  return false;
 }
 
 function isInformationalReview(entry: EnrichedReview): boolean {
@@ -541,8 +565,7 @@ export function projectReviewRootCauses(
   const ungroupedPrimary = enriched.filter(
     (entry) =>
       !groupedReviewIds.has(entry.reviewItem.id) &&
-      isPrimaryActionableReview(entry) &&
-      !isInformationalReview(entry),
+      isPrimaryActionableReview(entry),
   );
 
   for (const entry of ungroupedPrimary.sort((left, right) =>

@@ -12,6 +12,7 @@ import {
 } from "../schemas/framing-artifacts.schema.js";
 import type { FramingMaterialLineItem } from "../schemas/material.schema.js";
 import type { PendingMaterialClaim } from "../schemas/claim-outcome.schema.js";
+import { buildClaimCandidacyContext } from "../claims/buildClaimCandidacyContext.js";
 import { collectPendingClaims } from "../claims/collectPendingClaims.js";
 import { deriveMaterialClaimStatus } from "../claims/deriveClaimStatus.js";
 import { calculateFasteners } from "./calculateFasteners.js";
@@ -104,6 +105,13 @@ export function coordinateFramingCalculations(
     validation: input.validation,
     materials,
     explicitPendingClaims,
+    candidacyContext: buildClaimCandidacyContext({
+      openings: input.openings,
+      wallFraming: input.wallFraming,
+      floorFraming: input.floorFraming,
+      roofFraming: input.roofFraming,
+      sheathing: input.sheathing,
+    }),
   });
 
   const materialsWithStatus = materials.map((material) => {

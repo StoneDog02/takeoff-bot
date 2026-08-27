@@ -183,6 +183,7 @@ function calculateMemberMaterial(
       STRUCTURAL_MEMBER_QUANTITY_KEYS.material,
       member.id,
     ),
+    quantityKey: STRUCTURAL_MEMBER_QUANTITY_KEYS.material,
     category: framingMaterialCategoryForMember(member),
     description: `${plyLabel}${member.size} ${member.materialType} ${member.category}`,
     canonicalClassification: `${member.category}-${member.materialType}-${member.size}`,

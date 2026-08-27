@@ -9,6 +9,12 @@ import {
   BLOCKING_QUANTITY_KEYS,
   CONNECTORS_HARDWARE_QUANTITY_KEYS,
 } from "../validators/rule-ids.js";
+import { createMaterialLineItemId } from "../calculators/ids.js";
+import {
+  admitMaterialClaimCandidate,
+  type ClaimAdmissionSuppressionReason,
+  type ClaimCandidacyContext,
+} from "./admitMaterialClaimCandidate.js";
 import { getClaimCriticalInputContract } from "./claimContracts.js";
 import { lookupAssumptionRegistryEntry } from "./assumptionRegistry.js";
 
@@ -21,11 +27,19 @@ function materialCoversClaim(
   quantityKey: string,
   objectId: ObjectId,
 ): boolean {
-  return materials.some(
-    (material) =>
+  const expectedId = createMaterialLineItemId(quantityKey, objectId);
+  return materials.some((material) => {
+    if (material.id === expectedId) {
+      return true;
+    }
+    if (
       material.quantityKey === quantityKey &&
-      material.sourceObjectIds.includes(objectId),
-  );
+      material.sourceObjectIds.includes(objectId)
+    ) {
+      return true;
+    }
+    return false;
+  });
 }
 
 function createPendingClaimId(
@@ -57,20 +71,34 @@ const UNSUPPORTED_KEYS: readonly {
   },
 ];
 
+export type PendingClaimSuppression = {
+  quantityKey: string;
+  objectId: ObjectId;
+  objectType: string;
+  reason: ClaimAdmissionSuppressionReason;
+  detail: string;
+};
+
 /**
  * Horizontal pending-claim collection from validation impacts and unwired keys.
- * Does not invent quantities. Registry-authorized misses stay blocked here.
+ * Does not invent quantities. Only admit-capable emit candidates become pending.
+ * Registry-authorized misses stay blocked at the calculator (not double-pending).
  */
 export function collectPendingClaims(input: {
   validation?: ValidationPayload;
   materials: readonly FramingMaterialLineItem[];
   /** Optional explicit pending claims from calculators. */
   explicitPendingClaims?: readonly PendingMaterialClaim[];
+  /** Domain context for owner remapping and opening applicability. */
+  candidacyContext?: ClaimCandidacyContext;
+  /** When provided, filled with deterministic suppression audit rows. */
+  suppressionsOut?: PendingClaimSuppression[];
 }): PendingMaterialClaim[] {
   const pending: PendingMaterialClaim[] = [
     ...(input.explicitPendingClaims ?? []),
   ];
   const seen = new Set(pending.map((claim) => claim.id));
+  const suppressions = input.suppressionsOut;
 
   const validation = input.validation;
   if (validation) {
@@ -79,6 +107,7 @@ export function collectPendingClaims(input: {
         continue;
       }
       const objectId = issue.target.objectId;
+      const objectType = issue.target.objectType;
       for (const impact of issue.quantityImpacts) {
         if (impact.canCalculate !== false) {
           continue;
@@ -87,35 +116,54 @@ export function collectPendingClaims(input: {
         if (quantityKey == null || quantityKey.trim().length === 0) {
           continue;
         }
-        if (materialCoversClaim(input.materials, quantityKey, objectId)) {
-          continue;
-        }
 
-        const contract = getClaimCriticalInputContract(quantityKey);
-        const id = createPendingClaimId(quantityKey, objectId);
-        if (seen.has(id)) {
-          continue;
-        }
-
-        // If a registry entry exists for a typical missing property, calculators
-        // should have assumed. Pending here means no authorized path fired.
-        const claim = pendingMaterialClaimSchema.parse({
-          id,
+        const decision = admitMaterialClaimCandidate({
           quantityKey,
-          claimStatus: "BLOCKED_MISSING_REQUIRED_INPUT",
-          description:
-            impact.description.trim().length > 0
-              ? impact.description
-              : `Pending ${quantityKey}`,
-          unit: contract?.unit ?? null,
-          sourceObjectIds: [objectId],
-          missingPropertyPath: null,
-          basis: `Validation blocked ${quantityKey} with canCalculate=false; no calculated material line.`,
-          assumptionIds: [],
-          reviewItemIds: [],
+          objectId,
+          objectType,
+          context: input.candidacyContext,
         });
-        pending.push(claim);
-        seen.add(id);
+
+        if (!decision.admitted) {
+          suppressions?.push({
+            quantityKey,
+            objectId,
+            objectType,
+            reason: decision.reason,
+            detail: decision.detail,
+          });
+          continue;
+        }
+
+        for (const ownerObjectId of decision.ownerObjectIds) {
+          if (materialCoversClaim(input.materials, quantityKey, ownerObjectId)) {
+            continue;
+          }
+
+          const contract = decision.contract;
+          const id = createPendingClaimId(quantityKey, ownerObjectId);
+          if (seen.has(id)) {
+            continue;
+          }
+
+          const claim = pendingMaterialClaimSchema.parse({
+            id,
+            quantityKey,
+            claimStatus: "BLOCKED_MISSING_REQUIRED_INPUT",
+            description:
+              impact.description.trim().length > 0
+                ? impact.description
+                : `Pending ${quantityKey}`,
+            unit: contract.unit ?? null,
+            sourceObjectIds: [ownerObjectId],
+            missingPropertyPath: null,
+            basis: `Validation blocked ${quantityKey} with canCalculate=false; no calculated material line.`,
+            assumptionIds: [],
+            reviewItemIds: [],
+          });
+          pending.push(claim);
+          seen.add(id);
+        }
       }
     }
   }
@@ -126,7 +174,6 @@ export function collectPendingClaims(input: {
     if (seen.has(id)) {
       continue;
     }
-    // Only emit if no material covers the key at all.
     const covered = input.materials.some(
       (material) => material.quantityKey === unsupported.quantityKey,
     );
@@ -156,6 +203,9 @@ export function collectPendingClaims(input: {
 /**
  * Helper for calculators: emit pending when a claim-critical property is
  * unresolved and the assumption registry has no eligible entry.
+ *
+ * Calculators have already applied eligibility gates; when candidacyContext is
+ * omitted, only emit-role + owner-type checks run (no category re-gate).
  */
 export function createBlockedMissingInputPendingClaim(input: {
   quantityKey: string;
@@ -164,14 +214,38 @@ export function createBlockedMissingInputPendingClaim(input: {
   description: string;
   basis: string;
   reviewItemIds?: string[];
+  /** Optional objectType for admission (defaults to opening for opening keys). */
+  objectType?: string;
+  candidacyContext?: ClaimCandidacyContext;
 }): PendingMaterialClaim | null {
   const registered = lookupAssumptionRegistryEntry(
     input.quantityKey,
     input.missingPropertyPath,
   );
   if (registered) {
-    // Caller should have consulted the registry; do not also emit pending.
     return null;
+  }
+
+  const objectType = input.objectType ?? "opening";
+
+  if (input.candidacyContext) {
+    const decision = admitMaterialClaimCandidate({
+      quantityKey: input.quantityKey,
+      objectId: input.objectId,
+      objectType,
+      context: input.candidacyContext,
+    });
+    if (!decision.admitted) {
+      return null;
+    }
+  } else {
+    const contract = getClaimCriticalInputContract(input.quantityKey);
+    if (!contract || contract.claimRole !== "emit") {
+      return null;
+    }
+    if (!contract.quantityOwnerObjectTypes.includes(objectType)) {
+      return null;
+    }
   }
 
   const contract = getClaimCriticalInputContract(input.quantityKey);

@@ -145,6 +145,7 @@ function emitJoistCountLine(
 
   return emitLineItem({
     id: createMaterialLineItemId(quantityKey, area.id),
+    quantityKey,
     category: "lumber",
     description: `${joistSize} ${joistType} floor joists`,
     canonicalClassification: `floor-joist-${normalizeToken(joistType)}-${normalizeToken(joistSize)}`,
@@ -194,6 +195,7 @@ function emitJoistLinearFeetLine(
 
   return emitLineItem({
     id: createMaterialLineItemId(quantityKey, area.id),
+    quantityKey,
     category: "lumber",
     description: `${joistSize} ${joistType} floor joists`,
     canonicalClassification: `floor-joist-${normalizeToken(joistType)}-${normalizeToken(joistSize)}`,

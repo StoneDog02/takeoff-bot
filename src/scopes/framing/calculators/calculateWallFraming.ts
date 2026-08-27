@@ -185,6 +185,7 @@ function calculateSegmentStuds(
 
   return emitLineItem({
     id: createMaterialLineItemId(quantityKey, segment.id),
+    quantityKey,
     category: "lumber",
     description: `${wall.assembly.studSize} regularly spaced studs at ${wall.assembly.studSpacingInches} in O.C.`,
     canonicalClassification: `stud-${wall.assembly.studSize}-regular-spacing`,
@@ -251,6 +252,7 @@ function calculateSegmentPlates(
 
   return emitLineItem({
     id: createMaterialLineItemId(quantityKey, segment.id),
+    quantityKey,
     category: "lumber",
     description: `${sizeLabel}wall plates`.trim(),
     canonicalClassification: studSizeResolved

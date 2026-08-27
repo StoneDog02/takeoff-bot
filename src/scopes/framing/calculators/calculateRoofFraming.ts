@@ -119,6 +119,7 @@ function calculatePlaneCommonRafters(
 
   return emitLineItem({
     id: createMaterialLineItemId(quantityKey, plane.id),
+    quantityKey,
     category: "lumber",
     description: `${memberSize} common rafters`,
     canonicalClassification: `common-rafter-${normalizeToken(framingType)}-${normalizeToken(memberSize)}`,

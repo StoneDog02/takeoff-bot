@@ -172,6 +172,7 @@ function calculateAreaCoverage(
 
   return emitLineItem({
     id: createMaterialLineItemId(SHEATHING_QUANTITY_KEYS.area, area.id),
+    quantityKey: SHEATHING_QUANTITY_KEYS.area,
     category: framingMaterialCategoryForPanel(panelType),
     description: `${thickness} ${panelType} ${system.application} sheathing${
       optionalLabel.length > 0 ? ` ${optionalLabel}` : ""

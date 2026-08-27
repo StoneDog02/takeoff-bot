@@ -121,6 +121,7 @@ function calculateFastenerQuantity(
       CONNECTORS_HARDWARE_QUANTITY_KEYS.fastenerMaterial,
       fastener.id,
     ),
+    quantityKey: CONNECTORS_HARDWARE_QUANTITY_KEYS.fastenerMaterial,
     category: "fastener",
     description: descriptionParts.join(" "),
     canonicalClassification: classificationParts.join("-"),
