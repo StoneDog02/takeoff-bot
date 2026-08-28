@@ -15,7 +15,8 @@ export type ClaimAdmissionSuppressionReason =
   | "wrong_owner_type"
   | "inapplicable_category"
   | "missing_category_context"
-  | "no_canonical_owners";
+  | "no_canonical_owners"
+  | "non_occurrence_identity";
 
 export type ClaimAdmissionDecision =
   | {
@@ -34,6 +35,8 @@ export type ClaimAdmissionDecision =
 export type ClaimCandidacyContext = {
   /** Opening category by opening object id (for applicability). */
   openingCategoryById?: ReadonlyMap<string, string>;
+  /** Opening identityRole by opening object id (M3). */
+  openingIdentityRoleById?: ReadonlyMap<string, string>;
   /** Wall segment ids keyed by parent building-wall id. */
   segmentIdsByWallId?: ReadonlyMap<string, readonly ObjectId[]>;
   /** Floor area ids keyed by parent floor-framing-system id. */
@@ -137,7 +140,20 @@ function checkOpeningApplicability(
   objectType: string,
   context: ClaimCandidacyContext | undefined,
 ): Extract<ClaimAdmissionDecision, { admitted: false }> | null {
-  if (objectType !== "opening" || contract.eligibleOpeningCategories == null) {
+  if (objectType !== "opening") {
+    return null;
+  }
+
+  const identityRole = context?.openingIdentityRoleById?.get(objectId);
+  if (identityRole === "schedule_definition") {
+    return {
+      admitted: false,
+      reason: "non_occurrence_identity",
+      detail: `Opening ${objectId} identityRole=schedule_definition cannot own emit claim ${contract.quantityKey}.`,
+    };
+  }
+
+  if (contract.eligibleOpeningCategories == null) {
     return null;
   }
   const category = context?.openingCategoryById?.get(objectId);

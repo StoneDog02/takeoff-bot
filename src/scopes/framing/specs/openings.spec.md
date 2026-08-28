@@ -152,3 +152,19 @@ This subsystem does not implement:
 - Proposal generation
 
 These responsibilities belong to their respective subsystem specifications or the Construction Brain.
+
+---
+
+## 11. Opening Identity Convergence (M3)
+
+Identity and hosting authority for openings:
+
+1. **Roles:** `occurrence` (may emit framing materials), `schedule_definition` (non-emit), `unresolved_identity` (non-emit until resolved).
+2. **Host authority:** only `parentPhysicalRunKey` (preferred) or `parentWallTag` Evidence. Missing host on an occurrence fails applicability — it does not silently pass.
+3. **Cross-subject merge:** only via explicit Evidence `identity.boundSubjectKey` naming exactly one other opening subjectKey. Competing bindings leave openings unmerged and reviewable.
+4. **Forbidden:** proximity, dimension similarity, mark digit decode (`3068`→size), ordering, or best-match pairing.
+5. **Quantity:** never default semantic marks to `1`. Geometry gap Evidence may emit occurrence quantity `1` as explicit Evidence only.
+6. **One-to-many:** prefer N occurrence openings sharing a `scheduleReference`; `quantity > 1` only when Evidence attributes identical repeats to that hosted object.
+7. **Provenance:** merges retain unioned Evidence IDs, absorbed subjectKeys, and an `identity-binding-merge` resolution trace.
+
+Primary calculation authority remains `13-opening-wall-framing-calculations.md` and the closed M1 assumption registry.

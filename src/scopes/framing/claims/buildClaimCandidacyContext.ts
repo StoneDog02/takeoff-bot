@@ -19,9 +19,11 @@ export function buildClaimCandidacyContext(input: {
   sheathing?: SheathingPayload;
 }): ClaimCandidacyContext {
   const openingCategoryById = new Map<string, string>();
+  const openingIdentityRoleById = new Map<string, string>();
   if (input.openings) {
     for (const opening of input.openings.openings) {
       openingCategoryById.set(opening.id, opening.category);
+      openingIdentityRoleById.set(opening.id, opening.identityRole);
     }
   }
 
@@ -57,6 +59,7 @@ export function buildClaimCandidacyContext(input: {
 
   return {
     openingCategoryById,
+    openingIdentityRoleById,
     segmentIdsByWallId,
     areaIdsByFloorSystemId,
     planeIdsByRoofSystemId,

@@ -271,13 +271,60 @@ function validateParentResolved(
   const ruleId = OPENINGS_RULE_IDS.parentResolved;
   const evidenceIds = collectEvidenceIds(opening);
 
-  if (opening.parentObjectId === null) {
-    return buildPassedBatch(
+  if (opening.identityRole === "schedule_definition") {
+    return buildSkippedBatch(
       ruleId,
       "relationship",
       target,
-      `Opening ${opening.id} has no explicit parent object reference to validate.`,
+      `Opening ${opening.id} is a schedule_definition; parent segment is not required for emit.`,
       evidenceIds,
+    );
+  }
+
+  if (opening.parentObjectId === null) {
+    const quantityImpacts = categoryGatedOpeningEmitImpacts(opening, false, {
+      framing: "Opening framing requires a resolved parent wall segment.",
+      kingStuds: "King stud takeoff requires a resolved parent wall segment.",
+      roughSill: "Rough sill takeoff requires a resolved parent wall segment.",
+      cripplesAbove:
+        "Cripple stud count above header requires a resolved parent wall segment.",
+      cripplesBelow:
+        "Cripple stud count below sill requires a resolved parent wall segment.",
+    });
+
+    const explanation = `Opening ${opening.id} has no resolved parentObjectId (wall segment host).`;
+
+    return buildFailedBatch(
+      {
+        ruleId,
+        level: "relationship",
+        severity: "critical",
+        ruleViolated:
+          "Opening occurrence must resolve parentObjectId to a wall segment before opening-framing quantities can calculate.",
+        explanation,
+        target,
+        recommendedUserAction:
+          "Confirm the wall segment that hosts this opening from plans or explicit host Evidence.",
+        evidenceIds,
+        quantityImpacts,
+      },
+      {
+        ruleId,
+        target,
+        title: `Resolve parent object for opening ${opening.id}`,
+        description: explanation,
+        action: {
+          type: "provide-value",
+          instruction:
+            "Identify the parent wall segment that owns this opening before takeoff continues.",
+          targetProperty: "parentObjectId",
+        },
+        reviewStatus: "review-required",
+        blockingStatus: "blocked",
+        affectedObjects: [{ objectId: opening.id, objectType: opening.objectType }],
+        quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
+        evidenceIds,
+      },
     );
   }
 
@@ -301,18 +348,15 @@ function validateParentResolved(
     );
   }
 
-  const quantityImpacts = [
-    {
-      quantityKey: OPENING_QUANTITY_KEYS.framing,
-      description: "Opening framing requires a valid parent object.",
-      canCalculate: false,
-    },
-    {
-      quantityKey: OPENING_QUANTITY_KEYS.header,
-      description: "Header takeoff requires a valid parent object.",
-      canCalculate: false,
-    },
-  ];
+  const quantityImpacts = categoryGatedOpeningEmitImpacts(opening, false, {
+    framing: "Opening framing requires a valid parent object.",
+    kingStuds: "King stud takeoff requires a valid parent wall segment.",
+    roughSill: "Rough sill takeoff requires a valid parent wall segment.",
+    cripplesAbove:
+      "Cripple stud count above header requires a valid parent wall segment.",
+    cripplesBelow:
+      "Cripple stud count below sill requires a valid parent wall segment.",
+  });
 
   const explanation = `Opening ${opening.id} references missing parent object ${opening.parentObjectId}.`;
 
@@ -357,13 +401,73 @@ function validateParentWallResolved(
   const ruleId = OPENINGS_RULE_IDS.parentWallResolved;
   const evidenceIds = collectEvidenceIds(opening);
 
-  if (opening.parentWallId === null) {
-    return buildPassedBatch(
+  if (opening.identityRole === "schedule_definition") {
+    return buildSkippedBatch(
       ruleId,
       "relationship",
       target,
-      `Opening ${opening.id} has no explicit parent wall reference to validate.`,
+      `Opening ${opening.id} is a schedule_definition; parent wall is not required for emit.`,
       evidenceIds,
+    );
+  }
+
+  if (opening.parentWallId === null) {
+    const quantityImpacts: Array<{
+      quantityKey: string;
+      description: string;
+      canCalculate: boolean;
+    }> = [
+      {
+        quantityKey: OPENING_QUANTITY_KEYS.framing,
+        description: "Opening framing requires a resolved parent wall association.",
+        canCalculate: false,
+      },
+    ];
+    if (
+      isOpeningCategoryEligibleForQuantityKey(
+        OPENING_QUANTITY_KEYS.kingStuds,
+        opening.category,
+      )
+    ) {
+      quantityImpacts.push({
+        quantityKey: OPENING_QUANTITY_KEYS.kingStuds,
+        description: "King stud takeoff requires a resolved parent wall association.",
+        canCalculate: false,
+      });
+    }
+
+    const explanation = `Opening ${opening.id} has no resolved parentWallId.`;
+
+    return buildFailedBatch(
+      {
+        ruleId,
+        level: "relationship",
+        severity: "critical",
+        ruleViolated:
+          "Opening occurrence must resolve parentWallId before opening-framing quantities can calculate.",
+        explanation,
+        target,
+        recommendedUserAction:
+          "Confirm the parent wall associated with this opening.",
+        evidenceIds,
+        quantityImpacts,
+      },
+      {
+        ruleId,
+        target,
+        title: `Resolve parent wall for opening ${opening.id}`,
+        description: explanation,
+        action: {
+          type: "provide-value",
+          instruction: "Confirm the parent wall for this opening.",
+          targetProperty: "parentWallId",
+        },
+        reviewStatus: "review-required",
+        blockingStatus: "blocked",
+        affectedObjects: [{ objectId: opening.id, objectType: opening.objectType }],
+        quantityImpacts: toReviewQuantityImpacts(quantityImpacts),
+        evidenceIds,
+      },
     );
   }
 
@@ -728,6 +832,16 @@ function validateQuantityResolved(opening: Opening): ValidationBatch {
   const target = createObjectTarget(opening.id, opening.objectType);
   const ruleId = OPENINGS_RULE_IDS.quantityResolved;
   const evidenceIds = collectEvidenceIds(opening);
+
+  if (opening.identityRole === "schedule_definition") {
+    return buildSkippedBatch(
+      ruleId,
+      "object",
+      target,
+      `Opening ${opening.id} is a schedule_definition; occurrence quantity is not required.`,
+      evidenceIds,
+    );
+  }
 
   if (isQuantityResolved(opening)) {
     return buildPassedBatch(

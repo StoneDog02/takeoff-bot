@@ -25,6 +25,8 @@ describe("B2.2M.3 opening coverage metrics", () => {
       reviewItemIds: [],
       resolutionTraces: [],
       category: "door",
+      identityRole: "occurrence",
+      absorbedSubjectKeys: [],
       parentObjectId: "WS-001",
       parentWallId: "W-001",
       dimensions: {
@@ -178,6 +180,8 @@ describe("B2.2M.3 opening coverage metrics", () => {
       reviewItemIds: [] as string[],
       resolutionTraces: [],
       category: "door" as const,
+      identityRole: "occurrence" as const,
+      absorbedSubjectKeys: [] as string[],
       parentObjectId: "WS-001",
       parentWallId: "W-001",
       quantity: 1,

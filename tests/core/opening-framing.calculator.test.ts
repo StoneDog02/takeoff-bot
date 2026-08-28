@@ -126,6 +126,8 @@ function buildOpening(overrides: Partial<Opening> = {}): Opening {
       resolvedTrace("dimensions.nominalHeightFeet"),
     ],
     category: "window",
+    identityRole: "occurrence",
+    absorbedSubjectKeys: [],
     parentObjectId: "WS-001",
     parentWallId: "W-001",
     dimensions: {

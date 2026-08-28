@@ -24,6 +24,11 @@ export const OPENING_OPTIONAL_PROPERTY_PATHS = [
   "fireRating",
   "kingStudCount",
   "jackStudCount",
+  /**
+   * Explicit Evidence classifying schedule/type definition vs occurrence.
+   * Values: "occurrence" | "schedule_definition" only (normalized).
+   */
+  "identityRole",
   ...OPENING_GEOMETRY_PROPERTY_PATHS,
 ] as const;
 
@@ -41,6 +46,11 @@ export const OPENING_RELATIONSHIP_PROPERTY_PATHS = [
   "parentWallTag",
   "parentPhysicalRunKey",
   "headerMemberTag",
+  /**
+   * Explicit identity-binding to another opening subjectKey. Not UserDecision-
+   * eligible. Never inferred from proximity, mark decode, or best-match.
+   */
+  "identity.boundSubjectKey",
 ] as const;
 
 export type OpeningRelationshipPropertyPath =
@@ -79,7 +89,12 @@ export function normalizeOpeningCandidate(
       }
 
       const parsed = openingCategorySchema.safeParse(candidateValue);
-      return parsed.success ? parsed.data : undefined;
+      // Treat explicit "unknown" as absence so authoritative categories from a
+      // bound schedule subject are not conflict-nullified by geometry placeholders.
+      if (!parsed.success || parsed.data === "unknown") {
+        return undefined;
+      }
+      return parsed.data;
     }
     case "scheduleReference":
     case "detailReference":
@@ -87,6 +102,15 @@ export function normalizeOpeningCandidate(
       return typeof candidateValue === "string" && candidateValue.trim().length > 0
         ? candidateValue.trim()
         : undefined;
+    case "identityRole": {
+      if (typeof candidateValue !== "string") {
+        return undefined;
+      }
+      const trimmed = candidateValue.trim();
+      return trimmed === "occurrence" || trimmed === "schedule_definition"
+        ? trimmed
+        : undefined;
+    }
     case "dimensions.nominalWidthFeet":
     case "dimensions.nominalHeightFeet":
     case "dimensions.roughWidthFeet":
@@ -131,13 +155,12 @@ export function normalizeOpeningRelationshipCandidate(
     return undefined;
   }
 
-  if (propertyPath === "parentWallTag" || propertyPath === "parentPhysicalRunKey") {
-    return typeof candidateValue === "string" && candidateValue.trim().length > 0
-      ? candidateValue.trim()
-      : undefined;
-  }
-
-  if (propertyPath === "headerMemberTag") {
+  if (
+    propertyPath === "parentWallTag" ||
+    propertyPath === "parentPhysicalRunKey" ||
+    propertyPath === "headerMemberTag" ||
+    propertyPath === "identity.boundSubjectKey"
+  ) {
     return typeof candidateValue === "string" && candidateValue.trim().length > 0
       ? candidateValue.trim()
       : undefined;

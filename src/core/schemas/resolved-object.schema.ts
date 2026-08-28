@@ -28,6 +28,8 @@ export const resolutionMethodSchema = z.enum([
   "user-override",
   "supported-inference",
   "semantic-cluster-pending-physical-link",
+  /** Explicit identity.boundSubjectKey Evidence merged two opening subjects. */
+  "identity-binding-merge",
   "unresolved",
 ]);
 

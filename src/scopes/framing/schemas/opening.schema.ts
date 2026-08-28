@@ -16,6 +16,16 @@ export const openingCategorySchema = z.enum([
   "unknown",
 ]);
 
+/**
+ * M3 identity role. Occurrences may emit framing materials when claim-critical
+ * inputs resolve. Schedule definitions and unresolved identity do not emit.
+ */
+export const openingIdentityRoleSchema = z.enum([
+  "occurrence",
+  "schedule_definition",
+  "unresolved_identity",
+]);
+
 export const openingDimensionsSchema = z.object({
   nominalWidthFeet: z.number().finite().positive().nullable().default(null),
   nominalHeightFeet: z.number().finite().positive().nullable().default(null),
@@ -26,6 +36,16 @@ export const openingDimensionsSchema = z.object({
 export const openingSchema = resolvedObjectBaseSchema.extend({
   objectType: z.literal("opening"),
   category: openingCategorySchema,
+  /**
+   * Occurrence vs schedule-definition vs unresolved. Never inferred from
+   * ObjectId orthography — only Evidence / host / geometry subject authority.
+   */
+  identityRole: openingIdentityRoleSchema.default("unresolved_identity"),
+  /**
+   * SubjectKeys absorbed into this opening via explicit identity-binding
+   * Evidence. Empty when no cross-subject merge occurred.
+   */
+  absorbedSubjectKeys: z.array(z.string().trim().min(1)).default([]),
   parentObjectId: objectIdSchema.nullable().default(null),
   parentWallId: objectIdSchema.nullable().default(null),
   dimensions: openingDimensionsSchema,
@@ -58,5 +78,6 @@ export const openingSchema = resolvedObjectBaseSchema.extend({
 });
 
 export type OpeningCategory = z.infer<typeof openingCategorySchema>;
+export type OpeningIdentityRole = z.infer<typeof openingIdentityRoleSchema>;
 export type OpeningDimensions = z.infer<typeof openingDimensionsSchema>;
 export type Opening = z.infer<typeof openingSchema>;

@@ -315,7 +315,7 @@ describe("resolveOpenings", () => {
     assert.equal(walls.segments[0]?.openingIds.length, 0);
   });
 
-  it("passes validation for independent openings with null parentObjectId", () => {
+  it("fails parent validation for independent openings with null parentObjectId", () => {
     const payload = resolveOpenings(buildCompleteOpeningEvidence());
     const validation = validateOpenings({ payload });
 
@@ -323,9 +323,13 @@ describe("resolveOpenings", () => {
       (entry) => entry.ruleId === OPENINGS_RULE_IDS.parentResolved,
     );
 
-    assert.equal(parentResult?.outcome, "passed");
-    assert.equal(validation.validationIssues.length, 0);
-    assert.equal(validation.reviewItems.length, 0);
+    assert.equal(parentResult?.outcome, "failed");
+    assert.ok(
+      validation.validationIssues.some(
+        (issue) => issue.ruleId === OPENINGS_RULE_IDS.parentResolved,
+      ),
+    );
+    assert.equal(payload.openings[0]?.identityRole, "unresolved_identity");
   });
 
   it("resolves explicit kingStudCount from Evidence", () => {

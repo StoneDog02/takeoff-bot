@@ -72,6 +72,8 @@ function buildCompleteOpening(
       },
     ],
     category: "window",
+    identityRole: "occurrence",
+    absorbedSubjectKeys: [],
     parentObjectId: "WS-001",
     parentWallId: "W-001",
     dimensions: {
@@ -103,7 +105,7 @@ function buildParentMaps() {
 }
 
 describe("validateOpenings", () => {
-  it("passes when parentObjectId is null during independent resolution", () => {
+  it("fails when parentObjectId is null on an occurrence opening", () => {
     const batch = validateOpenings({
       payload: {
         openings: [
@@ -120,8 +122,41 @@ describe("validateOpenings", () => {
       (entry) => entry.ruleId === OPENINGS_RULE_IDS.parentResolved,
     );
 
-    assert.equal(parentResult?.outcome, "passed");
-    assert.equal(batch.validationIssues.length, 0);
+    assert.equal(parentResult?.outcome, "failed");
+    assert.ok(
+      batch.validationIssues.some(
+        (issue) =>
+          issue.ruleId === OPENINGS_RULE_IDS.parentResolved &&
+          issue.quantityImpacts.some(
+            (impact) =>
+              impact.quantityKey === OPENING_QUANTITY_KEYS.kingStuds &&
+              impact.canCalculate === false,
+          ),
+      ),
+    );
+  });
+
+  it("skips parent validation for schedule_definition openings", () => {
+    const batch = validateOpenings({
+      payload: {
+        openings: [
+          buildCompleteOpening({
+            identityRole: "schedule_definition",
+            parentObjectId: null,
+            parentWallId: null,
+            headerMemberId: null,
+            quantity: null,
+          }),
+        ],
+      },
+    });
+
+    assert.equal(
+      batch.validationResults.find(
+        (entry) => entry.ruleId === OPENINGS_RULE_IDS.parentResolved,
+      )?.outcome,
+      "skipped",
+    );
   });
 
   it("accepts a complete opening with passing results", () => {

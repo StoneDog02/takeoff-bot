@@ -91,6 +91,8 @@ function buildOpening(overrides: Partial<Opening> = {}): Opening {
     reviewItemIds: [],
     resolutionTraces: [],
     category: "door",
+    identityRole: "occurrence",
+    absorbedSubjectKeys: [],
     parentObjectId: "WS-001",
     parentWallId: "W-001",
     dimensions: {

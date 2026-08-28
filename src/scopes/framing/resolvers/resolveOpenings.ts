@@ -594,7 +594,12 @@ type OpeningResolveCluster = {
     | "semantic"
     | "confirmed-physical"
     | "semantic-pending"
-    | "disambiguated";
+    | "disambiguated"
+    | "identity-binding-merge";
+  /** Binding Evidence ids that authorized a cross-subject merge (if any). */
+  bindingEvidenceIds?: EvidenceId[];
+  /** True when competing bindings blocked a merge for this cluster. */
+  bindingConflict?: boolean;
 };
 
 function mergeRecords(groups: Array<{ subjectKey: string; records: Evidence[] }>): Evidence[] {
@@ -767,44 +772,296 @@ function buildOpeningResolveClusters(
     compareIds(left.openingId, right.openingId),
   );
 
-  return [...geometryClusters, ...semanticClusters];
+  return applyExplicitIdentityBindingMerges([
+    ...geometryClusters,
+    ...semanticClusters,
+  ]);
+}
+
+/**
+ * Merge clusters only when Evidence propertyPath identity.boundSubjectKey
+ * uniquely binds two subjectKeys. Competing bindings leave clusters separate.
+ * Never uses proximity, mark decode, or best-match heuristics.
+ */
+function applyExplicitIdentityBindingMerges(
+  clusters: readonly OpeningResolveCluster[],
+): OpeningResolveCluster[] {
+  if (clusters.length === 0) {
+    return [];
+  }
+
+  const working: OpeningResolveCluster[] = clusters.map((cluster) => ({
+    ...cluster,
+    records: [...cluster.records],
+    rawSubjectKeys: [...cluster.rawSubjectKeys],
+  }));
+
+  const indexBySubject = new Map<string, number>();
+  for (let index = 0; index < working.length; index += 1) {
+    for (const subjectKey of working[index]!.rawSubjectKeys) {
+      indexBySubject.set(subjectKey, index);
+    }
+  }
+
+  type Edge = {
+    leftIndex: number;
+    rightIndex: number;
+    evidenceIds: EvidenceId[];
+  };
+  const edges: Edge[] = [];
+  const conflictedIndexes = new Set<number>();
+
+  for (let index = 0; index < working.length; index += 1) {
+    const cluster = working[index]!;
+    const targets = new Map<string, EvidenceId[]>();
+
+    for (const record of cluster.records) {
+      if (record.propertyPath !== "identity.boundSubjectKey") {
+        continue;
+      }
+      const target = normalizeOpeningRelationshipCandidate(
+        "identity.boundSubjectKey",
+        record.candidateValue,
+      );
+      if (target === undefined) {
+        continue;
+      }
+      const existing = targets.get(target);
+      if (existing) {
+        existing.push(record.id);
+      } else {
+        targets.set(target, [record.id]);
+      }
+    }
+
+    if (targets.size === 0) {
+      continue;
+    }
+
+    if (targets.size > 1) {
+      conflictedIndexes.add(index);
+      continue;
+    }
+
+    const [targetKey, evidenceIds] = [...targets.entries()][0]!;
+    const targetIndex = indexBySubject.get(targetKey);
+    if (targetIndex === undefined) {
+      // Binding names an unknown subject — leave unresolved; no invent.
+      conflictedIndexes.add(index);
+      continue;
+    }
+    if (targetIndex === index) {
+      continue;
+    }
+
+    edges.push({
+      leftIndex: index,
+      rightIndex: targetIndex,
+      evidenceIds: uniqueSortedIds(evidenceIds),
+    });
+  }
+
+  // Competing edges: more than one distinct partner for a cluster → conflict.
+  const partnersByIndex = new Map<number, Set<number>>();
+  for (const edge of edges) {
+    for (const [from, to] of [
+      [edge.leftIndex, edge.rightIndex],
+      [edge.rightIndex, edge.leftIndex],
+    ] as const) {
+      const partners = partnersByIndex.get(from) ?? new Set<number>();
+      partners.add(to);
+      partnersByIndex.set(from, partners);
+    }
+  }
+  for (const [index, partners] of partnersByIndex) {
+    if (partners.size > 1) {
+      conflictedIndexes.add(index);
+      for (const partner of partners) {
+        conflictedIndexes.add(partner);
+      }
+    }
+  }
+
+  const parent = working.map((_, index) => index);
+  function find(index: number): number {
+    let current = index;
+    while (parent[current] !== current) {
+      current = parent[current]!;
+    }
+    let walk = index;
+    while (parent[walk] !== walk) {
+      const next = parent[walk]!;
+      parent[walk] = current;
+      walk = next;
+    }
+    return current;
+  }
+  function union(left: number, right: number): void {
+    const rootLeft = find(left);
+    const rootRight = find(right);
+    if (rootLeft === rootRight) {
+      return;
+    }
+    if (rootLeft < rootRight) {
+      parent[rootRight] = rootLeft;
+    } else {
+      parent[rootLeft] = rootRight;
+    }
+  }
+
+  const mergeEvidenceByRoot = new Map<number, EvidenceId[]>();
+  for (const edge of edges) {
+    if (
+      conflictedIndexes.has(edge.leftIndex) ||
+      conflictedIndexes.has(edge.rightIndex)
+    ) {
+      continue;
+    }
+    union(edge.leftIndex, edge.rightIndex);
+    const root = find(edge.leftIndex);
+    const existing = mergeEvidenceByRoot.get(root) ?? [];
+    mergeEvidenceByRoot.set(
+      root,
+      uniqueSortedIds([...existing, ...edge.evidenceIds]),
+    );
+  }
+
+  const groupsByRoot = new Map<number, number[]>();
+  for (let index = 0; index < working.length; index += 1) {
+    const root = find(index);
+    const group = groupsByRoot.get(root) ?? [];
+    group.push(index);
+    groupsByRoot.set(root, group);
+  }
+
+  const merged: OpeningResolveCluster[] = [];
+  for (const [, memberIndexes] of [...groupsByRoot.entries()].sort(
+    ([left], [right]) => left - right,
+  )) {
+    if (memberIndexes.length === 1) {
+      const only = working[memberIndexes[0]!]!;
+      merged.push({
+        ...only,
+        bindingConflict: conflictedIndexes.has(memberIndexes[0]!),
+      });
+      continue;
+    }
+
+    const members = memberIndexes.map((index) => working[index]!);
+    const geometryMember = members.find((member) =>
+      member.rawSubjectKeys.some((key) => isGeometryOpeningKey(key)),
+    );
+    const survivor = geometryMember ?? [...members].sort((left, right) =>
+      compareIds(left.openingId, right.openingId),
+    )[0]!;
+    const absorbedKeys = [
+      ...new Set(members.flatMap((member) => member.rawSubjectKeys)),
+    ].sort(compareIds);
+    const root = find(memberIndexes[0]!);
+    merged.push({
+      canonicalSubjectKey: survivor.canonicalSubjectKey,
+      openingId: survivor.openingId,
+      records: members.flatMap((member) => member.records),
+      rawSubjectKeys: absorbedKeys,
+      identityMode: "identity-binding-merge",
+      bindingEvidenceIds: mergeEvidenceByRoot.get(root) ?? [],
+    });
+  }
+
+  return merged.sort((left, right) => compareIds(left.openingId, right.openingId));
 }
 
 function identityTracesForCluster(cluster: OpeningResolveCluster): PropertyResolutionTrace[] {
+  const traces: PropertyResolutionTrace[] = [];
+
   if (cluster.identityMode === "semantic-pending") {
-    return [
+    traces.push(
       createTrace(
         "physicalIdentity",
         "semantic-cluster-pending-physical-link",
         `Semantic subjectKeys ${cluster.rawSubjectKeys.map((key) => `"${key}"`).join(", ")} sanitize to the same label without sufficient physical-location authority to confirm one physical opening.`,
         cluster.records.map((record) => record.id),
       ),
-    ];
+    );
   }
 
   if (cluster.identityMode === "confirmed-physical") {
-    return [
+    traces.push(
       createTrace(
         "physicalIdentity",
         "deterministic-calculation",
         `Corroborating physical signals merge semantic subjectKeys ${cluster.rawSubjectKeys.map((key) => `"${key}"`).join(", ")} into one opening.`,
         cluster.records.map((record) => record.id),
       ),
-    ];
+    );
   }
 
   if (cluster.identityMode === "disambiguated") {
-    return [
+    traces.push(
       createTrace(
         "physicalIdentity",
         "deterministic-calculation",
         `Distinct physical geometry or location disambiguates semantic label "${cluster.canonicalSubjectKey}" at ${locationFingerprint(cluster.records)}.`,
         cluster.records.map((record) => record.id),
       ),
-    ];
+    );
   }
 
-  return [];
+  if (cluster.identityMode === "identity-binding-merge") {
+    traces.push(
+      createTrace(
+        "physicalIdentity",
+        "identity-binding-merge",
+        `Explicit identity.boundSubjectKey Evidence merges subjectKeys ${cluster.rawSubjectKeys.map((key) => `"${key}"`).join(", ")} into opening ${cluster.openingId}.`,
+        cluster.bindingEvidenceIds ?? cluster.records.map((record) => record.id),
+      ),
+    );
+  }
+
+  if (cluster.bindingConflict) {
+    traces.push(
+      createTrace(
+        "physicalIdentity",
+        "unresolved",
+        `Competing or unbound identity.boundSubjectKey Evidence left subjectKeys ${cluster.rawSubjectKeys.map((key) => `"${key}"`).join(", ")} unmerged.`,
+        cluster.records
+          .filter((record) => record.propertyPath === "identity.boundSubjectKey")
+          .map((record) => record.id),
+      ),
+    );
+  }
+
+  return traces;
+}
+
+function classifyOpeningIdentityRole(input: {
+  cluster: OpeningResolveCluster;
+  parentObjectId: ObjectId | null;
+  identityRoleDecision: CandidateDecision;
+}): Opening["identityRole"] {
+  if (
+    input.identityRoleDecision.kind === "resolved" &&
+    input.identityRoleDecision.value === "schedule_definition"
+  ) {
+    return "schedule_definition";
+  }
+
+  if (input.cluster.rawSubjectKeys.some((key) => isGeometryOpeningKey(key))) {
+    return "occurrence";
+  }
+
+  if (input.parentObjectId !== null) {
+    return "occurrence";
+  }
+
+  if (
+    input.identityRoleDecision.kind === "resolved" &&
+    input.identityRoleDecision.value === "occurrence"
+  ) {
+    return "occurrence";
+  }
+
+  return "unresolved_identity";
 }
 
 function resolveOpeningPropertyAuthority(
@@ -1042,6 +1299,19 @@ function resolveOneOpening(
     ),
   ).length;
 
+  const identityRole = classifyOpeningIdentityRole({
+    cluster,
+    parentObjectId: relationship.parentObjectId,
+    identityRoleDecision: decisions.identityRole,
+  });
+
+  const absorbedSubjectKeys =
+    cluster.identityMode === "identity-binding-merge"
+      ? [...new Set(cluster.rawSubjectKeys.filter((key) => key !== cluster.canonicalSubjectKey))].sort(
+          compareIds,
+        )
+      : [];
+
   return {
     id: openingId,
     objectType: "opening",
@@ -1057,6 +1327,8 @@ function resolveOneOpening(
     reviewItemIds: [],
     resolutionTraces,
     category,
+    identityRole,
+    absorbedSubjectKeys,
     parentObjectId: relationship.parentObjectId,
     parentWallId: relationship.parentWallId,
     dimensions,

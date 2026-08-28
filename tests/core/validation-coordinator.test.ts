@@ -107,6 +107,8 @@ function buildIntegratedInput() {
           reviewItemIds: [],
           resolutionTraces: [],
           category: "window" as const,
+          identityRole: "occurrence" as const,
+          absorbedSubjectKeys: [],
           parentObjectId: "WS-001",
           parentWallId: "W-001",
           dimensions: {
