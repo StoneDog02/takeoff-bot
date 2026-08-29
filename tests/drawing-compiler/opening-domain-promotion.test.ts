@@ -34,6 +34,14 @@ function baseCandidate(
       matchScore: null,
       notes: [],
     },
+    markOwnership: {
+      status: "UNRESOLVED",
+      markText: null,
+      textPrimitiveId: null,
+      literalCategory: null,
+      matchScore: null,
+      notes: [],
+    },
     materialAuthoritative: false,
     ...overrides,
   };

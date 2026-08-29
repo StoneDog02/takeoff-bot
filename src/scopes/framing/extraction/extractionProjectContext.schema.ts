@@ -13,6 +13,18 @@ export const extractionProjectContextNoteSchema = z.object({
   summaryText: z.string().trim().min(1),
 });
 
+export const extractionProjectContextKnownDefinitionSchema = z.object({
+  semanticTypeKey: z.string().trim().min(1),
+  definitionKind: z.string().trim().min(1),
+  properties: z.record(z.string(), z.string()),
+  sourcePage: z.number().int().positive(),
+  validationStatus: z.literal("validated"),
+});
+
+export type ExtractionProjectContextKnownDefinition = z.infer<
+  typeof extractionProjectContextKnownDefinitionSchema
+>;
+
 export const extractionProjectContextSchema = z.object({
   intent: z.string().trim().min(1),
   bundlePageNumbers: z.array(z.number().int().positive()),
@@ -20,6 +32,9 @@ export const extractionProjectContextSchema = z.object({
   knownAreaTags: z.array(z.string().trim().min(1)),
   dictionaryBindings: z.array(extractionProjectContextBindingSchema),
   crossPageNotes: z.array(extractionProjectContextNoteSchema),
+  knownDefinitions: z
+    .array(extractionProjectContextKnownDefinitionSchema)
+    .default([]),
   contextDisclaimer: z.literal("CONTEXT ONLY — not plan evidence"),
 });
 

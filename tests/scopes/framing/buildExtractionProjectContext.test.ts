@@ -42,7 +42,7 @@ function bundleForIntent(intent: string): ExtractionPageBundle {
 }
 
 describe("buildExtractionProjectContext", () => {
-  it("returns empty context slice for wall-framing intent", () => {
+  it("returns empty relationship tags for wall-framing; knownDefinitions empty without dictionary", () => {
     const context = buildExtractionProjectContext({
       intent: "wall-framing",
       bundle: bundleForIntent("wall-framing"),
@@ -56,6 +56,7 @@ describe("buildExtractionProjectContext", () => {
     assert.deepEqual(context.knownAreaTags, []);
     assert.deepEqual(context.dictionaryBindings, []);
     assert.deepEqual(context.crossPageNotes, []);
+    assert.deepEqual(context.knownDefinitions, []);
     assert.equal(context.contextDisclaimer, "CONTEXT ONLY — not plan evidence");
   });
 

@@ -341,6 +341,14 @@ opening visual floor-plan search rules (this stage):
   mark (see opening type-mark / schedule dimension rules). Convert feet-inches
   labels to decimal feet without inventing missing parts. Do not infer standard
   door/window sizes or copy one opening's dimensions onto another.
+- When the extraction context lists promoted geometry opening subjectKeys
+  (form opening:p{page}:physical-run:…:gapN), prefer emitting category and
+  explicit printed dimensions onto that geometry subjectKey for the matching
+  physical opening rather than minting a parallel semantic occurrence subject.
+  Do this only when the mark/label/symbol clearly belongs to that listed gap;
+  otherwise omit the geometry subjectKey and emit a separate semantic subject.
+- Do not invent parentPhysicalRunKey, identity.boundSubjectKey, or wall hosts
+  from proximity. Hosting for geometry subjects is supplied by the compiler.
 - Emit headerMemberTag only when a header/member mark is explicitly linked to
   that opening by callout/leader/note (not by vague proximity alone). Attach
   the header tag to the correct opening subject only. If the same association is
@@ -808,7 +816,9 @@ function buildExtractionPreamble(
       "",
       "Project context (not plan text):",
       extractionProjectContext.contextDisclaimer,
-      "Use this block only to recognize tags and cross-page notes.",
+      "Use this block only to recognize tags, cross-page notes, and validated project definitions.",
+      "knownDefinitions interpret marks that are visible in the tile/page — they do not prove a physical occurrence exists.",
+      "Do not invent occurrences from definitions alone. Do not force a definition onto an object that does not show that mark.",
       "Do not emit relationships from context alone — plan text in this pass must explicitly establish ownership.",
       JSON.stringify(extractionProjectContext, null, 2),
     );

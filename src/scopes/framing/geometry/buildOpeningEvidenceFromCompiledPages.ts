@@ -6,10 +6,15 @@ import {
   applyParentRunDimensionExclusivity,
   governOpeningDimensionOwnership,
 } from "./governOpeningDimensionOwnership.js";
+import {
+  applyParentRunMarkExclusivity,
+  governOpeningMarkOwnership,
+} from "./governOpeningMarkOwnership.js";
 import { governOpeningPhysicalRunOwnership } from "./governOpeningPhysicalRunOwnership.js";
 import type {
   GovernedOpeningCandidate,
   OpeningGapCandidate,
+  OwnedOpeningMarkBinding,
 } from "./openingGovernanceTypes.js";
 
 /**
@@ -27,35 +32,6 @@ export function shouldPromoteOpeningToDomain(
 }
 
 export const OPENING_GEOMETRY_PASS_ID = "opening-geometry-pbg";
-
-const LABEL_CATEGORY_PATTERNS: Array<{ pattern: RegExp; category: OpeningCategory }> = [
-  { pattern: /\bGARAGE\s*DOOR\b/i, category: "garage-door" },
-  { pattern: /\bWINDOW\b/i, category: "window" },
-  { pattern: /\bDOOR\b/i, category: "door" },
-  { pattern: /\bCASED\b/i, category: "cased" },
-];
-
-function classifyCategoryFromLabels(
-  page: CompiledDrawingPage,
-  gapAt: { x: number; y: number },
-): OpeningCategory {
-  for (const primitive of page.text.primitives) {
-    const { normalDist, axialDist } = {
-      normalDist: Math.hypot(
-        primitive.mid.x - gapAt.x,
-        primitive.mid.y - gapAt.y,
-      ),
-      axialDist: 0,
-    };
-    if (normalDist > 150) continue;
-    for (const { pattern, category } of LABEL_CATEGORY_PATTERNS) {
-      if (pattern.test(primitive.rawText)) {
-        return category;
-      }
-    }
-  }
-  return "unknown";
-}
 
 function isPlanLayoutPage(page: CompiledDrawingPage): boolean {
   if (page.pageRole.role === "plan") return true;
@@ -132,6 +108,12 @@ function makeOpeningEvidence(input: {
   });
 }
 
+function resolveCategory(candidate: {
+  markOwnership: GovernedOpeningCandidate["markOwnership"];
+}): OpeningCategory {
+  return candidate.markOwnership.literalCategory ?? "unknown";
+}
+
 export function discoverGovernedOpeningCandidates(
   pages: readonly CompiledDrawingPage[],
 ): GovernedOpeningCandidate[] {
@@ -165,9 +147,16 @@ export function discoverGovernedOpeningCandidates(
         ptPerFt,
       );
 
+      const markEntries = runGaps.map((candidate) => ({
+        candidate,
+        ownership: governOpeningMarkOwnership(page, run, candidate),
+      }));
+      const exclusiveMarks = applyParentRunMarkExclusivity(markEntries);
+
       for (let i = 0; i < runGaps.length; i++) {
         const candidate = runGaps[i]!;
         const dimensionOwnership = exclusiveDims[i]!;
+        const markOwnership = exclusiveMarks[i]!;
         const roughWidth =
           dimensionOwnership.status === "ESTABLISHED"
             ? dimensionOwnership.roughWidthFeet
@@ -180,7 +169,7 @@ export function discoverGovernedOpeningCandidates(
           roughWidth,
         );
 
-        const category = classifyCategoryFromLabels(page, candidate.gapAt);
+        const category = resolveCategory({ markOwnership });
         const materialAuthoritative =
           physicalRunOwnership.status === "ESTABLISHED" &&
           dimensionOwnership.status === "ESTABLISHED" &&
@@ -192,6 +181,7 @@ export function discoverGovernedOpeningCandidates(
           category,
           physicalRunOwnership,
           dimensionOwnership,
+          markOwnership,
           materialAuthoritative,
         });
       }
@@ -201,13 +191,26 @@ export function discoverGovernedOpeningCandidates(
   return out;
 }
 
+export type OpeningGeometryEvidenceBuild = {
+  evidence: Evidence[];
+  ownedMarks: OwnedOpeningMarkBinding[];
+};
+
 /**
- * Build deterministic opening Evidence from compiled drawing pages (Authority A–C).
+ * Build deterministic opening Evidence from compiled drawing pages (Authority A–C)
+ * plus governed mark→gap ownership for same-subject category contribution.
  */
 export function buildOpeningEvidenceFromCompiledPages(
   pages: readonly CompiledDrawingPage[],
 ): Evidence[] {
+  return buildOpeningEvidenceWithMarkOwnership(pages).evidence;
+}
+
+export function buildOpeningEvidenceWithMarkOwnership(
+  pages: readonly CompiledDrawingPage[],
+): OpeningGeometryEvidenceBuild {
   const evidence: Evidence[] = [];
+  const ownedMarks: OwnedOpeningMarkBinding[] = [];
 
   for (const candidate of discoverGovernedOpeningCandidates(pages)) {
     // Keep raw gap inventory out of Opening domain / review queues.
@@ -217,19 +220,49 @@ export function buildOpeningEvidenceFromCompiledPages(
     const notes = [
       ...candidate.physicalRunOwnership.notes,
       ...candidate.dimensionOwnership.notes,
+      ...candidate.markOwnership.notes,
     ].join(" ");
 
-    evidence.push(
-      makeOpeningEvidence({
-        subjectKey: openingSubjectKey,
+    if (
+      candidate.markOwnership.status === "ESTABLISHED" &&
+      candidate.markOwnership.markText != null
+    ) {
+      ownedMarks.push({
+        geometrySubjectKey: openingSubjectKey,
         pageNumber,
-        propertyPath: "category",
-        candidateValue: candidate.category,
-        description: `Opening category from plan label near gap (${candidate.category})`,
-        originalText: notes,
-        type: "geometry",
-      }),
-    );
+        markText: candidate.markOwnership.markText,
+        textPrimitiveId: candidate.markOwnership.textPrimitiveId,
+        literalCategory: candidate.markOwnership.literalCategory,
+      });
+    }
+
+    // Emit non-unknown category only from ESTABLISHED literal label ownership.
+    // Type-mark-only ESTABLISHED ownership waits for Claude adopt (same subject).
+    if (candidate.category !== "unknown") {
+      evidence.push(
+        makeOpeningEvidence({
+          subjectKey: openingSubjectKey,
+          pageNumber,
+          propertyPath: "category",
+          candidateValue: candidate.category,
+          description: `Opening category from ESTABLISHED mark/label ownership (${candidate.category})`,
+          originalText: candidate.markOwnership.markText ?? notes,
+          type: "geometry",
+        }),
+      );
+    } else {
+      evidence.push(
+        makeOpeningEvidence({
+          subjectKey: openingSubjectKey,
+          pageNumber,
+          propertyPath: "category",
+          candidateValue: "unknown",
+          description: `Opening category from plan label near gap (${candidate.category})`,
+          originalText: notes,
+          type: "geometry",
+        }),
+      );
+    }
 
     if (candidate.physicalRunOwnership.parentPhysicalRunKey) {
       evidence.push(
@@ -314,5 +347,5 @@ export function buildOpeningEvidenceFromCompiledPages(
     );
   }
 
-  return evidence;
+  return { evidence, ownedMarks };
 }

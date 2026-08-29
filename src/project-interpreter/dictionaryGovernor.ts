@@ -428,20 +428,41 @@ export class DictionaryGovernor {
   }
 
   verifyDefinitionKey(def: ProjectSemanticDefinition): ValidatorResult {
-    const passed = /^SW\d/i.test(def.semanticTypeKey);
+    const key = def.semanticTypeKey.trim();
+    const passed =
+      /^SW\d+[A-Z]?$/i.test(key) ||
+      /^WB\d[\w./-]*$/i.test(key) ||
+      /^(?:LSTHD|STHD|HDU|HTT)\w*$/i.test(key) ||
+      /^(?:MTS|CS|HSTA|MST)\w*$/i.test(key) ||
+      /^(?:W|WT|AW)-?\d+[A-Z]?$/i.test(key);
     return {
       validator: "verifyDefinitionKey",
       claimId: def.semanticTypeKey,
       passed,
       message: passed
-        ? "SW schedule key pattern"
-        : "Definition key must match SW* pattern",
+        ? "Definition key matches V1 schedule/mark pattern"
+        : "Definition key must match SW*/WB*/holdown/connector/wall-type pattern",
     };
   }
 
   verifyDefinitionPropertyCitation(
     def: ProjectSemanticDefinition,
   ): ValidatorResult {
+    const fromProjectLearning = def.provenance.some(
+      (p) =>
+        p.toolCallId.startsWith("project-learning") ||
+        (p.artifactPath?.startsWith("project-learning:") ?? false),
+    );
+    if (fromProjectLearning) {
+      return {
+        validator: "verifyDefinitionPropertyCitation",
+        claimId: def.semanticTypeKey,
+        passed: def.properties.every((p) => p.rawText.trim().length > 0),
+        message:
+          "Project Learning artifact provenance — properties present (not raw Hybrid OCR)",
+      };
+    }
+
     for (const prop of def.properties) {
       const raw = prop.rawText.trim();
       if (!raw) {
@@ -598,21 +619,32 @@ export class DictionaryGovernor {
 export function governDefinitions(
   definitions: ProjectSemanticDefinition[],
 ): ValidatorResult[] {
-  return definitions.flatMap((def) => [
-    {
-      validator: "verifyDefinitionKey",
-      claimId: def.semanticTypeKey,
-      passed: /^SW\d/i.test(def.semanticTypeKey),
-      message: "SW key pattern",
-    },
-    {
-      validator: "verifyDefinition",
-      claimId: def.semanticTypeKey,
-      passed: def.provenance.length > 0,
-      message:
-        def.provenance.length > 0
-          ? "Definition has provenance"
-          : "Definition missing provenance",
-    },
-  ]);
+  return definitions.flatMap((def) => {
+    const key = def.semanticTypeKey.trim();
+    const keyPassed =
+      /^SW\d+[A-Z]?$/i.test(key) ||
+      /^WB\d[\w./-]*$/i.test(key) ||
+      /^(?:LSTHD|STHD|HDU|HTT)\w*$/i.test(key) ||
+      /^(?:MTS|CS|HSTA|MST)\w*$/i.test(key) ||
+      /^(?:W|WT|AW)-?\d+[A-Z]?$/i.test(key);
+    return [
+      {
+        validator: "verifyDefinitionKey",
+        claimId: def.semanticTypeKey,
+        passed: keyPassed,
+        message: keyPassed
+          ? "V1 schedule/mark key pattern"
+          : "Definition key pattern failed",
+      },
+      {
+        validator: "verifyDefinition",
+        claimId: def.semanticTypeKey,
+        passed: def.provenance.length > 0,
+        message:
+          def.provenance.length > 0
+            ? "Definition has provenance"
+            : "Definition missing provenance",
+      },
+    ];
+  });
 }

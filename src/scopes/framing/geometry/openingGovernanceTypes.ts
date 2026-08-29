@@ -40,9 +40,33 @@ export type DimensionOwnershipResult = {
   notes: string[];
 };
 
+export type MarkOwnershipResult = {
+  status: DimensionOwnershipStatus;
+  markText: string | null;
+  textPrimitiveId: string | null;
+  /**
+   * Category from literal DOOR/WINDOW/GARAGE DOOR/CASED label only.
+   * Null when unresolved, ambiguous, or type-mark-only (Claude may classify).
+   */
+  literalCategory: OpeningCategory | null;
+  /** Lower is better (axial + normal distance). Null when unresolved. */
+  matchScore: number | null;
+  notes: string[];
+};
+
 export type GovernedOpeningCandidate = OpeningGapCandidate & {
   category: OpeningCategory;
   physicalRunOwnership: PhysicalRunOwnershipResult;
   dimensionOwnership: DimensionOwnershipResult;
+  markOwnership: MarkOwnershipResult;
   materialAuthoritative: boolean;
+};
+
+/** ESTABLISHED mark→gap ownership used to adopt Claude Evidence onto geometry. */
+export type OwnedOpeningMarkBinding = {
+  geometrySubjectKey: string;
+  pageNumber: number;
+  markText: string;
+  textPrimitiveId: string | null;
+  literalCategory: OpeningCategory | null;
 };

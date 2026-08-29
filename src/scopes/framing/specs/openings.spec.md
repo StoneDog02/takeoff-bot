@@ -166,5 +166,6 @@ Identity and hosting authority for openings:
 5. **Quantity:** never default semantic marks to `1`. Geometry gap Evidence may emit occurrence quantity `1` as explicit Evidence only.
 6. **One-to-many:** prefer N occurrence openings sharing a `scheduleReference`; `quantity > 1` only when Evidence attributes identical repeats to that hosted object.
 7. **Provenance:** merges retain unioned Evidence IDs, absorbed subjectKeys, and an `identity-binding-merge` resolution trace.
+8. **Same-subject contribution (preferred over binding):** when compiler mark→gap ownership is `ESTABLISHED`, category / explicit printed dimensions may be emitted or adopted onto the geometry subjectKey `opening:p…:gapN` rather than minting a parallel semantic occurrence. Adoption matches by mark token, not tile proximity.
 
 Primary calculation authority remains `13-opening-wall-framing-calculations.md` and the closed M1 assumption registry.

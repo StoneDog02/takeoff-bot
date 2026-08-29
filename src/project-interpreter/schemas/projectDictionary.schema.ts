@@ -126,6 +126,8 @@ export const governedProjectDictionarySchema = projectDictionarySchema.extend({
     rejectedHypothesisIds: z.array(z.string()),
     acceptedBindingIds: z.array(z.string()),
     rejectedBindingIds: z.array(z.string()),
+    acceptedDefinitionKeys: z.array(z.string()).default([]),
+    rejectedDefinitionKeys: z.array(z.string()).default([]),
     validatorResults: z.array(
       z.object({
         validator: z.string(),

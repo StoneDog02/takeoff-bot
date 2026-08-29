@@ -26,15 +26,28 @@ import {
   isDrawingCompilerEnabled,
   selectPagesForDrawingCompiler,
 } from "../compiler/selectPagesForDrawingCompiler.js";
+import { isProjectLearningEnabled } from "../../../project-interpreter/projectLearning/isProjectLearningEnabled.js";
+import { runProjectLearning } from "../../../project-interpreter/projectLearning/runProjectLearning.js";
+import {
+  mapProjectLearningToSemanticDefinitions,
+  mergeProjectSemanticDefinitions,
+} from "../../../project-interpreter/projectLearning/mapProjectLearningToSemanticDefinitions.js";
 import { buildOrientationDictionary } from "../../../project-interpreter/buildOrientationDictionary.js";
 import { CompilerInvestigationFacade } from "../../../project-interpreter/compilerInvestigationFacade.js";
 import { DictionaryGovernor } from "../../../project-interpreter/dictionaryGovernor.js";
 import type { ProjectOrientationContext } from "../../../project-interpreter/projectOrientationContext.js";
+import type {
+  ProjectDictionary,
+  ProjectSemanticDefinition as DictSemanticDefinition,
+} from "../../../project-interpreter/schemas/projectDictionary.schema.js";
 import type { SemanticDefinition } from "../../../drawing-compiler/schemas/semanticDefinition.schema.js";
+import { projectLearningArtifactSchema } from "../schemas/project-learning.schema.js";
+import path from "node:path";
 import { buildGeometryEvidenceFromCompiledPages } from "../geometry/buildGeometryEvidenceFromCompiledPages.js";
 import { buildAreaSystemRelationshipEvidence } from "../geometry/buildAreaSystemRelationshipEvidence.js";
 import { buildConstructionSemanticRelationshipEvidence } from "../geometry/buildConstructionSemanticRelationshipEvidence.js";
-import { buildGovernedSemanticCompilerEvidence } from "../geometry/buildGovernedSemanticCompilerEvidence.js";
+import { adoptOpeningSemanticEvidenceOntoGeometry } from "../geometry/adoptOpeningSemanticEvidenceOntoGeometry.js";
+import { buildGovernedSemanticCompilerEvidenceWithOwnership } from "../geometry/buildGovernedSemanticCompilerEvidence.js";
 import { buildSemanticBindingEvidenceFromCompiledPages } from "../geometry/buildSemanticBindingEvidenceFromCompiledPages.js";
 import {
   buildWallExistenceEvidenceFromCompiledPages,
@@ -177,6 +190,7 @@ export function createFramingStageArtifact<TSchema extends z.ZodTypeAny>(
 
 const COMPILER_AUTOMATION_AUDIT_COMPANION_SUFFIX = "compiler-automation-audit";
 const PROJECT_DICTIONARY_COMPANION_SUFFIX = "project-dictionary";
+const PROJECT_LEARNING_COMPANION_SUFFIX = "project-learning";
 const SEMANTIC_BINDING_AUDIT_COMPANION_SUFFIX = "semantic-binding-audit";
 const EXTRACTION_WORK_UNITS_COMPANION_SUFFIX = "extraction-work-units";
 const PLAN_REFERENCE_QUEUE_COMPANION_SUFFIX = "plan-reference-queue";
@@ -527,6 +541,45 @@ const stages: PipelineStage[] = [
           emptyTextPageNumbers,
         });
 
+        let learningValidatedDefs: DictSemanticDefinition[] = [];
+
+        if (isProjectLearningEnabled()) {
+          const learning = await runProjectLearning({
+            projectId: context.projectId,
+            planIndex: context.planIndex,
+            classifiedPages: pageClassification.pages,
+            artifactOutputDir: path.join(
+              "artifacts",
+              "project-learning",
+              context.projectId,
+              context.pipelineRunId,
+            ),
+            // Live ODL + Claude region interpret outside mock AI.
+            allowLiveOdl: !context.useMockAi,
+            allowLiveClaudeInterpret: !context.useMockAi,
+          });
+          learningValidatedDefs = learning.validatedDefinitions;
+
+          const learningArtifact = createFramingStageArtifact(
+            context,
+            5,
+            projectLearningArtifactSchema,
+            "project-learning",
+            learning.payload,
+            { type: "system", identifier: "project-learning" },
+          );
+          context.stageSideEffects.publishCompanionArtifact(
+            PROJECT_LEARNING_COMPANION_SUFFIX,
+            learningArtifact,
+          );
+        }
+
+        const schedulePageFromClassification = pageClassification.pages.find(
+          (page) =>
+            page.pageKind === "schedule" ||
+            page.contentRoles.includes("schedule"),
+        )?.pageNumber;
+
         if (isProjectOrientationEnabled()) {
           const facade = await CompilerInvestigationFacade.create(
             context.planIndex.pdfPath,
@@ -535,11 +588,33 @@ const stages: PipelineStage[] = [
             projectId: context.planIndex.pdfPath,
             pdfPath: context.planIndex.pdfPath,
             facade,
+            schedulePageNumber: schedulePageFromClassification,
           });
+          const dictionaryWithLearning: ProjectDictionary = {
+            ...built.dictionary,
+            definitions: mergeProjectSemanticDefinitions(
+              built.dictionary.definitions,
+              learningValidatedDefs,
+            ),
+          };
           const governor = new DictionaryGovernor(facade);
-          const govReport = await governor.govern(built.dictionary);
-          orientationContext = built.orientationContext;
-          crossPageDefinitions = built.orientationContext.definitions;
+          const govReport = await governor.govern(dictionaryWithLearning);
+          const acceptedLearning = learningValidatedDefs.filter((def) =>
+            govReport.acceptedDefinitionKeys.some(
+              (key) =>
+                key.trim().toUpperCase() ===
+                def.semanticTypeKey.trim().toUpperCase(),
+            ),
+          );
+          orientationContext = {
+            ...built.orientationContext,
+            definitions: [
+              ...built.orientationContext.definitions,
+              ...mapProjectLearningToSemanticDefinitions(acceptedLearning),
+            ],
+            dictionaryDefinitions: govReport.dictionary.definitions,
+          };
+          crossPageDefinitions = orientationContext.definitions;
 
           const dictionaryArtifact = createFramingStageArtifact(
             context,
@@ -555,12 +630,74 @@ const stages: PipelineStage[] = [
                 rejectedHypothesisIds: govReport.rejectedHypothesisIds,
                 acceptedBindingIds: govReport.acceptedBindingIds,
                 rejectedBindingIds: govReport.rejectedBindingIds,
+                acceptedDefinitionKeys: govReport.acceptedDefinitionKeys,
+                rejectedDefinitionKeys: govReport.rejectedDefinitionKeys,
                 validatorResults: govReport.validatorResults,
                 greenOutcome: govReport.greenOutcome,
                 greenCriterion: govReport.greenCriterion,
               },
             },
             { type: "system", identifier: "project-orientation" },
+          );
+          context.stageSideEffects.publishCompanionArtifact(
+            PROJECT_DICTIONARY_COMPANION_SUFFIX,
+            dictionaryArtifact,
+          );
+          context.stageSideEffects.publishArtifactOverride(
+            "projectDictionary",
+            dictionaryArtifact,
+          );
+        } else if (learningValidatedDefs.length > 0) {
+          const facade = await CompilerInvestigationFacade.create(
+            context.planIndex.pdfPath,
+          );
+          const learningDictionary: ProjectDictionary = {
+            projectId: context.projectId,
+            generatedAt: new Date().toISOString(),
+            interpreterModel: "project-learning-v1",
+            experimentBranch: "hybrid",
+            observations: [],
+            hypotheses: [],
+            definitions: learningValidatedDefs,
+            bindings: [],
+            unresolved: [],
+            contradictions: [],
+            metrics: { toolCalls: 0, tokens: 0, durationMs: 0 },
+          };
+          const governor = new DictionaryGovernor(facade);
+          const govReport = await governor.govern(learningDictionary);
+          const acceptedLearning = learningValidatedDefs.filter((def) =>
+            govReport.acceptedDefinitionKeys.some(
+              (key) =>
+                key.trim().toUpperCase() ===
+                def.semanticTypeKey.trim().toUpperCase(),
+            ),
+          );
+          crossPageDefinitions =
+            mapProjectLearningToSemanticDefinitions(acceptedLearning);
+
+          const dictionaryArtifact = createFramingStageArtifact(
+            context,
+            5,
+            projectDictionaryArtifactSchema,
+            "project-dictionary",
+            {
+              ...govReport.dictionary,
+              governance: {
+                evaluatedAt: govReport.evaluatedAt,
+                passRate: govReport.passRate,
+                acceptedHypothesisIds: govReport.acceptedHypothesisIds,
+                rejectedHypothesisIds: govReport.rejectedHypothesisIds,
+                acceptedBindingIds: govReport.acceptedBindingIds,
+                rejectedBindingIds: govReport.rejectedBindingIds,
+                acceptedDefinitionKeys: govReport.acceptedDefinitionKeys,
+                rejectedDefinitionKeys: govReport.rejectedDefinitionKeys,
+                validatorResults: govReport.validatorResults,
+                greenOutcome: govReport.greenOutcome,
+                greenCriterion: govReport.greenCriterion,
+              },
+            },
+            { type: "system", identifier: "project-learning" },
           );
           context.stageSideEffects.publishCompanionArtifact(
             PROJECT_DICTIONARY_COMPANION_SUFFIX,
@@ -764,13 +901,21 @@ const stages: PipelineStage[] = [
         ),
         ocrCacheDir: process.env.TAKEOFF_WALL_ASSEMBLY_OCR_CACHE_DIR ?? null,
       });
-      const semanticCompilerEvidence = buildGovernedSemanticCompilerEvidence(
+      const semanticCompilerBuild = buildGovernedSemanticCompilerEvidenceWithOwnership(
         compiledPages.pages,
         dictionaryPayload,
         { noteTexts: wallAssemblyNoteTexts },
       );
-      if (semanticCompilerEvidence.length > 0) {
-        evidence = [...evidence, ...semanticCompilerEvidence];
+      if (semanticCompilerBuild.evidence.length > 0) {
+        evidence = [...evidence, ...semanticCompilerBuild.evidence];
+      }
+
+      if (semanticCompilerBuild.ownedOpeningMarks.length > 0) {
+        const adopted = adoptOpeningSemanticEvidenceOntoGeometry({
+          evidence,
+          ownedMarks: semanticCompilerBuild.ownedOpeningMarks,
+        });
+        evidence = adopted.evidence;
       }
 
       if (isDrawingSemanticBindingEnabled()) {

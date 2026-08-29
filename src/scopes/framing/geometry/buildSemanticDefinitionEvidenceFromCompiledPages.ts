@@ -24,6 +24,29 @@ function compilerBboxToSourceRegion(
   };
 }
 
+function scheduleNameForDefinitionKind(kind: string): string {
+  switch (kind) {
+    case "shear-wall":
+      return "SHEAR WALL SCHEDULE";
+    case "header":
+      return "WOOD BEAM/HEADER SCHEDULE";
+    case "holdown":
+      return "METAL HOLDOWN SCHEDULE";
+    case "wall-type":
+      return "WALL LEGEND AND ABBREVIATIONS";
+    default:
+      return "PROJECT SCHEDULE";
+  }
+}
+
+function subjectKindForDefinitionKind(
+  kind: string,
+): "wall" | "structural-member" | "other" {
+  if (kind === "header") return "structural-member";
+  if (kind === "shear-wall" || kind === "wall-type") return "wall";
+  return "other";
+}
+
 export function assignSemanticDefinitionEvidence(
   def: SemanticDefinition,
 ): Evidence[] {
@@ -52,12 +75,12 @@ export function assignSemanticDefinitionEvidence(
           elementLabel: def.semanticTypeKey,
           detailNumber: null,
           sectionNumber: null,
-          scheduleName: "SHEAR WALL SCHEDULE",
+          scheduleName: scheduleNameForDefinitionKind(def.definitionKind),
           noteReference: null,
         },
         originalText: prop.rawText,
         references: [],
-        subjectKind: "wall",
+        subjectKind: subjectKindForDefinitionKind(def.definitionKind),
         subjectKey: def.semanticTypeKey,
         propertyPath: prop.propertyPath,
         candidateValue: prop.candidateValue,

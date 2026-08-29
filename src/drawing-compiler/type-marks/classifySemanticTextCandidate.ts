@@ -43,9 +43,10 @@ const PROPERTY_PHRASE_PATTERNS = [
   /^METAL\s+STUD\s+WALLS?$/i,
 ];
 
-/** Reusable plan type / assembly identifier marks (SW2, W1, W-001, …). */
+/** Reusable plan type / assembly identifier marks (SW2, WB2-10DF, W1, W-001, …). */
 const TYPE_IDENTIFIER_PATTERNS = [
   /^SW\d+[A-Z]?$/i,
+  /^WB\d[\w./-]*$/i,
   /^W\d+[A-Z]?$/i,
   /^W-\d{3,}$/i,
   /^WT-?\d+[A-Z]?$/i,

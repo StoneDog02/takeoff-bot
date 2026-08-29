@@ -10,6 +10,7 @@ import {
   type ExtractionProjectContext,
   type ExtractionProjectContextAudit,
 } from "./extractionProjectContext.schema.js";
+import { selectKnownDefinitionsForWorkUnit } from "./selectKnownDefinitionsForWorkUnit.js";
 
 const CONTEXT_DISCLAIMER = "CONTEXT ONLY — not plan evidence" as const;
 
@@ -22,6 +23,15 @@ const RELATIONSHIP_INTENTS = new Set<FramingExtractionIntent>([
   "floor-framing",
   "sheathing",
   "roof-framing",
+]);
+
+const PHYSICAL_DEFINITION_INTENTS = new Set<string>([
+  "wall-framing",
+  "structural-members",
+  "floor-framing",
+  "sheathing",
+  "roof-framing",
+  "openings",
 ]);
 
 type DomainPatterns = {
@@ -293,6 +303,7 @@ function emptyContext(intent: string, bundlePageNumbers: number[]): ExtractionPr
     knownAreaTags: [],
     dictionaryBindings: [],
     crossPageNotes: [],
+    knownDefinitions: [],
     contextDisclaimer: CONTEXT_DISCLAIMER,
   });
 }
@@ -313,7 +324,8 @@ export function auditExtractionProjectContext(
     context.knownSystemTags.length > 0 ||
     context.knownAreaTags.length > 0 ||
     context.dictionaryBindings.length > 0 ||
-    context.crossPageNotes.length > 0;
+    context.crossPageNotes.length > 0 ||
+    (context.knownDefinitions?.length ?? 0) > 0;
 
   return extractionProjectContextAuditSchema.parse({
     contextSliceHash: hashExtractionProjectContext(context),
@@ -332,11 +344,15 @@ export type BuildExtractionProjectContextInput = {
     assemblyNames: string[];
     notes: string[];
   };
+  /** Test / retrieval seam for semantic-key override. */
+  candidateKeysOverride?: readonly string[];
+  schedulePrimary?: boolean;
 };
 
 /**
  * Intent-scoped project context for extraction preamble (O1).
  * Context is not Evidence — Claude must still ground relationships in plan text.
+ * knownDefinitions are semantic-key-driven validated Project Dictionary defs.
  */
 export function buildExtractionProjectContext(
   input: BuildExtractionProjectContextInput,
@@ -345,13 +361,30 @@ export function buildExtractionProjectContext(
     .map((member) => member.pageNumber)
     .sort((left, right) => left - right);
 
+  const knownDefinitions = PHYSICAL_DEFINITION_INTENTS.has(input.intent)
+    ? selectKnownDefinitionsForWorkUnit({
+        intent: input.intent,
+        bundle: input.bundle,
+        dictionary: input.dictionary,
+        compiledPages: input.compiledPages,
+        candidateKeysOverride: input.candidateKeysOverride,
+        schedulePrimary: input.schedulePrimary,
+      })
+    : [];
+
   if (!RELATIONSHIP_INTENTS.has(input.intent as FramingExtractionIntent)) {
-    return emptyContext(input.intent, bundlePageNumbers);
+    return extractionProjectContextSchema.parse({
+      ...emptyContext(input.intent, bundlePageNumbers),
+      knownDefinitions,
+    });
   }
 
   const domain = domainForIntent(input.intent);
   if (!domain) {
-    return emptyContext(input.intent, bundlePageNumbers);
+    return extractionProjectContextSchema.parse({
+      ...emptyContext(input.intent, bundlePageNumbers),
+      knownDefinitions,
+    });
   }
 
   const { systemTags, areaTags } = collectDictionaryTags(input.dictionary, domain);
@@ -373,6 +406,7 @@ export function buildExtractionProjectContext(
     knownAreaTags: areaTags,
     dictionaryBindings,
     crossPageNotes,
+    knownDefinitions,
     contextDisclaimer: CONTEXT_DISCLAIMER,
   });
 }

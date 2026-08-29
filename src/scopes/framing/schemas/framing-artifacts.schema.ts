@@ -42,6 +42,7 @@ import { buildingWallSchema, wallSegmentSchema } from "./wall.schema.js";
 import { classifiedPlanPageSchema } from "../../../plans/pageClassification.js";
 import { compiledDrawingPageSchema } from "../../../drawing-compiler/schemas/compiledDrawingPage.schema.js";
 import { governedProjectDictionarySchema } from "../../../project-interpreter/schemas/projectDictionary.schema.js";
+import { projectLearningPayloadSchema } from "../../../project-interpreter/projectLearning/projectLearningTypes.js";
 import { extractionBudgetAuditSchema } from "../extraction/extractionBudgetAudit.schema.js";
 import { planReferenceTraceSchema } from "../extraction/planReferenceTrace.schema.js";
 import {
@@ -271,6 +272,10 @@ export const projectDictionaryArtifactSchema =
     "project-dictionary",
     projectDictionaryPayloadSchema,
   );
+export const projectLearningArtifactSchema = createTypedArtifactEnvelopeSchema(
+  "project-learning",
+  projectLearningPayloadSchema,
+);
 export const semanticBindingAuditArtifactSchema =
   createTypedArtifactEnvelopeSchema(
     "semantic-binding-audit",
@@ -384,6 +389,7 @@ export type CompilerAutomationAuditPayload = z.infer<
 export type ProjectDictionaryPayload = z.infer<
   typeof projectDictionaryPayloadSchema
 >;
+export type ProjectLearningPayload = z.infer<typeof projectLearningPayloadSchema>;
 export type SemanticBindingAuditPayload = z.infer<
   typeof semanticBindingAuditPayloadSchema
 >;

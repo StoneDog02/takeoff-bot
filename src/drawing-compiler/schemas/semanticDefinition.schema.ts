@@ -40,6 +40,7 @@ export const semanticDefinitionSchema = z.object({
       "img2table-ocr",
       "band-ocr-audit",
       "row-band-ocr",
+      "project-learning",
     ]),
     columnHeaders: z.array(z.string()).optional(),
     rowIndex: z.number().int().nonnegative().optional(),

@@ -28,6 +28,7 @@ import {
   type WallFramingPayload,
 } from "../schemas/framing-artifacts.schema.js";
 import type { Opening } from "../schemas/opening.schema.js";
+import { isMarkDecodedOpeningDimensionEvidence } from "../geometry/openingMarkText.js";
 import {
   createDisambiguatedOpeningObjectId,
   createOpeningObjectId,
@@ -82,6 +83,10 @@ function selectCandidate(
 
   for (const record of records) {
     if (record.propertyPath !== propertyPath) {
+      continue;
+    }
+
+    if (isMarkDecodedOpeningDimensionEvidence(record)) {
       continue;
     }
 
