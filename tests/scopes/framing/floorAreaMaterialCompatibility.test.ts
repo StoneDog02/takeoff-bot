@@ -85,7 +85,7 @@ describe("floorAreaMaterialCompatibility", () => {
       entry.tokens.includes("CRAWL"),
     )!;
 
-    const result = evaluateConstructionSemanticFloorProof({
+    const results = evaluateConstructionSemanticFloorProof({
       index,
       evidence: patioEvidence,
       areaClusters,
@@ -93,7 +93,10 @@ describe("floorAreaMaterialCompatibility", () => {
       region,
     });
 
-    assert.notEqual(result.status, "accepted");
+    assert.equal(
+      results.some((entry) => entry.status === "accepted"),
+      false,
+    );
   });
 
   it("blocks compatibility between wood system and slab area records", () => {

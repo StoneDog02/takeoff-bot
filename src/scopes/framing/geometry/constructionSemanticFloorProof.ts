@@ -42,7 +42,9 @@ function existingParentSystemTags(
   return evidence.some(
     (record) =>
       record.subjectKey === areaSubjectKey &&
-      record.propertyPath === "parentSystemTag",
+      record.propertyPath === "parentSystemTag" &&
+      typeof record.candidateValue === "string" &&
+      record.candidateValue.trim().length > 0,
   );
 }
 
@@ -96,66 +98,23 @@ function evaluateScopeApplicability(input: {
   return { passes: true };
 }
 
-export function evaluateConstructionSemanticFloorProof(input: {
+function resolveUniqueSystemForRegion(input: {
   index: PlanRelationshipSignalIndex;
-  evidence: readonly Evidence[];
-  areaClusters: readonly ClusterCandidate[];
-  systemClusters: readonly ClusterCandidate[];
   region: RegionIdentity;
-}): ConstructionSemanticProofResult {
-  const scopeCheck = evaluateScopeApplicability({
-    index: input.index,
-    region: input.region,
-    systemClusters: input.systemClusters,
-  });
-  if (!scopeCheck.passes) {
-    return {
-      status: "rejected",
-      reason: scopeCheck.reason ?? "MISSING-SA",
-      authorizingEvidenceIds: [...input.region.evidenceIds],
-    };
-  }
-
-  const matchingAreas = areaClustersMatchingRegion(input.areaClusters, input.region);
-  if (matchingAreas.length === 0) {
-    return {
-      status: "rejected",
-      reason: "CS-CONFLICT-AREA",
-      authorizingEvidenceIds: [...input.region.evidenceIds],
-    };
-  }
-
-  const areaScores = matchingAreas.map((cluster) =>
-    scoreAreaClusterBinding({ region: input.region, cluster }),
-  );
-  const areaSelection = selectUniqueByScore<string>(
-    areaScores,
-    "CS-CONFLICT-AREA",
-  );
-
-  if (areaSelection.status === "conflict") {
-    return {
-      status: "rejected",
-      reason: areaSelection.reason,
-      conflictCandidates: areaSelection.candidates,
-      authorizingEvidenceIds: areaSelection.authorizingEvidenceIds,
-    };
-  }
-
-  const areaCluster = matchingAreas.find(
-    (cluster) => cluster.subjectKey === areaSelection.value,
-  )!;
-  if (isSlabOrNonWoodFloorArea(areaCluster.records)) {
-    return {
-      status: "rejected",
-      reason: "CS-INCOMPATIBLE-AREA-MATERIAL",
-      authorizingEvidenceIds: areaSelection.authorizingEvidenceIds,
-    };
-  }
-  if (existingParentSystemTags(input.evidence, areaCluster.subjectKey)) {
-    return { status: "rejected", reason: "ALREADY-LINKED" };
-  }
-
+  systemClusters: readonly ClusterCandidate[];
+  areaAuthorizingEvidenceIds: readonly EvidenceId[];
+}):
+  | {
+      status: "unique";
+      systemSubjectKey: string;
+      systemCluster: ClusterCandidate;
+      score: number;
+      authorizingEvidenceIds: EvidenceId[];
+    }
+  | {
+      status: "rejected";
+      result: ConstructionSemanticProofResult;
+    } {
   const boundSystemScores = input.systemClusters
     .map((cluster) =>
       scoreSystemClusterBinding({
@@ -169,14 +128,22 @@ export function evaluateConstructionSemanticFloorProof(input: {
   if (boundSystemScores.length === 0) {
     return {
       status: "rejected",
-      reason: "MISSING-SA",
-      authorizingEvidenceIds: areaSelection.authorizingEvidenceIds,
+      result: {
+        status: "rejected",
+        reason: "MISSING-SA",
+        authorizingEvidenceIds: [...input.areaAuthorizingEvidenceIds],
+      },
     };
   }
 
   const fingerprintGroups = new Map<
     string,
-    { fingerprintKey: string; clusters: ClusterCandidate[]; totalScore: number; scores: ScopeBindingScore[] }
+    {
+      fingerprintKey: string;
+      clusters: ClusterCandidate[];
+      totalScore: number;
+      scores: ScopeBindingScore[];
+    }
   >();
 
   for (const entry of boundSystemScores) {
@@ -209,8 +176,11 @@ export function evaluateConstructionSemanticFloorProof(input: {
   if (fingerprintGroups.size === 0) {
     return {
       status: "rejected",
-      reason: "MISSING-APC",
-      authorizingEvidenceIds: areaSelection.authorizingEvidenceIds,
+      result: {
+        status: "rejected",
+        reason: "MISSING-APC",
+        authorizingEvidenceIds: [...input.areaAuthorizingEvidenceIds],
+      },
     };
   }
 
@@ -230,12 +200,15 @@ export function evaluateConstructionSemanticFloorProof(input: {
   if (assemblySelection.status === "conflict") {
     return {
       status: "rejected",
-      reason: assemblySelection.reason,
-      conflictCandidates: assemblySelection.candidates,
-      authorizingEvidenceIds: uniqueSortedIds([
-        ...areaSelection.authorizingEvidenceIds,
-        ...assemblySelection.authorizingEvidenceIds,
-      ]),
+      result: {
+        status: "rejected",
+        reason: assemblySelection.reason,
+        conflictCandidates: assemblySelection.candidates,
+        authorizingEvidenceIds: uniqueSortedIds([
+          ...input.areaAuthorizingEvidenceIds,
+          ...assemblySelection.authorizingEvidenceIds,
+        ]),
+      },
     };
   }
 
@@ -245,50 +218,246 @@ export function evaluateConstructionSemanticFloorProof(input: {
     "CS-CONFLICT-SYSTEM",
   );
 
-  if (systemSelection.status === "conflict") {
-    return {
-      status: "rejected",
-      reason: systemSelection.reason,
-      conflictCandidates: systemSelection.candidates,
-      authorizingEvidenceIds: uniqueSortedIds([
-        ...areaSelection.authorizingEvidenceIds,
-        ...systemSelection.authorizingEvidenceIds,
-      ]),
-    };
+  let systemSubjectKey: string;
+  let systemScore: number;
+  let systemAuthorizingEvidenceIds: EvidenceId[];
+
+  if (systemSelection.status === "unique") {
+    systemSubjectKey = systemSelection.value;
+    systemScore = systemSelection.score;
+    systemAuthorizingEvidenceIds = systemSelection.authorizingEvidenceIds;
+  } else {
+    // Same assembly fingerprint with tied scope scores = fragment duplicates,
+    // not competing assemblies. Prefer denser APC, then system-named subjects.
+    const tied = systemSelection.candidates;
+    if (tied.length === 0) {
+      return {
+        status: "rejected",
+        result: {
+          status: "rejected",
+          reason: systemSelection.reason,
+          conflictCandidates: systemSelection.candidates,
+          authorizingEvidenceIds: uniqueSortedIds([
+            ...input.areaAuthorizingEvidenceIds,
+            ...systemSelection.authorizingEvidenceIds,
+          ]),
+        },
+      };
+    }
+
+    const ranked = [...tied].sort((left, right) => {
+      const leftCluster = input.systemClusters.find((c) => c.subjectKey === left);
+      const rightCluster = input.systemClusters.find((c) => c.subjectKey === right);
+      const leftApc = countApcProperties(leftCluster?.records ?? []);
+      const rightApc = countApcProperties(rightCluster?.records ?? []);
+      if (leftApc !== rightApc) {
+        return rightApc - leftApc;
+      }
+      const leftRank = systemSubjectPreferenceRank(left);
+      const rightRank = systemSubjectPreferenceRank(right);
+      if (leftRank !== rightRank) {
+        return leftRank - rightRank;
+      }
+      return compareIds(left, right);
+    });
+    systemSubjectKey = ranked[0]!;
+    const winningScore = winningAssembly.scores.find(
+      (entry) => entry.subjectKey === systemSubjectKey,
+    );
+    systemScore = winningScore?.score ?? 0;
+    systemAuthorizingEvidenceIds = uniqueSortedIds(
+      winningAssembly.scores
+        .filter((entry) => tied.includes(entry.subjectKey))
+        .flatMap((entry) => entry.authorizingEvidenceIds),
+    );
   }
 
   const systemCluster = input.systemClusters.find(
-    (cluster) => cluster.subjectKey === systemSelection.value,
+    (cluster) => cluster.subjectKey === systemSubjectKey,
   );
-  if (
-    systemCluster &&
-    !isWoodJoistFloorSystemCompatibleWithArea({
-      systemRecords: systemCluster.records,
-      areaRecords: areaCluster.records,
-    })
-  ) {
+  if (!systemCluster) {
     return {
       status: "rejected",
-      reason: "CS-INCOMPATIBLE-AREA-MATERIAL",
-      authorizingEvidenceIds: uniqueSortedIds([
-        ...areaSelection.authorizingEvidenceIds,
-        ...systemSelection.authorizingEvidenceIds,
-      ]),
+      result: {
+        status: "rejected",
+        reason: "MISSING-SA",
+        authorizingEvidenceIds: uniqueSortedIds([
+          ...input.areaAuthorizingEvidenceIds,
+          ...systemAuthorizingEvidenceIds,
+        ]),
+      },
     };
   }
 
-  const authorizingEvidenceIds = uniqueSortedIds([
-    ...areaSelection.authorizingEvidenceIds,
-    ...systemSelection.authorizingEvidenceIds,
-  ]);
-
   return {
-    status: "accepted",
-    areaSubjectKey: areaSelection.value,
-    systemSubjectKey: systemSelection.value,
-    authorizingEvidenceIds,
-    supportScore: areaSelection.score + systemSelection.score,
+    status: "unique",
+    systemSubjectKey,
+    systemCluster,
+    score: systemScore,
+    authorizingEvidenceIds: systemAuthorizingEvidenceIds,
   };
+}
+
+function countApcProperties(records: readonly Evidence[]): number {
+  const paths = new Set(
+    records
+      .map((record) => record.propertyPath)
+      .filter(
+        (path) =>
+          path === "assembly.joistType" ||
+          path === "assembly.joistSize" ||
+          path === "assembly.joistSpacingInches",
+      ),
+  );
+  return paths.size;
+}
+
+function systemSubjectPreferenceRank(subjectKey: string): number {
+  if (/FLOOR\s+SYSTEM/i.test(subjectKey)) {
+    return 0;
+  }
+  if (/FLOOR\s+FRAMING/i.test(subjectKey)) {
+    return 1;
+  }
+  return 2;
+}
+
+/**
+ * When multiple floor areas match one region (e.g. crawl bays), do not reject
+ * with CS-CONFLICT-AREA. Resolve a unique system/assembly for the region, then
+ * emit an accepted parent link for every eligible matching area.
+ */
+export function evaluateConstructionSemanticFloorProof(input: {
+  index: PlanRelationshipSignalIndex;
+  evidence: readonly Evidence[];
+  areaClusters: readonly ClusterCandidate[];
+  systemClusters: readonly ClusterCandidate[];
+  region: RegionIdentity;
+}): ConstructionSemanticProofResult[] {
+  const scopeCheck = evaluateScopeApplicability({
+    index: input.index,
+    region: input.region,
+    systemClusters: input.systemClusters,
+  });
+  if (!scopeCheck.passes) {
+    return [
+      {
+        status: "rejected",
+        reason: scopeCheck.reason ?? "MISSING-SA",
+        authorizingEvidenceIds: [...input.region.evidenceIds],
+      },
+    ];
+  }
+
+  const matchingAreas = areaClustersMatchingRegion(input.areaClusters, input.region);
+  if (matchingAreas.length === 0) {
+    return [
+      {
+        status: "rejected",
+        reason: "CS-CONFLICT-AREA",
+        authorizingEvidenceIds: [...input.region.evidenceIds],
+      },
+    ];
+  }
+
+  const areaScores = matchingAreas.map((cluster) =>
+    scoreAreaClusterBinding({ region: input.region, cluster }),
+  );
+  const areaAuthorizingEvidenceIds = uniqueSortedIds(
+    areaScores.flatMap((entry) => entry.authorizingEvidenceIds),
+  );
+
+  const systemResolution = resolveUniqueSystemForRegion({
+    index: input.index,
+    region: input.region,
+    systemClusters: input.systemClusters,
+    areaAuthorizingEvidenceIds,
+  });
+  if (systemResolution.status === "rejected") {
+    return [systemResolution.result];
+  }
+
+  const accepted: ConstructionSemanticProofResult[] = [];
+  let sawAlreadyLinked = false;
+  let sawIncompatible = false;
+
+  for (const areaCluster of matchingAreas) {
+    const areaScore = areaScores.find(
+      (entry) => entry.subjectKey === areaCluster.subjectKey,
+    );
+    if (!areaScore || areaScore.score <= 0) {
+      continue;
+    }
+
+    if (isSlabOrNonWoodFloorArea(areaCluster.records)) {
+      sawIncompatible = true;
+      continue;
+    }
+    if (existingParentSystemTags(input.evidence, areaCluster.subjectKey)) {
+      sawAlreadyLinked = true;
+      continue;
+    }
+    if (
+      !isWoodJoistFloorSystemCompatibleWithArea({
+        systemRecords: systemResolution.systemCluster.records,
+        areaRecords: areaCluster.records,
+      })
+    ) {
+      sawIncompatible = true;
+      continue;
+    }
+
+    accepted.push({
+      status: "accepted",
+      areaSubjectKey: areaCluster.subjectKey,
+      systemSubjectKey: systemResolution.systemSubjectKey,
+      authorizingEvidenceIds: uniqueSortedIds([
+        ...areaScore.authorizingEvidenceIds,
+        ...systemResolution.authorizingEvidenceIds,
+      ]),
+      supportScore: areaScore.score + systemResolution.score,
+    });
+  }
+
+  if (accepted.length > 0) {
+    return accepted.sort((left, right) => {
+      if (left.status !== "accepted" || right.status !== "accepted") {
+        return 0;
+      }
+      return compareIds(left.areaSubjectKey, right.areaSubjectKey);
+    });
+  }
+
+  if (sawAlreadyLinked) {
+    return [
+      {
+        status: "rejected",
+        reason: "ALREADY-LINKED",
+        authorizingEvidenceIds: areaAuthorizingEvidenceIds,
+      },
+    ];
+  }
+
+  if (sawIncompatible) {
+    return [
+      {
+        status: "rejected",
+        reason: "CS-INCOMPATIBLE-AREA-MATERIAL",
+        authorizingEvidenceIds: uniqueSortedIds([
+          ...areaAuthorizingEvidenceIds,
+          ...systemResolution.authorizingEvidenceIds,
+        ]),
+      },
+    ];
+  }
+
+  return [
+    {
+      status: "rejected",
+      reason: "CS-CONFLICT-AREA",
+      authorizingEvidenceIds: areaAuthorizingEvidenceIds,
+    },
+  ];
 }
 
 export function evaluateAllConstructionSemanticFloorProofs(input: {
@@ -325,39 +494,41 @@ export function evaluateAllConstructionSemanticFloorProofs(input: {
     }
 
     for (const region of regions) {
-      const result = evaluateConstructionSemanticFloorProof({
+      const regionResults = evaluateConstructionSemanticFloorProof({
         index: input.index,
         evidence: input.evidence,
         areaClusters: pageAreas,
         systemClusters: pageSystems,
         region,
       });
-      results.push(result);
+      results.push(...regionResults);
 
-      if (result.status === "accepted") {
-        auditEntries.push({
-          pageNumber,
-          regionLabel: region.label,
-          areaSubjectKey: result.areaSubjectKey,
-          systemSubjectKey: result.systemSubjectKey,
-          status: "accepted",
-          reason: null,
-          supportScore: result.supportScore,
-          conflictCandidates: [],
-          authorizingEvidenceIds: result.authorizingEvidenceIds,
-        });
-      } else {
-        auditEntries.push({
-          pageNumber,
-          regionLabel: region.label,
-          areaSubjectKey: null,
-          systemSubjectKey: null,
-          status: "rejected",
-          reason: result.reason,
-          supportScore: null,
-          conflictCandidates: result.conflictCandidates ?? [],
-          authorizingEvidenceIds: result.authorizingEvidenceIds ?? [],
-        });
+      for (const result of regionResults) {
+        if (result.status === "accepted") {
+          auditEntries.push({
+            pageNumber,
+            regionLabel: region.label,
+            areaSubjectKey: result.areaSubjectKey,
+            systemSubjectKey: result.systemSubjectKey,
+            status: "accepted",
+            reason: null,
+            supportScore: result.supportScore,
+            conflictCandidates: [],
+            authorizingEvidenceIds: result.authorizingEvidenceIds,
+          });
+        } else {
+          auditEntries.push({
+            pageNumber,
+            regionLabel: region.label,
+            areaSubjectKey: null,
+            systemSubjectKey: null,
+            status: "rejected",
+            reason: result.reason,
+            supportScore: null,
+            conflictCandidates: result.conflictCandidates ?? [],
+            authorizingEvidenceIds: result.authorizingEvidenceIds ?? [],
+          });
+        }
       }
     }
   }

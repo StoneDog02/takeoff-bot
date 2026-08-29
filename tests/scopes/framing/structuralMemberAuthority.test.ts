@@ -4,11 +4,13 @@ import { describe, it } from "node:test";
 import { evidenceSchema } from "../../../src/core/schemas/evidence.schema.js";
 import {
   applyStructuralMemberAuthority,
+  BEAM_HEADER_CATEGORY_SYNONYM_MARKER,
   formatCanonicalDimensionalMemberSize,
   isScheduleMarkAsSize,
   looksLikeDimensionalMemberSize,
   parseCanonicalDimensionalMemberSize,
   parseInchMeasureToMilli,
+  resolveBeamHeaderCategorySynonym,
   resolveDimensionalSizeOverScheduleMark,
   resolveExplicitSingleOccurrenceQuantity,
   resolveNotationEquivalentDimensionalSizes,
@@ -61,6 +63,22 @@ function lengthEvidence(id: string, feet: number) {
     subjectKey: "WB2-11.88LVL",
     propertyPath: "lengthFeet",
     candidateValue: feet,
+  });
+}
+
+function categoryEvidence(id: string, value: string) {
+  return evidenceSchema.parse({
+    id,
+    type: "note",
+    relationship: "supports",
+    description: `Category candidate ${value}`,
+    source,
+    originalText: `WB2-11.88LVL x 23'-6" LONG`,
+    references: [],
+    subjectKind: "structural-member",
+    subjectKey: "WB2-11.88LVL",
+    propertyPath: "category",
+    candidateValue: value,
   });
 }
 
@@ -322,5 +340,113 @@ describe("structuralMemberAuthority", () => {
       ),
       true,
     );
+  });
+
+  it("parses space-separated mixed fractions without collapsing to simple fractions", () => {
+    assert.equal(parseInchMeasureToMilli('1 3/4"'), 1750);
+    assert.equal(parseInchMeasureToMilli("11 7/8"), 11875);
+    assert.deepEqual(parseCanonicalDimensionalMemberSize('(2)-1 3/4"x11 7/8"'), {
+      plyCount: 2,
+      widthMilli: 1750,
+      heightMilli: 11875,
+    });
+  });
+
+  it("converges space-fraction and dot-fraction size notations including LVL suffix", () => {
+    const records = [
+      sizeEvidence("E-SPACE", '(2)-1 3/4"x11 7/8"'),
+      sizeEvidence("E-DOT", '(2)-1.3/4"x11.7/8"'),
+      sizeEvidence("E-DOT-LVL", '(2)-1.3/4"x11.7/8" LVL'),
+      lengthEvidence("E-LEN", 23.5),
+    ];
+    const resolution = resolveNotationEquivalentDimensionalSizes(
+      "WB2-11.88LVL",
+      records,
+    );
+    assert.ok(resolution);
+    assert.equal(resolution.size, '(2)-1.75"x11.875"');
+
+    const applied = applyStructuralMemberAuthority(
+      "WB2-11.88LVL",
+      baseMember({
+        category: "header",
+        size: null,
+        lengthFeet: 23.5,
+        materialType: "LVL",
+        quantity: 1,
+      }),
+      records,
+    );
+    assert.equal(applied.size, '(2)-1.75"x11.875"');
+  });
+
+  it("converges beam|header category synonyms to header when HEADER Evidence exists", () => {
+    const records = [
+      categoryEvidence("E-WB2-CATEGORY", "header"),
+      categoryEvidence("E-WB2-11.88LVL-CATEGORY", "beam"),
+      sizeEvidence("E-DIM", '(2)-1.3/4"x11.7/8"'),
+      lengthEvidence("E-LEN", 23.5),
+    ];
+    const resolution = resolveBeamHeaderCategorySynonym(records);
+    assert.ok(resolution);
+    assert.equal(resolution.category, "header");
+    assert.ok(
+      resolution.explanation.includes(BEAM_HEADER_CATEGORY_SYNONYM_MARKER),
+    );
+
+    const applied = applyStructuralMemberAuthority(
+      "WB2-11.88LVL",
+      baseMember({
+        category: "unknown",
+        size: '(2)-1.3/4"x11.7/8"',
+        lengthFeet: 23.5,
+        materialType: "LVL",
+        quantity: 1,
+        resolutionTraces: [
+          {
+            propertyPath: "category",
+            method: "unresolved",
+            explanation: "Conflicting category candidates",
+            evidenceIds: ["E-WB2-CATEGORY", "E-WB2-11.88LVL-CATEGORY"],
+            assumptionIds: [],
+            userDecisionIds: [],
+            validationIssueIds: [],
+            reviewItemIds: [],
+          },
+        ],
+      }),
+      records,
+    );
+    assert.equal(applied.category, "header");
+    assert.equal(
+      applied.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "category" && trace.method === "unresolved",
+      ),
+      false,
+    );
+    assert.equal(
+      applied.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "category" &&
+          trace.method === "supported-inference",
+      ),
+      true,
+    );
+  });
+
+  it("does not silently pick when category conflict includes a non-synonym", () => {
+    const records = [
+      categoryEvidence("E-HEADER", "header"),
+      categoryEvidence("E-BEAM", "beam"),
+      categoryEvidence("E-POST", "post"),
+    ];
+    assert.equal(resolveBeamHeaderCategorySynonym(records), null);
+    const applied = applyStructuralMemberAuthority(
+      "WB2-11.88LVL",
+      baseMember({ category: "unknown" }),
+      records,
+    );
+    assert.equal(applied.category, "unknown");
   });
 });

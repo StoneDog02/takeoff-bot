@@ -52,7 +52,7 @@ describe("constructionSemanticFloorProof", () => {
       entry.tokens.includes("CRAWL"),
     )!;
 
-    const result = evaluateConstructionSemanticFloorProof({
+    const results = evaluateConstructionSemanticFloorProof({
       index,
       evidence,
       areaClusters,
@@ -60,6 +60,8 @@ describe("constructionSemanticFloorProof", () => {
       region,
     });
 
+    assert.equal(results.length, 1);
+    const result = results[0]!;
     assert.equal(result.status, "accepted");
     if (result.status === "accepted") {
       assert.equal(result.areaSubjectKey, "FLOOR AREA CRAWL SPACE");
@@ -82,7 +84,7 @@ describe("constructionSemanticFloorProof", () => {
       evidenceIds: ["E-CRAWLAREA-LABEL"],
     };
 
-    const result = evaluateConstructionSemanticFloorProof({
+    const results = evaluateConstructionSemanticFloorProof({
       index,
       evidence,
       areaClusters,
@@ -90,6 +92,8 @@ describe("constructionSemanticFloorProof", () => {
       region,
     });
 
+    assert.equal(results.length, 1);
+    const result = results[0]!;
     assert.equal(result.status, "rejected");
     if (result.status === "rejected") {
       assert.equal(result.reason, "MISSING-SR");
@@ -117,7 +121,7 @@ describe("constructionSemanticFloorProof", () => {
     assert.ok(auditEntries.length >= 2);
   });
 
-  it("rejects equal-support system conflict", () => {
+  it("deterministically picks among equal-score same-assembly system fragments", () => {
     const evidence = becksteadCrawlSpaceEvidence();
     const sharedTile = "t-r1-c1";
     const equalA = {
@@ -166,7 +170,7 @@ describe("constructionSemanticFloorProof", () => {
     const region = index.regionIdentities.find((entry) =>
       entry.tokens.includes("CRAWL"),
     )!;
-    const result = evaluateConstructionSemanticFloorProof({
+    const results = evaluateConstructionSemanticFloorProof({
       index,
       evidence: mergedEvidence,
       areaClusters,
@@ -174,10 +178,108 @@ describe("constructionSemanticFloorProof", () => {
       region,
     });
 
-    assert.equal(result.status, "rejected");
-    if (result.status === "rejected") {
-      assert.equal(result.reason, "CS-CONFLICT-SYSTEM");
-      assert.ok((result.conflictCandidates ?? []).length >= 2);
-    }
+    const accepted = results.filter((entry) => entry.status === "accepted");
+    assert.ok(accepted.length >= 1);
+    assert.ok(
+      accepted.every(
+        (entry) =>
+          entry.status === "accepted" &&
+          (entry.systemSubjectKey === "TJI 210 FLOOR SYSTEM" ||
+            entry.systemSubjectKey === "TJI 210 FLOOR SYSTEM B"),
+      ),
+    );
+    // Prefer denser APC / lexicographically earlier fragment when scores tie.
+    assert.equal(
+      accepted.every(
+        (entry) =>
+          entry.status === "accepted" &&
+          entry.systemSubjectKey === "TJI 210 FLOOR SYSTEM",
+      ),
+      true,
+    );
+  });
+
+  it("links all eligible crawl bay areas to the unique winning system", () => {
+    const base = becksteadCrawlSpaceEvidence();
+    const page = 3;
+    const tile = "t-r1-c1";
+    const bayA: Evidence = {
+      id: "E-BAY-A-LAYOUT",
+      type: "dimension",
+      relationship: "supports",
+      description: "Crawl bay A layout",
+      source: {
+        page: {
+          documentId: null,
+          pageNumber: page,
+          sheetId: null,
+          sheetTitle: "CRAWL SPACE/FOUNDATION PLAN",
+          pageLabel: null,
+          revision: null,
+        },
+        region: { x: 0.1, y: 0.1, width: 0.2, height: 0.15 },
+        tileId: tile,
+        elementLabel: "CRAWL SPACE FLOOR AREA (40x50 BAY)",
+        detailNumber: null,
+        sectionNumber: null,
+        scheduleName: null,
+        noteReference: null,
+      },
+      originalText: `40'-0"`,
+      references: [],
+      subjectKind: "floor-framing-area",
+      subjectKey: "CRAWL SPACE FLOOR AREA (40x50 BAY)",
+      propertyPath: "joistLayoutLengthFeet",
+      candidateValue: 40,
+    };
+    const bayB: Evidence = {
+      ...bayA,
+      id: "E-BAY-B-LAYOUT",
+      description: "Crawl bay B layout",
+      source: {
+        ...bayA.source!,
+        elementLabel: `CRAWL SPACE FLOOR AREA (27'6" BAY)`,
+      },
+      originalText: `27'-6"`,
+      subjectKey: `CRAWL SPACE FLOOR AREA (27'6" BAY)`,
+      candidateValue: 27.5,
+    };
+    const evidence = [...base, bayA, bayB];
+    const index = buildPlanRelationshipSignalIndex({
+      evidence,
+      classifiedPages: becksteadCrawlPageClassification(),
+    });
+    const { areaClusters, systemClusters } = clustersFromEvidence(evidence);
+    const region = index.regionIdentities.find((entry) =>
+      entry.tokens.includes("CRAWL"),
+    )!;
+
+    const results = evaluateConstructionSemanticFloorProof({
+      index,
+      evidence,
+      areaClusters,
+      systemClusters,
+      region,
+    });
+
+    const acceptedAreas = results
+      .filter((entry) => entry.status === "accepted")
+      .map((entry) => (entry.status === "accepted" ? entry.areaSubjectKey : ""));
+    assert.ok(acceptedAreas.includes("FLOOR AREA CRAWL SPACE"));
+    assert.ok(acceptedAreas.includes("CRAWL SPACE FLOOR AREA (40x50 BAY)"));
+    assert.ok(acceptedAreas.includes(`CRAWL SPACE FLOOR AREA (27'6" BAY)`));
+    assert.ok(
+      results.every(
+        (entry) =>
+          entry.status !== "accepted" ||
+          entry.systemSubjectKey === "FLOOR SYSTEM CRAWL SPACE",
+      ),
+    );
+    assert.equal(
+      results.some(
+        (entry) => entry.status === "rejected" && entry.reason === "CS-CONFLICT-AREA",
+      ),
+      false,
+    );
   });
 });

@@ -88,7 +88,9 @@ function hasExistingParentSystemTag(
   return evidence.some(
     (record) =>
       record.subjectKey === areaSubjectKey &&
-      record.propertyPath === "parentSystemTag",
+      record.propertyPath === "parentSystemTag" &&
+      typeof record.candidateValue === "string" &&
+      record.candidateValue.trim().length > 0,
   );
 }
 

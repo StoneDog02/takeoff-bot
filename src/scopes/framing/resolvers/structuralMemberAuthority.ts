@@ -12,6 +12,9 @@ export const NOTATION_EQUIVALENT_SIZE_MARKER =
 export const SINGLE_OCCURRENCE_QUANTITY_MARKER =
   "Explicit single-occurrence quantity established";
 
+export const BEAM_HEADER_CATEGORY_SYNONYM_MARKER =
+  "Wood-beam schedule category beam|header synonyms converged";
+
 /** Exact thousandths of an inch — avoids float drift in equivalence. */
 export type MilliInches = number;
 
@@ -84,7 +87,25 @@ const MATERIAL_SUFFIX_PATTERN =
  * dot-fraction notation (1.3/4 = 1 + 3/4).
  */
 export function parseInchMeasureToMilli(token: string): MilliInches | null {
-  const raw = token.trim().replace(/["'\s]/g, "");
+  const trimmedQuotes = token.trim().replace(/["']/g, "").trim();
+  if (trimmedQuotes.length === 0) {
+    return null;
+  }
+
+  // whole numer/denom with space  e.g. 1 3/4, 11 7/8
+  // Must run before whitespace stripping — otherwise "1 3/4" becomes "13/4".
+  const spaceMixed = /^(\d+)\s+(\d+)\/(\d+)$/.exec(trimmedQuotes);
+  if (spaceMixed) {
+    const whole = Number(spaceMixed[1]);
+    const numer = Number(spaceMixed[2]);
+    const denom = Number(spaceMixed[3]);
+    if (denom <= 0) {
+      return null;
+    }
+    return Math.round(((whole * denom + numer) * 1000) / denom);
+  }
+
+  const raw = trimmedQuotes.replace(/\s+/g, "");
   if (raw.length === 0) {
     return null;
   }
@@ -458,6 +479,73 @@ function lengthEvidenceLooksLikeExplicitPlacement(record: Evidence): boolean {
   );
 }
 
+/**
+ * When category Evidence only conflicts between wood-beam schedule synonyms
+ * `beam` and `header`, converge to `header` when HEADER-corroborating Evidence
+ * exists (aligned with Project Learning definitionKind aliases and M2 Beckstead
+ * WB2-11.88LVL outcome). True conflicts involving other categories stay unresolved.
+ */
+export function resolveBeamHeaderCategorySynonym(
+  records: readonly Evidence[],
+): {
+  category: "header";
+  evidenceIds: EvidenceId[];
+  explanation: string;
+} | null {
+  const categoryRecords = records.filter(
+    (record) => record.propertyPath === "category",
+  );
+  if (categoryRecords.length === 0) {
+    return null;
+  }
+
+  const grouped = new Map<string, EvidenceId[]>();
+  for (const record of categoryRecords) {
+    if (typeof record.candidateValue !== "string") {
+      continue;
+    }
+    const key = record.candidateValue.trim().toLowerCase();
+    if (key !== "beam" && key !== "header") {
+      // Non-synonym category present — not a pure beam|header synonym conflict.
+      if (key.length > 0) {
+        return null;
+      }
+      continue;
+    }
+    const existing = grouped.get(key) ?? [];
+    existing.push(record.id);
+    grouped.set(key, existing);
+  }
+
+  if (!grouped.has("beam") || !grouped.has("header")) {
+    return null;
+  }
+
+  const headerCorroborated = categoryRecords.some((record) => {
+    if (
+      typeof record.candidateValue === "string" &&
+      record.candidateValue.trim().toLowerCase() === "header"
+    ) {
+      return true;
+    }
+    const text = `${record.id}\n${record.description}\n${record.originalText ?? ""}`;
+    return /\bheader\b/i.test(text);
+  });
+
+  if (!headerCorroborated) {
+    return null;
+  }
+
+  return {
+    category: "header",
+    evidenceIds: uniqueSortedIds([
+      ...(grouped.get("beam") ?? []),
+      ...(grouped.get("header") ?? []),
+    ]),
+    explanation: `${BEAM_HEADER_CATEGORY_SYNONYM_MARKER}: HEADER-corroborating Evidence present; beam treated as wood-beam schedule synonym of header.`,
+  };
+}
+
 export function applyStructuralMemberAuthority(
   subjectKey: string,
   member: StructuralMember,
@@ -465,6 +553,34 @@ export function applyStructuralMemberAuthority(
 ): StructuralMember {
   let next: StructuralMember = member;
   const traces = [...member.resolutionTraces];
+
+  if (next.category === "unknown") {
+    const categoryResolution = resolveBeamHeaderCategorySynonym(records);
+    if (categoryResolution) {
+      const withoutUnresolvedCategory = traces.filter(
+        (trace) =>
+          !(
+            trace.propertyPath === "category" &&
+            trace.method === "unresolved"
+          ),
+      );
+      withoutUnresolvedCategory.push(
+        createTrace(
+          "category",
+          "supported-inference",
+          categoryResolution.explanation,
+          categoryResolution.evidenceIds,
+        ),
+      );
+      next = {
+        ...next,
+        category: categoryResolution.category,
+        resolutionTraces: withoutUnresolvedCategory,
+      };
+      traces.length = 0;
+      traces.push(...withoutUnresolvedCategory);
+    }
+  }
 
   if (next.size === null) {
     const sizeResolution =
@@ -519,6 +635,7 @@ export function applyStructuralMemberAuthority(
   }
 
   if (
+    next.category === member.category &&
     next.size === member.size &&
     next.quantity === member.quantity &&
     traces.length === member.resolutionTraces.length
