@@ -1,5 +1,7 @@
 # Material Taxonomy
 
+> **Product completeness contract:** the locked Master Taxonomy PDF and Recommended Lumber Takeoff Format live under [`docs/product/`](../../docs/product/). This Construction Brain file is reasoning/vocabulary guidance — it does **not** decide what exists on a house and is not the finished-product authority.
+
 ## Purpose
 
 This document defines the canonical material taxonomy used by the framing engine.

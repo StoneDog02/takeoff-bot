@@ -1,5 +1,5 @@
 import type { Evidence } from "../../../src/core/schemas/evidence.schema.js";
-import type { ClassifiedPlanPage } from "../../../src/plans/pageClassification.js";
+import type { ClassifiedPlanPage } from "../../src/pdf/pageClassification.js";
 
 export const BECKSTEAD_CRAWL_PAGE = 3;
 

@@ -5,15 +5,15 @@ import {
   calculateFloorFraming,
   countRegularlySpacedJoists,
   isSimpleAreaJoistLinearFeetTypeSupported,
-} from "../../src/scopes/framing/calculators/calculateFloorFraming.js";
-import type { FloorFramingPayload } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
-import { framingMaterialLineItemSchema } from "../../src/scopes/framing/schemas/material.schema.js";
+} from "../../src/framing/calculate/calculateFloorFraming.js";
+import type { FloorFramingPayload } from "../../src/framing/schemas/framing-artifacts.schema.js";
+import { framingMaterialLineItemSchema } from "../../src/framing/schemas/material.schema.js";
 import type {
   FloorFramingArea,
   FloorFramingSystem,
-} from "../../src/scopes/framing/schemas/floor-framing.schema.js";
-import { FLOOR_QUANTITY_KEYS } from "../../src/scopes/framing/validators/rule-ids.js";
-import { createMaterialLineItemId } from "../../src/scopes/framing/calculators/ids.js";
+} from "../../src/framing/schemas/floor-framing.schema.js";
+import { FLOOR_QUANTITY_KEYS } from "../../src/framing/validators/rule-ids.js";
+import { createMaterialLineItemId } from "../../src/framing/calculate/ids.js";
 
 function resolvedTrace(propertyPath: string) {
   return {

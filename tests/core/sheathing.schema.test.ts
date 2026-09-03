@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import {
   sheathingAreaSchema,
   sheathingSystemSchema,
-} from "../../src/scopes/framing/schemas/sheathing.schema.js";
+} from "../../src/framing/schemas/sheathing.schema.js";
 
 describe("sheathing domain contracts", () => {
   it("accepts a sheathing system that references areas by ID only", () => {

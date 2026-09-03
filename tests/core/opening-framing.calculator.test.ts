@@ -1,23 +1,23 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { calculateOpeningFraming } from "../../src/scopes/framing/calculators/calculateOpeningFraming.js";
-import { createMaterialLineItemId } from "../../src/scopes/framing/calculators/ids.js";
-import { createOpeningKingStudCountAssumptionId } from "../../src/scopes/framing/calculators/createOpeningKingStudCountAssumption.js";
-import { createOpeningCrippleLayoutAssumptionId } from "../../src/scopes/framing/calculators/createOpeningCrippleLayoutAssumption.js";
-import { createOpeningRoughSillSizeAssumptionId } from "../../src/scopes/framing/calculators/createOpeningRoughSillSizeAssumption.js";
-import { calculateFramingTakeoff } from "../../src/scopes/framing/reset/calculateFramingTakeoff.js";
-import { emptyFramingConstruction } from "../../src/scopes/framing/reset/framingConstruction.schema.js";
+import { calculateOpeningFraming } from "../../src/framing/calculate/calculateOpeningFraming.js";
+import { createMaterialLineItemId } from "../../src/framing/calculate/ids.js";
+import { createOpeningKingStudCountAssumptionId } from "../../src/framing/calculate/createOpeningKingStudCountAssumption.js";
+import { createOpeningCrippleLayoutAssumptionId } from "../../src/framing/calculate/createOpeningCrippleLayoutAssumption.js";
+import { createOpeningRoughSillSizeAssumptionId } from "../../src/framing/calculate/createOpeningRoughSillSizeAssumption.js";
+import { calculateFramingTakeoff } from "../../src/framing/calculate/calculateFramingTakeoff.js";
+import { emptyFramingConstruction } from "../../src/framing/schemas/framingConstruction.schema.js";
 import type {
   OpeningsPayload,
   WallFramingPayload,
-} from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
-import type { Opening } from "../../src/scopes/framing/schemas/opening.schema.js";
+} from "../../src/framing/schemas/framing-artifacts.schema.js";
+import type { Opening } from "../../src/framing/schemas/opening.schema.js";
 import {
   OPENING_QUANTITY_KEYS,
   STRUCTURAL_MEMBER_QUANTITY_KEYS,
   WALL_QUANTITY_KEYS,
-} from "../../src/scopes/framing/validators/rule-ids.js";
+} from "../../src/framing/validators/rule-ids.js";
 
 function resolvedTrace(
   propertyPath: string,

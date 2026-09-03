@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { calculateSheathing } from "../../src/scopes/framing/calculators/calculateSheathing.js";
-import type { SheathingPayload } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
-import { framingMaterialLineItemSchema } from "../../src/scopes/framing/schemas/material.schema.js";
+import { calculateSheathing } from "../../src/framing/calculate/calculateSheathing.js";
+import type { SheathingPayload } from "../../src/framing/schemas/framing-artifacts.schema.js";
+import { framingMaterialLineItemSchema } from "../../src/framing/schemas/material.schema.js";
 import type {
   SheathingArea,
   SheathingSystem,
-} from "../../src/scopes/framing/schemas/sheathing.schema.js";
+} from "../../src/framing/schemas/sheathing.schema.js";
 
 function resolvedTrace(
   propertyPath: string,

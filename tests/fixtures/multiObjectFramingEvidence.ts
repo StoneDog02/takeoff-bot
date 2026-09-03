@@ -5,4 +5,4 @@ export {
   buildOpeningEvidenceForSubject,
   buildSheathingEvidenceForWall001,
   buildWallEvidenceForSubject,
-} from "../../src/scopes/framing/demo/multiObjectFramingEvidence.js";
+} from "../../src/framing/demo/multiObjectFramingEvidence.js";

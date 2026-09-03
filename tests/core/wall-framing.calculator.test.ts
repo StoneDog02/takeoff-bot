@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { calculateWallFraming } from "../../src/scopes/framing/calculators/calculateWallFraming.js";
-import type { WallFramingPayload } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
-import { framingMaterialLineItemSchema } from "../../src/scopes/framing/schemas/material.schema.js";
+import { calculateWallFraming } from "../../src/framing/calculate/calculateWallFraming.js";
+import type { WallFramingPayload } from "../../src/framing/schemas/framing-artifacts.schema.js";
+import { framingMaterialLineItemSchema } from "../../src/framing/schemas/material.schema.js";
 
 function buildCompletePayload(
   overrides: Partial<WallFramingPayload> = {},

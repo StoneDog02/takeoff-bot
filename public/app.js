@@ -87,7 +87,7 @@ function renderState(state = currentState) {
   renderPackages(state);
 
   const summary = state.takeoff.summary;
-  materialSummary.textContent = `${summary.materialLineItemCount} material lines · ${summary.pendingClaimCount ?? state.takeoff.pendingClaims?.length ?? 0} pending claims · ${summary.openingCount} openings · ${summary.wallCount} walls`;
+  materialSummary.textContent = `${summary.materialLineItemCount} material lines · ${summary.openingCount} openings · ${summary.wallCount} walls`;
   renderMaterials(state);
   renderReviewItems(state);
   renderReviewDetail(state);
@@ -268,18 +268,6 @@ function renderMaterials(state) {
     materialsTableBody?.append(row);
   }
 
-  for (const pending of state.takeoff.pendingClaims ?? []) {
-    const row = document.createElement("tr");
-    row.classList.add("pending-claim");
-    row.innerHTML = `
-      <td>${escapeHtml(pending.description)}</td>
-      <td>—</td>
-      <td>${escapeHtml(pending.unit ?? "—")}</td>
-      <td>${escapeHtml(formatClaimStatus(pending.claimStatus))}</td>
-      <td>${escapeHtml(pending.sourceObjectIds.join(", "))}</td>
-    `;
-    materialsTableBody?.append(row);
-  }
 }
 
 /**
@@ -557,7 +545,7 @@ function renderReviewDetail(state) {
 
 /**
  * @param {HTMLElement} container
- * @param {import('../src/core/schemas/review-workspace.schema.js').ReviewWorkspaceItem} item
+ * @param {TakeoffViewState["reviewWorkspace"]["items"][number]} item
  */
 function renderCorrectionForm(container, item) {
   const inputType =
@@ -904,25 +892,6 @@ function buildTakeoffExportCsv(state) {
         material.sourceObjectIds.join("; "),
         material.assumptionIds?.join("; ") ?? "",
         material.reviewItemIds?.join("; ") ?? "",
-      ]),
-    );
-  }
-
-  for (const pending of state.takeoff.pendingClaims ?? []) {
-    lines.push(
-      csvRow([
-        "pending_claim",
-        pending.id,
-        pending.quantityKey,
-        pending.description,
-        "",
-        pending.unit ?? "",
-        pending.claimStatus,
-        "",
-        pending.missingPropertyPath ?? "",
-        pending.sourceObjectIds.join("; "),
-        "",
-        pending.basis,
       ]),
     );
   }

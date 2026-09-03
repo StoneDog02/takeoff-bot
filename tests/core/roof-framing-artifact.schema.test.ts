@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { roofFramingArtifactSchema } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
+import { roofFramingArtifactSchema } from "../../src/framing/schemas/framing-artifacts.schema.js";
 
 const timestamp = "2026-07-10T12:00:00.000Z";
 

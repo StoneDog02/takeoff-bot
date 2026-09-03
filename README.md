@@ -1,14 +1,28 @@
 # Takeoff Bot
 
-Reusable AI construction takeoff engine — a repeatable scope pipeline framework.
+Residential framing takeoff engine: upload a construction plan PDF, read the plans, calculate framing materials, and emit a takeoff.
 
-## Philosophy
+## Product
 
-- **Claude/Anthropic** extracts structured information from plans
-- **TypeScript** performs deterministic calculations
-- Every scope follows the same pipeline pattern
-- Every stage saves artifacts for debuggability
-- No single Claude call generates a full takeoff
+- **In scope:** residential framing material takeoffs
+- **Out of scope:** concrete, electrical, plumbing, HVAC, and other trade takeoffs
+
+Authoritative architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)  
+Product contract (taxonomy / recommended format): [`docs/product/`](docs/product/)  
+Known limitations: [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md)
+
+## How a PDF becomes materials
+
+```text
+PDF → indexPlan → readFramingPlans → calculateFramingTakeoff → framing takeoff JSON
+```
+
+1. **Upload** — index the PDF (`src/pdf/indexPlan.ts`)
+2. **Read** — classify pages, optionally compile drawings / project dictionary, extract facts, reconcile walls/openings/members/floor/roof/sheathing
+3. **Calculate** — deterministic domain calculators and governed assumptions
+4. **Output** — material list under `artifacts/{projectId}/framing/`
+
+Plans decide what exists. The Material Taxonomy defines finished-product completeness vocabulary — it does not decide what exists on the house.
 
 ## Requirements
 
@@ -20,21 +34,21 @@ node -v
 java -version
 ```
 
-## Quick Start
+## Quick start
 
 ```bash
 npm install
-cp .env.example .env   # optional — pipeline mocks AI without API key
-npm run dev -- --pdf ./plans/sample.pdf --scope framing
+cp .env.example .env   # optional — mocks AI without API key
+npm run dev -- --pdf ./plans/sample.pdf
 ```
 
-Live Claude proof (requires `ANTHROPIC_API_KEY`; never falls back to mock Evidence):
+Live Claude (requires `ANTHROPIC_API_KEY`; never falls back to mock Evidence):
 
 ```bash
 npm run proof:live-framing
 ```
 
-Artifacts are written to `artifacts/{projectId}/framing/`.
+For OCR-heavy residential PDFs (e.g. Beckstead), enable compiler / learning flags as documented in `.env.example`.
 
 ## Scripts
 
@@ -42,27 +56,29 @@ Artifacts are written to `artifacts/{projectId}/framing/`.
 |---------|-------------|
 | `npm run dev` | Run CLI via tsx |
 | `npm run build` | Compile TypeScript |
-| `npm run start` | Run compiled output |
+| `npm run start` | Run compiled output (`npm run build` first) |
 | `npm run test` | Run tests |
-| `npm run proof:live-framing` | Run the controlled PDF through live Claude extraction |
-| `npm run test:live-framing` | Same live proof as an opt-in integration test |
+| `npm run ui:dev` | Local takeoff UI server |
+| `npm run proof:live-framing` | Controlled PDF through live Claude extraction |
 
-## Project Structure
+## Project structure
 
+```text
+docs/                Architecture, product contract, limitations
+docs/history/        Non-authoritative historical notes
+docs/product/        Master Taxonomy product contract
+knowledge/           Construction Brain (framing)
+src/app.ts           CLI entry
+src/pdf/             PDF indexing / classification
+src/compiler/        Drawing compiler
+src/project-reading/ Project dictionary / learning / orientation
+src/framing/         Read / resolve / calculate / output
+tests/               Tests and fixtures
+benchmarks/          Beckstead benchmark / parity assets
+artifacts/           Generated outputs (gitignored)
+plans/               Input PDFs (gitignored)
 ```
-docs/          Architecture and guides (manual population)
-specs/         Per-scope extraction/calculation specs
-knowledge/     Domain knowledge loaded per-stage
-src/           TypeScript source
-artifacts/     Pipeline stage outputs (gitignored)
-plans/         Input PDFs
-tests/         Test files
-```
 
-## Adding Scopes
+## Agent / contributor rules
 
-See `docs/SCOPE_CREATION_GUIDE.md`. Register new scopes in `src/scopes/registry.ts`.
-
-## Current Status
-
-Stage 1 indexes real PDF text layers. Downstream drawing understanding is a separate milestone.
+See [`AGENTS.md`](AGENTS.md).

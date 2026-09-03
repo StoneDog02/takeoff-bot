@@ -2,15 +2,15 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { evidenceSchema } from "../../src/core/schemas/evidence.schema.js";
-import { wallFramingPayloadSchema } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
+import { wallFramingPayloadSchema } from "../../src/framing/schemas/framing-artifacts.schema.js";
 import {
   createWallObjectId,
   createWallSegmentObjectId,
-} from "../../src/scopes/framing/resolvers/ids.js";
-import { resolveWallFraming } from "../../src/scopes/framing/resolvers/resolveWallFraming.js";
-import { WALL_QUANTITY_KEYS } from "../../src/scopes/framing/validators/rule-ids.js";
-import { calculateWallFraming } from "../../src/scopes/framing/calculators/calculateWallFraming.js";
-import { createMaterialLineItemId } from "../../src/scopes/framing/calculators/ids.js";
+} from "../../src/framing/resolve/ids.js";
+import { resolveWallFraming } from "../../src/framing/resolve/resolveWallFraming.js";
+import { WALL_QUANTITY_KEYS } from "../../src/framing/validators/rule-ids.js";
+import { calculateWallFraming } from "../../src/framing/calculate/calculateWallFraming.js";
+import { createMaterialLineItemId } from "../../src/framing/calculate/ids.js";
 
 const source = {
   page: {

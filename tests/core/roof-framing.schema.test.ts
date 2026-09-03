@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import {
   roofFramingSystemSchema,
   roofPlaneSchema,
-} from "../../src/scopes/framing/schemas/roof-framing.schema.js";
+} from "../../src/framing/schemas/roof-framing.schema.js";
 
 describe("roof framing domain contracts", () => {
   it("accepts a roof framing system that references planes by ID only", () => {

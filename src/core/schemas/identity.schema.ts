@@ -53,47 +53,9 @@ export const evidenceIdSchema = identifierSchema.brand<"EvidenceId">();
  */
 export const assumptionIdSchema = identifierSchema.brand<"AssumptionId">();
 
-/**
- * Identifies a validation issue.
- */
-export const validationIssueIdSchema =
-  identifierSchema.brand<"ValidationIssueId">();
-
-/**
- * Identifies one deterministic validation-rule evaluation.
- */
-export const validationResultIdSchema =
-  identifierSchema.brand<"ValidationResultId">();
-
-/**
- * Identifies a user-facing review item.
- */
-export const reviewItemIdSchema =
-  identifierSchema.brand<"ReviewItemId">();
-
-/**
- * Identifies an immutable user decision that confirms, replaces, rejects,
- * or otherwise resolves an engine-generated reviewable condition.
- */
-export const userDecisionIdSchema =
-  identifierSchema.brand<"UserDecisionId">();
-
-/**
- * Identifies one explainable confidence evaluation.
- */
-export const confidenceEvaluationIdSchema =
-  identifierSchema.brand<"ConfidenceEvaluationId">();
-
 export type Identifier = z.infer<typeof identifierSchema>;
 export type ObjectId = z.infer<typeof objectIdSchema>;
 export type PipelineRunId = z.infer<typeof pipelineRunIdSchema>;
 export type ArtifactId = z.infer<typeof artifactIdSchema>;
 export type EvidenceId = z.infer<typeof evidenceIdSchema>;
 export type AssumptionId = z.infer<typeof assumptionIdSchema>;
-export type ValidationIssueId = z.infer<typeof validationIssueIdSchema>;
-export type ValidationResultId = z.infer<typeof validationResultIdSchema>;
-export type ReviewItemId = z.infer<typeof reviewItemIdSchema>;
-export type UserDecisionId = z.infer<typeof userDecisionIdSchema>;
-export type ConfidenceEvaluationId = z.infer<
-  typeof confidenceEvaluationIdSchema
->;

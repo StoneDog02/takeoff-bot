@@ -3,12 +3,12 @@ import path from "node:path";
 import { resolveUseMockAi } from "../config/aiMode.js";
 import { isAnthropicConfigured } from "../config/env.js";
 import { generateUiSessionId } from "../core/utils/ids.js";
-import { indexPlan } from "../plans/indexPlan.js";
+import { indexPlan } from "../pdf/indexPlan.js";
 import {
-  runFramingResetTakeoff,
-  type RunFramingResetTakeoffResult,
-} from "../scopes/framing/reset/runFramingResetTakeoff.js";
-import type { ResetTakeoff } from "../scopes/framing/reset/resetTakeoff.schema.js";
+  runFramingTakeoff,
+  type RunFramingTakeoffResult,
+} from "../framing/output/runFramingTakeoff.js";
+import type { FramingTakeoff } from "../framing/schemas/framingTakeoff.schema.js";
 
 export type FramingTakeoffServiceOptions = {
   artifactRoot?: string;
@@ -19,7 +19,7 @@ export type TakeoffViewState = {
   sessionId: string;
   projectId: string;
   pdfPath: string;
-  takeoff: ResetTakeoff;
+  takeoff: FramingTakeoff;
   takeoffPath: string | null;
   materialCount: number;
   limitations: string[];
@@ -29,11 +29,11 @@ type FramingTakeoffSession = {
   id: string;
   projectId: string;
   pdfPath: string;
-  result: RunFramingResetTakeoffResult;
+  result: RunFramingTakeoffResult;
 };
 
 /**
- * UI service for the framing reset production path.
+ * UI service for the framing takeoff production path.
  *
  * Review workspace / user-decision Run-2 / Stage-16 product state are retired.
  */
@@ -57,14 +57,14 @@ export class FramingTakeoffService {
         "tests/fixtures/beckstead-residence-plans.pdf",
     );
     const projectId =
-      input?.projectId ?? `ui-reset-${generateUiSessionId().slice(0, 8)}`;
+      input?.projectId ?? `ui-${generateUiSessionId().slice(0, 8)}`;
 
     const useMockAi = resolveUseMockAi({
       live: false,
       anthropicConfigured: isAnthropicConfigured(),
     });
     const planIndex = await indexPlan(pdfPath);
-    const result = await runFramingResetTakeoff({
+    const result = await runFramingTakeoff({
       projectId,
       pdfPath,
       planIndex,
@@ -75,7 +75,7 @@ export class FramingTakeoffService {
 
     if (!result.success || !result.takeoff) {
       throw new Error(
-        `Reset takeoff failed: ${result.errors.join("; ") || "unknown error"}`,
+        `Framing takeoff failed: ${result.errors.join("; ") || "unknown error"}`,
       );
     }
 
@@ -108,7 +108,7 @@ export class FramingTakeoffService {
       takeoffPath: session.result.takeoffPath,
       materialCount: takeoff.materials.length,
       limitations: [
-        "UI uses the framing reset production path only.",
+        "UI uses the framing takeoff production path only.",
         "Review workspace and user-decision recalculation are not available.",
       ],
     };

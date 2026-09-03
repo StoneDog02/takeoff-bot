@@ -5,8 +5,8 @@ import { evidenceSchema } from "../../src/core/schemas/evidence.schema.js";
 import {
   buildRoofFramingCommonRafterEvidence,
   buildRoofFramingTrussEvidence,
-} from "../../src/scopes/framing/demo/roofFramingCommonRafterEvidence.js";
-import { resolveRoofFraming } from "../../src/scopes/framing/resolvers/resolveRoofFraming.js";
+} from "../../src/framing/demo/roofFramingCommonRafterEvidence.js";
+import { resolveRoofFraming } from "../../src/framing/resolve/resolveRoofFraming.js";
 
 function roofEvidence(
   subjectKind: "roof-framing-system" | "roof-plane",

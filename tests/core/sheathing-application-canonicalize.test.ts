@@ -4,10 +4,10 @@ import { describe, it } from "node:test";
 import {
   canonicalizeSheathingApplication,
   normalizeSheathingSystemCandidate,
-} from "../../src/scopes/framing/resolvers/sheathingPropertyPaths.js";
-import { normalizeOpeningCandidate } from "../../src/scopes/framing/resolvers/openingPropertyPaths.js";
-import { normalizeWallFramingCandidate } from "../../src/scopes/framing/resolvers/wallFramingPropertyPaths.js";
-import { normalizeStructuralMemberCandidate } from "../../src/scopes/framing/resolvers/structuralMemberPropertyPaths.js";
+} from "../../src/framing/resolve/sheathingPropertyPaths.js";
+import { normalizeOpeningCandidate } from "../../src/framing/resolve/openingPropertyPaths.js";
+import { normalizeWallFramingCandidate } from "../../src/framing/resolve/wallFramingPropertyPaths.js";
+import { normalizeStructuralMemberCandidate } from "../../src/framing/resolve/structuralMemberPropertyPaths.js";
 
 describe("canonicalizeSheathingApplication", () => {
   it("maps explicit wall terminology to wall", () => {

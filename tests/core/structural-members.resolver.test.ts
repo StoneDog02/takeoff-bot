@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { evidenceSchema } from "../../src/core/schemas/evidence.schema.js";
-import { calculateStructuralMembers } from "../../src/scopes/framing/calculators/calculateStructuralMembers.js";
-import { createMaterialLineItemId } from "../../src/scopes/framing/calculators/ids.js";
-import { createStructuralMemberObjectId } from "../../src/scopes/framing/resolvers/ids.js";
-import { resolveStructuralMembers } from "../../src/scopes/framing/resolvers/resolveStructuralMembers.js";
-import { resolveWallFraming } from "../../src/scopes/framing/resolvers/resolveWallFraming.js";
-import { STRUCTURAL_MEMBER_QUANTITY_KEYS } from "../../src/scopes/framing/validators/rule-ids.js";
+import { calculateStructuralMembers } from "../../src/framing/calculate/calculateStructuralMembers.js";
+import { createMaterialLineItemId } from "../../src/framing/calculate/ids.js";
+import { createStructuralMemberObjectId } from "../../src/framing/resolve/ids.js";
+import { resolveStructuralMembers } from "../../src/framing/resolve/resolveStructuralMembers.js";
+import { resolveWallFraming } from "../../src/framing/resolve/resolveWallFraming.js";
+import { STRUCTURAL_MEMBER_QUANTITY_KEYS } from "../../src/framing/validators/rule-ids.js";
 
 const source = {
   page: {

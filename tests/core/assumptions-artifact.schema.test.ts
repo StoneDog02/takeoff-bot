@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { assumptionsArtifactSchema } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
+import { assumptionsArtifactSchema } from "../../src/framing/schemas/framing-artifacts.schema.js";
 
 const timestamp = "2026-07-10T12:00:00.000Z";
 
@@ -27,16 +27,7 @@ const activeAssumption = {
     affectedQuantityKeys: ["wall.studs", "wall.plates"],
   },
   riskLevel: "medium",
-  userEditable: true,
   reviewRequired: true,
-  confidenceImpact: {
-    level: "material",
-    explanation: "A material-driving property remains assumed.",
-  },
-  evidenceIds: [],
-  reviewItemIds: ["RI-014"],
-  status: "active",
-  userDecisionId: null,
 } as const;
 
 describe("assumptions artifact contract", () => {

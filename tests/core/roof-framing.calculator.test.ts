@@ -4,16 +4,16 @@ import { describe, it } from "node:test";
 import {
   calculateRoofFraming,
   countRegularlySpacedCommonRafters,
-} from "../../src/scopes/framing/calculators/calculateRoofFraming.js";
-import { createMaterialLineItemId } from "../../src/scopes/framing/calculators/ids.js";
-import { isStickCommonRafterFramingType } from "../../src/scopes/framing/resolvers/roofFramingPropertyPaths.js";
-import type { RoofFramingPayload } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
-import { framingMaterialLineItemSchema } from "../../src/scopes/framing/schemas/material.schema.js";
+} from "../../src/framing/calculate/calculateRoofFraming.js";
+import { createMaterialLineItemId } from "../../src/framing/calculate/ids.js";
+import { isStickCommonRafterFramingType } from "../../src/framing/resolve/roofFramingPropertyPaths.js";
+import type { RoofFramingPayload } from "../../src/framing/schemas/framing-artifacts.schema.js";
+import { framingMaterialLineItemSchema } from "../../src/framing/schemas/material.schema.js";
 import type {
   RoofFramingSystem,
   RoofPlane,
-} from "../../src/scopes/framing/schemas/roof-framing.schema.js";
-import { ROOF_QUANTITY_KEYS } from "../../src/scopes/framing/validators/rule-ids.js";
+} from "../../src/framing/schemas/roof-framing.schema.js";
+import { ROOF_QUANTITY_KEYS } from "../../src/framing/validators/rule-ids.js";
 
 function resolvedTrace(propertyPath: string) {
   return {

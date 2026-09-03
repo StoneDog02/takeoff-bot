@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { computePlanSourceFingerprint } from "../../src/plans/computePlanSourceFingerprint.js";
-import type { PlanIndex } from "../../src/plans/PlanIndex.js";
+import { computePlanSourceFingerprint } from "../../src/pdf/computePlanSourceFingerprint.js";
+import type { PlanIndex } from "../../src/pdf/PlanIndex.js";
 
 function samplePlan(overrides: Partial<PlanIndex> = {}): PlanIndex {
   return {

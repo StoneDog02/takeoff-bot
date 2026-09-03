@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { evidenceSchema } from "../../src/core/schemas/evidence.schema.js";
-import { buildFloorFramingJoistCountEvidence } from "../../src/scopes/framing/demo/floorFramingJoistCountEvidence.js";
-import { resolveFloorFraming } from "../../src/scopes/framing/resolvers/resolveFloorFraming.js";
+import { buildFloorFramingJoistCountEvidence } from "../../src/framing/demo/floorFramingJoistCountEvidence.js";
+import { resolveFloorFraming } from "../../src/framing/resolve/resolveFloorFraming.js";
 
 function floorEvidence(
   subjectKind: "floor-framing-system" | "floor-framing-area",

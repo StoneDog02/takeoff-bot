@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { calculateWallFraming } from "../../src/scopes/framing/calculators/calculateWallFraming.js";
-import { computeNetStudDeduction } from "../../src/scopes/framing/calculators/netStudDeduction.js";
-import type { Opening } from "../../src/scopes/framing/schemas/opening.schema.js";
-import type { WallFramingPayload } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
+import { calculateWallFraming } from "../../src/framing/calculate/calculateWallFraming.js";
+import { computeNetStudDeduction } from "../../src/framing/calculate/netStudDeduction.js";
+import type { Opening } from "../../src/framing/schemas/opening.schema.js";
+import type { WallFramingPayload } from "../../src/framing/schemas/framing-artifacts.schema.js";
 
 function buildPayload(lengthFeet = 20): WallFramingPayload {
   return {

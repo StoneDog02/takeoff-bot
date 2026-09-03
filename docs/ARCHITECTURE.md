@@ -1,328 +1,82 @@
 # Architecture
 
-This repository implements a deterministic, artifact-first construction takeoff engine.
+This repository is a **residential framing takeoff engine**.
 
-The system uses AI for evidence extraction and deterministic software for resolution, validation, calculation, and persistence.
+It accepts residential construction plan PDFs and returns a framing material takeoff.
 
-The immediate reference implementation is the Framing scope, but the architecture is designed to scale across every future construction scope.
-
----
-
-# Mission
-
-Build a production-quality construction takeoff engine that is:
-
-- Deterministic
-- Explainable
-- Traceable
-- Maintainable
-- Supplier-ready
-
-Optimize every implementation toward accurate material takeoffs rather than maximizing AI output.
+It is not a multi-scope takeoff platform. Other trades (concrete, electrical, plumbing, HVAC, etc.) are out of product scope.
 
 ---
 
-# Core Philosophy
+## Production flow
 
-Claude extracts evidence.
+```text
+UPLOAD PDF
+    ↓
+READ THE PLANS
+    ↓
+CALCULATE / DERIVE / ASSUME
+    ↓
+MATERIAL OUTPUT
+```
 
-**Project Interpreter** (optional layer between compiler artifacts and Evidence governance) induces a project-local dictionary via bounded, tool-grounded investigation. It does not replace deterministic compilation, resolution, or calculation. Interpreter output is governed before any Evidence emit.
+| Step | Responsibility | Primary code |
+|------|----------------|--------------|
+| UPLOAD | Index the PDF into page text / structure | `src/pdf/indexPlan.ts` |
+| READ | Classify pages, optionally compile drawings / learn project meaning, extract facts, reconcile construction objects | `src/framing/read/readFramingPlans.ts` + `resolve/` / `geometry/` / `extract/` |
+| CALCULATE | Deterministic quantities and governed assumptions | `src/framing/calculate/` |
+| OUTPUT | Contractor-facing material list | `src/framing/output/` → `artifacts/{projectId}/framing/framing-takeoff.json` |
 
-TypeScript resolves.
+Supporting subsystems: `src/compiler/` (drawing compiler), `src/project-reading/` (dictionary / learning / orientation).
 
-Artifacts preserve deterministic state.
+Entry points: `src/app.ts` (CLI) and `src/ui/framingTakeoffService.ts` (UI).
 
-Validators evaluate correctness.
-
-Calculators compute quantities.
-
-Confidence measures trustworthiness.
-
-Review Items surface uncertainty.
-
-Users resolve uncertainty.
-
-Never maximize extraction.
-
-Maximize deterministic completion.
-
-Never hide assumptions.
-
-Never hallucinate quantities.
-
-Prefer review items over guesses.
+Both call `runFramingTakeoff`. There is no separate stage pipeline for production.
 
 ---
 
-# Architectural Layers
+## Locked principles
 
-Construction Brain
-
-↓
-
-Specifications
-
-↓
-
-Schemas
-
-↓
-
-Artifacts
-
-↓
-
-Validators
-
-↓
-
-Calculators
-
-↓
-
-Extraction Prompts
-
-↓
-
-Pipeline Wiring
-
-Each layer owns one responsibility.
-
-Construction behavior is authored in the Construction Brain and must not be redefined in schemas, validators, calculators, or prompts.
-
-Prompts may receive only the scoped Construction Brain context required for the current extraction stage.
----
-
-# Construction Brain
-
-The Construction Brain is the authoritative source of construction behavior.
-
-It defines:
-
-- terminology
-- assemblies
-- identification rules
-- interpretation rules
-- validation rules
-- confidence rules
-
-Construction knowledge must never be duplicated elsewhere.
+1. **Plans decide what exists.** The Material Taxonomy does not decide what exists on the house.
+2. **Claude / reader systems understand the plans.** TypeScript performs deterministic derivation, calculation, and governed assumptions.
+3. **Input completion order:** plan fact → deterministic derivation → governed assumption → NOT DETERMINABLE only when necessary.
+4. **Relationships** exist only when they help interpret construction, calculate quantities, prevent duplication, or satisfy another concrete takeoff need.
+5. **Validators** validate our reading and math — not whether the architect designed the building correctly.
+6. **Developer provenance / debugging** must not become contractor-facing authority or calculation permission machinery.
+7. Do **not** recreate Evidence-as-authority, claim lifecycles, centralized validation permission, confidence gates, or review-workspace architecture under new names.
 
 ---
 
-# Specifications
+## Layer jobs
 
-Specifications implement the Construction Brain.
-
-They define:
-
-- subsystem ownership
-- consumed artifacts
-- produced artifacts
-- implementation responsibilities
-- success criteria
-
-Specifications never redefine construction behavior.
-
----
-
-# Schemas
-
-Schemas define deterministic engine contracts.
-
-Core schemas remain construction-agnostic.
-
-Scope schemas define construction objects.
-
-Schemas describe data.
-
-They never perform calculations.
+| Layer | Job |
+|-------|-----|
+| Construction Brain (`knowledge/framing/`) | How residential framing works and how the engine should reason |
+| PDF ingest / classification | What pages exist and what roles they play |
+| Drawing compiler / project reading | Geometry, schedules, project-local meaning |
+| Extraction (Claude) | Structured facts from plans |
+| Evidence | Reader → resolver transport (not emit permission) |
+| Resolvers | Construction understanding (walls, openings, members, floor, roof, sheathing) |
+| Calculators + assumptions | Material quantities and governed defaults |
+| Output | Material list for the takeoff product |
+| Master Taxonomy (`docs/product/`) | What the finished product must ultimately account for / output vocabulary |
+| Developer diagnostics | Artifacts, replay, traces — never calculation permission |
 
 ---
 
-# Artifacts
+## Product completeness
 
-Artifact payloads represent immutable persisted snapshots.
+Authoritative product contract:
 
-Changes to resolved state create new artifacts rather than mutating prior payloads.
-Persistence metadata may evolve without changing the artifact payload.
+- [`docs/product/PRODUCT_CONTRACT.md`](product/PRODUCT_CONTRACT.md)
+- Master Taxonomy PDF under `docs/product/`
 
-Artifacts own:
+Known current capability limits:
 
-- execution provenance
-- persistence
-- lineage
-- versioning
-
-Resolved objects do not.
-
-Every persisted artifact is:
-
-Artifact Envelope
-
-↓
-
-Typed Payload
+- [`docs/LIMITATIONS.md`](LIMITATIONS.md)
 
 ---
 
-# Engine Principles
+## Historical docs
 
-Relationships reference IDs.
-
-Never embed related domain objects.
-
-Extraction objects and resolved objects are different lifecycle stages.
-
-Evidence never owns confidence.
-
-Confidence is a separate subsystem.
-
-Review Items are immutable.
-
-User Decisions live in separate artifacts.
-
-Property Resolution Traces explain how values were resolved.
-
-NodeNext module resolution requires `.js` imports.
-
-Confidence, completion, review status, and blocking status are independent concepts and must never be collapsed into one score.
-
----
-
-# Domain Model
-
-Primary Objects
-
-Represent construction.
-
-Examples:
-
-- Wall
-- Wall Segment
-- Opening
-- Structural Member
-
-Supporting Objects
-
-Explain or evaluate construction.
-
-Examples:
-
-- Evidence
-- Validation
-- Assumptions
-- Confidence
-- Review Items
-
-Container Objects
-
-Persist and organize.
-
-Examples:
-
-- Artifact Envelope
-- Framing Takeoff
-
-Never mix responsibilities.
-
----
-
-# Deterministic Rules
-
-Never rely on hidden AI memory.
-
-Never perform one-shot takeoffs.
-
-Never inject the entire Construction Brain into every prompt.
-
-Use page bundles to preserve cross-sheet context.
-
-Claude extracts structured evidence.
-
-TypeScript validates, normalizes, calculates, and assembles outputs.
-
-Missing information creates Review Items.
-
-Approved deterministic defaults may be used only when explicitly allowed.
-
-Conflicting information creates Review Items.
-
-Unknown is preferable to incorrect.
-
----
-
-# Runtime Flow
-
-Plan Set
-
-↓
-
-Plan Indexer
-
-↓
-
-Scope Router
-
-↓
-
-Page Bundle Builder
-
-↓
-
-Scope Pipeline
-
-↓
-
-AI Extraction
-
-↓
-
-Validation
-
-↓
-
-Deterministic Resolution
-
-↓
-
-Calculation
-
-↓
-
-Review Items
-
-↓
-
-Artifact Persistence
-
-↓
-
-Takeoff Report
-
----
-
-# Design Priorities
-
-When implementation choices exist, prefer:
-
-1. Deterministic behavior
-2. Explicit modeling
-3. ID references over embedding
-4. Immutable artifacts
-5. Explainability
-6. Maintainability
-7. Simplicity
-8. Extensibility
-
-Challenge existing designs only when there is a materially better architecture.
-
-Do not redesign stable architecture unnecessarily.
-
----
-
-# Schedule definition extraction (B2.2L.6)
-
-Compiler schedule extraction establishes **definitions** only (`SW* → properties`). It does **not** bind physical runs or infer ownership. Promoted path: heading-anchored table region + row-band OCR (`extractScheduleFromRowBands`) with `DictionaryGovernor.verifyDefinitionPropertyCitation` against `schedule-*` OCR cache entries.
-
-**Full Framing Takeoff Audit:** Run after B2.2L.6 reaches governed schedule definitions (S3) **and** a subsequent bridge milestone improves end-to-end takeoff completion — see `artifacts/b2.2l.6/RESEARCH.md` §SOP. L.6 does not implement the audit runner.
+Prior stage-pipeline and reset migration documents live under [`docs/history/`](history/). They are not source of truth.

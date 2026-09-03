@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import type { Evidence } from "../../src/core/schemas/evidence.schema.js";
-import { indexPlan } from "../../src/plans/indexPlan.js";
+import { indexPlan } from "../../src/pdf/indexPlan.js";
 import {
   REALISTIC_PLAN_EXPECTED_FACTS,
   REALISTIC_PLAN_FORBIDDEN_INVENTIONS,

@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import {
   compiledDrawingPagesArtifactSchema,
   compilerAutomationAuditArtifactSchema,
-} from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
+} from "../../src/framing/schemas/framing-artifacts.schema.js";
 
 const timestamp = "2026-08-21T12:00:00.000Z";
 

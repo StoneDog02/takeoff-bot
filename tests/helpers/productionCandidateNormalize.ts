@@ -4,31 +4,31 @@ import {
   isFloorSystemPropertyPath,
   normalizeFloorAreaCandidate,
   normalizeFloorSystemCandidate,
-} from "../../src/scopes/framing/resolvers/floorFramingPropertyPaths.js";
+} from "../../src/framing/resolve/floorFramingPropertyPaths.js";
 import {
   isOpeningPropertyPath,
   normalizeOpeningCandidate,
-} from "../../src/scopes/framing/resolvers/openingPropertyPaths.js";
+} from "../../src/framing/resolve/openingPropertyPaths.js";
 import {
   isRoofPlanePropertyPath,
   isRoofSystemPropertyPath,
   normalizeRoofPlaneCandidate,
   normalizeRoofSystemCandidate,
-} from "../../src/scopes/framing/resolvers/roofFramingPropertyPaths.js";
+} from "../../src/framing/resolve/roofFramingPropertyPaths.js";
 import {
   isSheathingAreaPropertyPath,
   isSheathingSystemPropertyPath,
   normalizeSheathingAreaCandidate,
   normalizeSheathingSystemCandidate,
-} from "../../src/scopes/framing/resolvers/sheathingPropertyPaths.js";
+} from "../../src/framing/resolve/sheathingPropertyPaths.js";
 import {
   isStructuralMemberPropertyPath,
   normalizeStructuralMemberCandidate,
-} from "../../src/scopes/framing/resolvers/structuralMemberPropertyPaths.js";
+} from "../../src/framing/resolve/structuralMemberPropertyPaths.js";
 import {
   isWallFramingPropertyPath,
   normalizeWallFramingCandidate,
-} from "../../src/scopes/framing/resolvers/wallFramingPropertyPaths.js";
+} from "../../src/framing/resolve/wallFramingPropertyPaths.js";
 
 /**
  * Applies the same property-specific candidate normalizer production resolvers

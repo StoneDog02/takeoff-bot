@@ -1,0 +1,21 @@
+# Beckstead parity snapshots
+
+Tracked takeoff outputs used to prove cleanup did not change architecture-invariant material results.
+
+## beckstead-reset-m1-framing-takeoff.json
+
+```json
+{
+  "frozenAt": "2026-09-03",
+  "source": "artifacts/beckstead-reset-m1/framing/reset-takeoff.json",
+  "schemaVersion": 1,
+  "projectId": "beckstead-reset-m1",
+  "materialCount": 53,
+  "assumptionCount": 0,
+  "materialsByDomainOrCategory": {
+    "wall": 52,
+    "structural": 1
+  },
+  "note": "Architecture-invariant parity snapshot for framing-only cleanup. Compare material payloads after renames."
+}
+```

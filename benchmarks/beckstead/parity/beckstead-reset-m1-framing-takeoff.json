@@ -1,0 +1,655 @@
+{
+  "schemaVersion": 1,
+  "projectId": "beckstead-reset-m1",
+  "pdfPath": "/Users/stoneyharward/Projects/takeoff-bot/tests/fixtures/beckstead-residence-plans.pdf",
+  "createdAt": "2026-09-02T22:49:09.910Z",
+  "materials": [
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 7,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p3:343b5ac7d6dc",
+        "WS-physical-run:p3:343b5ac7d6dc"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 20.4999,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p3:343b5ac7d6dc",
+        "WS-physical-run:p3:343b5ac7d6dc"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 6,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p3:40989f944b9b",
+        "WS-physical-run:p3:40989f944b9b"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 16.5,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p3:40989f944b9b",
+        "WS-physical-run:p3:40989f944b9b"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 4,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p3:8c1cbf07c005",
+        "WS-physical-run:p3:8c1cbf07c005"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 11.4999,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p3:8c1cbf07c005",
+        "WS-physical-run:p3:8c1cbf07c005"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 9,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p3:90d9a1ee9bde",
+        "WS-physical-run:p3:90d9a1ee9bde"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 31.5,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p3:90d9a1ee9bde",
+        "WS-physical-run:p3:90d9a1ee9bde"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 12,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p3:c529df116770",
+        "WS-physical-run:p3:c529df116770"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 42,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p3:c529df116770",
+        "WS-physical-run:p3:c529df116770"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 6,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p3:d03f217eacaa",
+        "WS-physical-run:p3:d03f217eacaa"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 16.5,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p3:d03f217eacaa",
+        "WS-physical-run:p3:d03f217eacaa"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 7,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p3:de2c90b29bd4",
+        "WS-physical-run:p3:de2c90b29bd4"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 20.4999,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p3:de2c90b29bd4",
+        "WS-physical-run:p3:de2c90b29bd4"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 4,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p3:ee2e3ac59450",
+        "WS-physical-run:p3:ee2e3ac59450"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 11.4999,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p3:ee2e3ac59450",
+        "WS-physical-run:p3:ee2e3ac59450"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 12,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p3:f557006338b3",
+        "WS-physical-run:p3:f557006338b3"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 42,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p3:f557006338b3",
+        "WS-physical-run:p3:f557006338b3"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 7,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:00b9abd7a594",
+        "WS-physical-run:p4:00b9abd7a594"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 24,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:00b9abd7a594",
+        "WS-physical-run:p4:00b9abd7a594"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 7,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:106193d1bdf4",
+        "WS-physical-run:p4:106193d1bdf4"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 24,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:106193d1bdf4",
+        "WS-physical-run:p4:106193d1bdf4"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 8,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:189824022331",
+        "WS-physical-run:p4:189824022331"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 25.1199,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:189824022331",
+        "WS-physical-run:p4:189824022331"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 6,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:229d1651acfb",
+        "WS-physical-run:p4:229d1651acfb"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 17.0001,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:229d1651acfb",
+        "WS-physical-run:p4:229d1651acfb"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 27,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:39bf86d87f6b",
+        "WS-physical-run:p4:39bf86d87f6b"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 111.92009999999999,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:39bf86d87f6b",
+        "WS-physical-run:p4:39bf86d87f6b"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 8,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:3fc73fa826e3",
+        "WS-physical-run:p4:3fc73fa826e3"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 24.999899999999997,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:3fc73fa826e3",
+        "WS-physical-run:p4:3fc73fa826e3"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 9,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:76fef7b1659d",
+        "WS-physical-run:p4:76fef7b1659d"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 30.240000000000002,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:76fef7b1659d",
+        "WS-physical-run:p4:76fef7b1659d"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 6,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:8a9e75734306",
+        "WS-physical-run:p4:8a9e75734306"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 18,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:8a9e75734306",
+        "WS-physical-run:p4:8a9e75734306"
+      ]
+    },
+    {
+      "description": "2x6 regularly spaced studs at 16 in O.C.",
+      "quantity": 10,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:b63e7b80746a",
+        "WS-physical-run:p4:b63e7b80746a"
+      ]
+    },
+    {
+      "description": "2x6 wall plates",
+      "quantity": 34.539899999999996,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:b63e7b80746a",
+        "WS-physical-run:p4:b63e7b80746a"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 5,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:b90227e1bda9",
+        "WS-physical-run:p4:b90227e1bda9"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 13.86,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:b90227e1bda9",
+        "WS-physical-run:p4:b90227e1bda9"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 29,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:c3957c31477f",
+        "WS-physical-run:p4:c3957c31477f"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 108.78,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:c3957c31477f",
+        "WS-physical-run:p4:c3957c31477f"
+      ]
+    },
+    {
+      "description": "2x6 regularly spaced studs at 16 in O.C.",
+      "quantity": 21,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:cafe9edb9e1b",
+        "WS-physical-run:p4:cafe9edb9e1b"
+      ]
+    },
+    {
+      "description": "2x6 wall plates",
+      "quantity": 76.5,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:cafe9edb9e1b",
+        "WS-physical-run:p4:cafe9edb9e1b"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 7,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:cd455c204182",
+        "WS-physical-run:p4:cd455c204182"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 21.2601,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:cd455c204182",
+        "WS-physical-run:p4:cd455c204182"
+      ]
+    },
+    {
+      "description": "2x6 regularly spaced studs at 16 in O.C.",
+      "quantity": 28,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:cde365fcf1e2",
+        "WS-physical-run:p4:cde365fcf1e2"
+      ]
+    },
+    {
+      "description": "2x6 wall plates",
+      "quantity": 106.5,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:cde365fcf1e2",
+        "WS-physical-run:p4:cde365fcf1e2"
+      ]
+    },
+    {
+      "description": "2x6 regularly spaced studs at 16 in O.C.",
+      "quantity": 19,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:d09cf93289c4",
+        "WS-physical-run:p4:d09cf93289c4"
+      ]
+    },
+    {
+      "description": "2x6 wall plates",
+      "quantity": 70.5,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:d09cf93289c4",
+        "WS-physical-run:p4:d09cf93289c4"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 13,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:d0e2c481a4e1",
+        "WS-physical-run:p4:d0e2c481a4e1"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 45,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:d0e2c481a4e1",
+        "WS-physical-run:p4:d0e2c481a4e1"
+      ]
+    },
+    {
+      "description": "2x4 regularly spaced studs at 16 in O.C.",
+      "quantity": 7,
+      "unit": "each",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.studs",
+      "debugSourceIds": [
+        "physical-run:p4:fd6bbace891f",
+        "WS-physical-run:p4:fd6bbace891f"
+      ]
+    },
+    {
+      "description": "2x4 wall plates",
+      "quantity": 21.240000000000002,
+      "unit": "linear-foot",
+      "category": "lumber",
+      "domain": "wall",
+      "quantityKey": "wall.plates",
+      "debugSourceIds": [
+        "physical-run:p4:fd6bbace891f",
+        "WS-physical-run:p4:fd6bbace891f"
+      ]
+    },
+    {
+      "description": "(2)-1.75\"x11.875\" LVL header",
+      "quantity": 23.5,
+      "unit": "linear-foot",
+      "category": "engineered-wood",
+      "domain": "structural",
+      "quantityKey": "member.material",
+      "debugSourceIds": [
+        "SM-WB2-11.88LVL"
+      ]
+    }
+  ],
+  "meta": {
+    "wallCount": 55,
+    "openingCount": 82,
+    "structuralMemberCount": 40,
+    "floorSystemCount": 6,
+    "floorAreaCount": 11,
+    "roofSystemCount": 10,
+    "roofPlaneCount": 3,
+    "sheathingSystemCount": 11,
+    "sheathingAreaCount": 1,
+    "materialCount": 53
+  }
+}

@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { calculateStructuralMembers } from "../../src/scopes/framing/calculators/calculateStructuralMembers.js";
-import type { StructuralMembersPayload } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
-import { framingMaterialLineItemSchema } from "../../src/scopes/framing/schemas/material.schema.js";
-import type { StructuralMember } from "../../src/scopes/framing/schemas/structural-member.schema.js";
+import { calculateStructuralMembers } from "../../src/framing/calculate/calculateStructuralMembers.js";
+import type { StructuralMembersPayload } from "../../src/framing/schemas/framing-artifacts.schema.js";
+import { framingMaterialLineItemSchema } from "../../src/framing/schemas/material.schema.js";
+import type { StructuralMember } from "../../src/framing/schemas/structural-member.schema.js";
 
 function resolvedTrace(propertyPath: string, assumptionIds: string[] = []) {
   return {

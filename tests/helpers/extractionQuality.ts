@@ -4,9 +4,9 @@ import type {
   ExtractionFactClass,
   ForbiddenInvention,
 } from "../fixtures/realisticResidentialFramingPlan.js";
-import { isIJoistType } from "../../src/scopes/framing/resolvers/floorFramingPropertyPaths.js";
-import { isStickCommonRafterFramingType } from "../../src/scopes/framing/resolvers/roofFramingPropertyPaths.js";
-import { isWoodStudWallType } from "../../src/scopes/framing/resolvers/wallFramingPropertyPaths.js";
+import { isIJoistType } from "../../src/framing/resolve/floorFramingPropertyPaths.js";
+import { isStickCommonRafterFramingType } from "../../src/framing/resolve/roofFramingPropertyPaths.js";
+import { isWoodStudWallType } from "../../src/framing/resolve/wallFramingPropertyPaths.js";
 import { tryNormalizeProductionCandidate } from "./productionCandidateNormalize.js";
 
 /**

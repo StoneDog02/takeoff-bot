@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { indexPlan } from "../../src/plans/indexPlan.js";
+import { indexPlan } from "../../src/pdf/indexPlan.js";
 import {
   mixedOpeningNominalWidthLineIndexes,
   openingNominalWidthLineIndex,

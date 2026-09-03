@@ -26,74 +26,22 @@ function createValidAssumption() {
       affectedQuantityKeys: ["wall.studs", "wall.plates"],
     },
     riskLevel: "medium",
-    userEditable: true,
     reviewRequired: true,
-    confidenceImpact: {
-      level: "material",
-      explanation: "A material-driving property remains assumed.",
-    },
-    evidenceIds: [],
-    reviewItemIds: ["RI-014"],
-    status: "active",
-    userDecisionId: null,
   } as const;
 }
 
 describe("assumptionSchema", () => {
-  it("accepts a traceable active assumption", () => {
+  it("accepts a governed default assumption", () => {
     const result = assumptionSchema.parse(createValidAssumption());
 
     assert.equal(result.id, "A-014");
     assert.equal(result.target.propertyPath, "assembly.studSize");
-    assert.equal(result.userDecisionId, null);
+    assert.equal(result.reviewRequired, true);
   });
 
-  it("requires a User Decision for confirmed assumptions", () => {
+  it("rejects duplicate quantity-impact keys", () => {
     const result = assumptionSchema.safeParse({
       ...createValidAssumption(),
-      status: "confirmed",
-    });
-
-    assert.equal(result.success, false);
-  });
-
-  it("accepts a replaced assumption without embedding its replacement value", () => {
-    const result = assumptionSchema.parse({
-      ...createValidAssumption(),
-      status: "replaced",
-      userDecisionId: "UD-009",
-    });
-
-    assert.equal(result.status, "replaced");
-    assert.equal(result.userDecisionId, "UD-009");
-    assert.equal("replacementValue" in result, false);
-  });
-
-  it("rejects a resolving User Decision on an active assumption", () => {
-    const result = assumptionSchema.safeParse({
-      ...createValidAssumption(),
-      userDecisionId: "UD-009",
-    });
-
-    assert.equal(result.success, false);
-  });
-
-  it("rejects replacement of a non-editable assumption", () => {
-    const result = assumptionSchema.safeParse({
-      ...createValidAssumption(),
-      userEditable: false,
-      status: "replaced",
-      userDecisionId: "UD-009",
-    });
-
-    assert.equal(result.success, false);
-  });
-
-  it("rejects duplicate relationship and quantity-impact IDs", () => {
-    const result = assumptionSchema.safeParse({
-      ...createValidAssumption(),
-      evidenceIds: ["E-001", "E-001"],
-      reviewItemIds: ["RI-014", "RI-014"],
       materialImpact: {
         ...createValidAssumption().materialImpact,
         affectedQuantityKeys: ["wall.studs", "wall.studs"],
@@ -103,7 +51,7 @@ describe("assumptionSchema", () => {
     assert.equal(result.success, false);
 
     if (!result.success) {
-      assert.equal(result.error.issues.length, 3);
+      assert.equal(result.error.issues.length, 1);
     }
   });
 });

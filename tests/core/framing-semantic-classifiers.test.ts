@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { isIJoistType } from "../../src/scopes/framing/resolvers/floorFramingPropertyPaths.js";
-import { isStickCommonRafterFramingType } from "../../src/scopes/framing/resolvers/roofFramingPropertyPaths.js";
-import { isWoodStudWallType } from "../../src/scopes/framing/resolvers/wallFramingPropertyPaths.js";
+import { isIJoistType } from "../../src/framing/resolve/floorFramingPropertyPaths.js";
+import { isStickCommonRafterFramingType } from "../../src/framing/resolve/roofFramingPropertyPaths.js";
+import { isWoodStudWallType } from "../../src/framing/resolve/wallFramingPropertyPaths.js";
 
 describe("production semantic classifiers (Milestone I)", () => {
   it("classifies wood-stud wallType variants used by opening eligibility", () => {

@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { evidenceSchema } from "../../src/core/schemas/evidence.schema.js";
-import { createOpeningObjectId } from "../../src/scopes/framing/resolvers/ids.js";
-import { resolveOpenings } from "../../src/scopes/framing/resolvers/resolveOpenings.js";
-import { resolveStructuralMembers } from "../../src/scopes/framing/resolvers/resolveStructuralMembers.js";
-import { resolveWallFraming } from "../../src/scopes/framing/resolvers/resolveWallFraming.js";
+import { createOpeningObjectId } from "../../src/framing/resolve/ids.js";
+import { resolveOpenings } from "../../src/framing/resolve/resolveOpenings.js";
+import { resolveStructuralMembers } from "../../src/framing/resolve/resolveStructuralMembers.js";
+import { resolveWallFraming } from "../../src/framing/resolve/resolveWallFraming.js";
 import {
   buildCompleteOpeningEvidence,
   openingEvidence,

@@ -4,20 +4,17 @@ import { resolveUseMockAi } from "./config/aiMode.js";
 import { isAnthropicConfigured } from "./config/env.js";
 import { logger } from "./core/logging/logger.js";
 import { generateProjectId } from "./core/utils/ids.js";
-import { indexPlan } from "./plans/indexPlan.js";
-import { registerScopes, scopeRegistry } from "./scopes/registry.js";
-import { runFramingResetTakeoff } from "./scopes/framing/reset/runFramingResetTakeoff.js";
+import { indexPlan } from "./pdf/indexPlan.js";
+import { runFramingTakeoff } from "./framing/output/runFramingTakeoff.js";
 
 interface CliArgs {
   pdfPath: string;
-  scopeName: string;
   projectId: string;
   live: boolean;
 }
 
 function parseArgs(argv: string[]): CliArgs {
-  let pdfPath = "./plans/sample.pdf";
-  let scopeName = "framing";
+  let pdfPath = "./pdf/sample.pdf";
   let projectId = generateProjectId();
   let live = false;
 
@@ -25,46 +22,44 @@ function parseArgs(argv: string[]): CliArgs {
     const arg = argv[i];
     if (arg === "--pdf" && argv[i + 1]) {
       pdfPath = argv[++i];
-    } else if (arg === "--scope" && argv[i + 1]) {
-      scopeName = argv[++i];
     } else if (arg === "--project" && argv[i + 1]) {
       projectId = argv[++i];
     } else if (arg === "--live") {
       live = true;
+    } else if (arg === "--scope" && argv[i + 1]) {
+      // Accepted for backward compatibility; framing is the only product.
+      i += 1;
     } else if (arg === "--help" || arg === "-h") {
       printHelp();
       process.exit(0);
     }
   }
 
-  return { pdfPath, scopeName, projectId, live };
+  return { pdfPath, projectId, live };
 }
 
 function printHelp(): void {
   console.log(`
-Takeoff Bot — framing production path
+Takeoff Bot — residential framing takeoff
 
 Usage:
-  npm run dev -- --pdf <path> --scope framing [--project <id>] [--live]
+  npm run dev -- --pdf <path> [--project <id>] [--live]
 
 Options:
   --pdf               Path to plan PDF
-  --scope             Scope name (framing is the production path)
   --project           Project ID for artifact storage (auto-generated if omitted)
   --live              Require Anthropic extraction; never fall back to mock Evidence
   --help              Show this help
 
 Examples:
-  npm run dev -- --pdf ./plans/sample.pdf --scope framing
-  npm run dev -- --live --pdf tests/fixtures/beckstead-residence-plans.pdf --scope framing --project beckstead-reset
+  npm run dev -- --pdf ./plans/sample.pdf
+  npm run dev -- --live --pdf tests/fixtures/beckstead-residence-plans.pdf --project beckstead
 `);
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const pdfPath = path.resolve(args.pdfPath);
-
-  registerScopes();
 
   let useMockAi: boolean;
   try {
@@ -81,21 +76,11 @@ async function main(): Promise<void> {
 
   logger.info("Takeoff Bot starting", {
     pdfPath,
-    scope: args.scopeName,
     projectId: args.projectId,
     anthropicConfigured: isAnthropicConfigured(),
     live: args.live,
     useMockAi,
-    availableScopes: scopeRegistry.list(),
   });
-
-  if (args.scopeName !== "framing") {
-    logger.error("Only the framing scope is implemented", {
-      scope: args.scopeName,
-    });
-    console.error(`Unknown or unimplemented scope '${args.scopeName}'. Use --scope framing.`);
-    process.exit(1);
-  }
 
   const planIndex = await indexPlan(pdfPath);
 
@@ -103,7 +88,7 @@ async function main(): Promise<void> {
     logger.warn("ANTHROPIC_API_KEY not set — using mocked reader outputs");
   }
 
-  const result = await runFramingResetTakeoff({
+  const result = await runFramingTakeoff({
     projectId: args.projectId,
     pdfPath,
     planIndex,
@@ -112,12 +97,12 @@ async function main(): Promise<void> {
   });
 
   if (result.success && result.takeoffPath) {
-    logger.info("Reset takeoff completed successfully", {
+    logger.info("Framing takeoff completed successfully", {
       projectId: result.projectId,
       takeoffPath: result.takeoffPath,
       materialCount: result.takeoff?.materials.length ?? 0,
     });
-    console.log(`\n✓ Reset takeoff complete`);
+    console.log(`\n✓ Framing takeoff complete`);
     console.log(`  Project:  ${result.projectId}`);
     console.log(`  Takeoff:  ${result.takeoffPath}`);
     console.log(`  Materials:${result.takeoff?.materials.length ?? 0}`);
@@ -127,8 +112,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  logger.error("Reset takeoff failed", { errors: result.errors });
-  console.error(`\n✗ Reset takeoff failed`);
+  logger.error("Framing takeoff failed", { errors: result.errors });
+  console.error(`\n✗ Framing takeoff failed`);
   for (const error of result.errors) {
     console.error(`  - ${error}`);
   }

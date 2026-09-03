@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { evidenceSchema } from "../../src/core/schemas/evidence.schema.js";
-import { resolveSheathing } from "../../src/scopes/framing/resolvers/resolveSheathing.js";
-import { buildSheathingEvidenceForWall001 } from "../../src/scopes/framing/demo/multiObjectFramingEvidence.js";
+import { resolveSheathing } from "../../src/framing/resolve/resolveSheathing.js";
+import { buildSheathingEvidenceForWall001 } from "../../src/framing/demo/multiObjectFramingEvidence.js";
 
 function sheathingEvidence(
   subjectKind: "sheathing-system" | "sheathing-area",

@@ -6,7 +6,7 @@ import {
   countDisplacedStudPositions,
   countRegularlySpacedStuds,
   enumerateStudLayoutPositionsInches,
-} from "../../src/scopes/framing/calculators/netStudDeduction.js";
+} from "../../src/framing/calculate/netStudDeduction.js";
 
 describe("netStudDeduction", () => {
   it("counts baseline studs per ch.13 formula", () => {
