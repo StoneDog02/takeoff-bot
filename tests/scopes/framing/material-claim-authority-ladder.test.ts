@@ -241,22 +241,21 @@ describe("Material Claim Authority Ladder — assumed quantity + pending", () =>
     assert.ok(result.assumptions.some((a) => a.status === "active"));
   });
 
-  it("emits pending claim when jackStudCount is missing (no registry entry)", () => {
+  it("skips jack studs when jackStudCount is missing without pending claims (D22)", () => {
     const result = calculateOpeningFraming(buildOpenings(), buildWallFraming());
     assert.equal(
       result.materials.some((m) => /jack studs/i.test(m.description)),
       false,
     );
-    assert.ok(
+    assert.equal(
       result.pendingClaims.some(
-        (claim) =>
-          claim.quantityKey === OPENING_QUANTITY_KEYS.jackStuds &&
-          claim.claimStatus === "BLOCKED_MISSING_REQUIRED_INPUT",
+        (claim) => claim.quantityKey === OPENING_QUANTITY_KEYS.jackStuds,
       ),
+      false,
     );
   });
 
-  it("coordinator attaches claim statuses and aggregates pending claims", () => {
+  it("coordinator attaches claim statuses; jack gaps do not mint pendingClaims (D22)", () => {
     const payload = coordinateFramingCalculations({
       wallFraming: buildWallFraming({ heightFeet: null }),
       openings: buildOpenings(),
@@ -266,10 +265,14 @@ describe("Material Claim Authority Ladder — assumed quantity + pending", () =>
         (m) => m.claimStatus === "CALCULATED_WITH_ASSUMPTION",
       ),
     );
-    assert.ok(payload.pendingClaims.length >= 1);
+    assert.equal(
+      payload.pendingClaims.some(
+        (claim) => claim.quantityKey === OPENING_QUANTITY_KEYS.jackStuds,
+      ),
+      false,
+    );
   });
 });
-
 describe("Material Claim Authority Ladder — status + lifecycle", () => {
   it("derives CONFIRMED vs CALCULATED_WITH_ASSUMPTION", () => {
     assert.equal(deriveMaterialClaimStatus({}), "CONFIRMED");

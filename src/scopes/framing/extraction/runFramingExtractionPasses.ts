@@ -21,12 +21,20 @@ import {
 import type { ExtractionBudgetAudit } from "./extractionBudgetAudit.schema.js";
 import type { PlanReferenceTrace } from "./planReferenceTrace.schema.js";
 
+/** Empty assemblies — Stage 4 stub removed from production (D4). */
+export const EMPTY_BUILDING_ASSEMBLIES: ExtractFramingEvidenceInput["buildingAssemblies"] =
+  {
+    assemblyNames: [],
+    notes: [],
+  };
+
 export interface RunFramingExtractionPassesInput {
   planIndex: PlanIndex;
   pages: readonly ClassifiedPlanPage[];
   pageClassification: ExtractFramingEvidenceInput["pageClassification"];
   planReadingOrder: ExtractFramingEvidenceInput["planReadingOrder"];
-  buildingAssemblies: ExtractFramingEvidenceInput["buildingAssemblies"];
+  /** Optional; defaults to empty. Production reset does not inject stub assemblies (D4). */
+  buildingAssemblies?: ExtractFramingEvidenceInput["buildingAssemblies"];
   projectDictionary?: GovernedProjectDictionary | null;
   compiledPages?: readonly CompiledDrawingPage[];
   scopeName?: string;
@@ -63,6 +71,8 @@ export async function runFramingExtractionPasses(
   input: RunFramingExtractionPassesInput,
 ): Promise<RunFramingExtractionPassesResult> {
   const scopeName = input.scopeName ?? "framing";
+  const buildingAssemblies =
+    input.buildingAssemblies ?? EMPTY_BUILDING_ASSEMBLIES;
   const workPlan =
     input.workPlan ??
     buildFramingExtractionWorkPlan({
@@ -87,7 +97,7 @@ export async function runFramingExtractionPasses(
       bundle: workUnit.bundle,
       dictionary,
       compiledPages,
-      buildingAssemblies: input.buildingAssemblies,
+      buildingAssemblies,
     });
     const contextAudit = auditExtractionProjectContext(extractionProjectContext);
     enrichedWorkUnits[index] = {
@@ -99,7 +109,7 @@ export async function runFramingExtractionPasses(
       planIndex: input.planIndex,
       pageClassification: input.pageClassification,
       planReadingOrder: input.planReadingOrder,
-      buildingAssemblies: input.buildingAssemblies,
+      buildingAssemblies,
       extractionProjectContext,
       extractionBundle: workUnit.bundle,
       pageVisuals: input.pageVisuals,
@@ -145,7 +155,7 @@ export async function runFramingExtractionPasses(
       scopeName,
       pageClassification: input.pageClassification,
       planReadingOrder: input.planReadingOrder,
-      buildingAssemblies: input.buildingAssemblies,
+      buildingAssemblies,
       pageVisuals: input.pageVisuals,
       visualOutputDir: input.visualOutputDir,
       visualScale: input.visualScale,

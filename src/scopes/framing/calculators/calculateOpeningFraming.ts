@@ -6,7 +6,6 @@ import type {
 } from "../../../core/schemas/identity.schema.js";
 import { applyAssumptionUserDecisionLifecycle } from "../claims/applyAssumptionLifecycle.js";
 import { consultAssumptionRegistry } from "../claims/assumptionRegistry.js";
-import { createBlockedMissingInputPendingClaim } from "../claims/collectPendingClaims.js";
 import { deriveMaterialClaimStatus } from "../claims/deriveClaimStatus.js";
 import type {
   OpeningsPayload,
@@ -567,19 +566,8 @@ function calculateOpeningJackStuds(
       JACK_STUD_COUNT_PROPERTY_PATH,
     )
   ) {
-    const pending = createBlockedMissingInputPendingClaim({
-      quantityKey,
-      objectId: opening.id,
-      missingPropertyPath: JACK_STUD_COUNT_PROPERTY_PATH,
-      description: "Jack stud quantity pending explicit jackStudCount",
-      basis:
-        "Jack stud count has no Construction Brain–authorized assumption registry entry and must not be invented from opening width or code tables.",
-    });
-    return {
-      materials: [],
-      assumptions: [],
-      pendingClaims: pending ? [pending] : [],
-    };
+    // D22: no PendingMaterialClaim — skip when required input is missing.
+    return { materials: [], assumptions: [], pendingClaims: [] };
   }
 
   const quantity = opening.jackStudCount * opening.quantity;

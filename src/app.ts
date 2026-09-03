@@ -7,12 +7,15 @@ import { logger } from "./core/logging/logger.js";
 import { generateProjectId } from "./core/utils/ids.js";
 import { indexPlan } from "./plans/indexPlan.js";
 import { registerScopes, scopeRegistry } from "./scopes/registry.js";
+import { runFramingResetTakeoff } from "./scopes/framing/reset/runFramingResetTakeoff.js";
 
 interface CliArgs {
   pdfPath: string;
   scopeName: string;
   projectId: string;
   live: boolean;
+  /** Escape hatch: run legacy 16-stage pipeline (dev/audit only). */
+  legacyPipeline: boolean;
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -20,6 +23,7 @@ function parseArgs(argv: string[]): CliArgs {
   let scopeName = "framing";
   let projectId = generateProjectId();
   let live = false;
+  let legacyPipeline = false;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -31,32 +35,35 @@ function parseArgs(argv: string[]): CliArgs {
       projectId = argv[++i];
     } else if (arg === "--live") {
       live = true;
+    } else if (arg === "--legacy-pipeline") {
+      legacyPipeline = true;
     } else if (arg === "--help" || arg === "-h") {
       printHelp();
       process.exit(0);
     }
   }
 
-  return { pdfPath, scopeName, projectId, live };
+  return { pdfPath, scopeName, projectId, live, legacyPipeline };
 }
 
 function printHelp(): void {
   console.log(`
-Takeoff Bot — scope pipeline framework
+Takeoff Bot — framing factory-reset path (D1–D24)
 
 Usage:
-  npm run dev -- --pdf <path> --scope <scope> [--project <id>] [--live]
+  npm run dev -- --pdf <path> --scope framing [--project <id>] [--live]
 
 Options:
-  --pdf       Path to plan PDF
-  --scope     Scope name (framing, concrete, ...)
-  --project   Project ID for artifact storage (auto-generated if omitted)
-  --live      Require Anthropic extraction; never fall back to mock Evidence
-  --help      Show this help
+  --pdf               Path to plan PDF
+  --scope             Scope name (framing uses reset path; others use PipelineRunner)
+  --project           Project ID for artifact storage (auto-generated if omitted)
+  --live              Require Anthropic extraction; never fall back to mock Evidence
+  --legacy-pipeline   Dev/audit escape hatch: run the old 16-stage PipelineRunner
+  --help              Show this help
 
 Examples:
   npm run dev -- --pdf ./plans/sample.pdf --scope framing
-  npm run proof:live-framing
+  npm run dev -- --live --pdf tests/fixtures/beckstead-residence-plans.pdf --scope framing --project beckstead-reset
 `);
 }
 
@@ -86,16 +93,54 @@ async function main(): Promise<void> {
     anthropicConfigured: isAnthropicConfigured(),
     live: args.live,
     useMockAi,
+    legacyPipeline: args.legacyPipeline,
     availableScopes: scopeRegistry.list(),
   });
 
-  const scope = scopeRegistry.get(args.scopeName);
   const planIndex = await indexPlan(pdfPath);
+
+  if (args.scopeName === "framing" && !args.legacyPipeline) {
+    if (useMockAi) {
+      logger.warn("ANTHROPIC_API_KEY not set — using mocked reader outputs");
+    }
+
+    const result = await runFramingResetTakeoff({
+      projectId: args.projectId,
+      pdfPath,
+      planIndex,
+      useMockAi,
+      writeDebugArtifacts: true,
+    });
+
+    if (result.success && result.takeoffPath) {
+      logger.info("Reset takeoff completed successfully", {
+        projectId: result.projectId,
+        takeoffPath: result.takeoffPath,
+        materialCount: result.takeoff?.materials.length ?? 0,
+      });
+      console.log(`\n✓ Reset takeoff complete`);
+      console.log(`  Project:  ${result.projectId}`);
+      console.log(`  Takeoff:  ${result.takeoffPath}`);
+      console.log(`  Materials:${result.takeoff?.materials.length ?? 0}`);
+      if (result.debugPaths.length > 0) {
+        console.log(`  Debug:    ${result.debugPaths.length} companion file(s)`);
+      }
+    } else {
+      logger.error("Reset takeoff failed", { errors: result.errors });
+      console.error(`\n✗ Reset takeoff failed`);
+      for (const error of result.errors) {
+        console.error(`  - ${error}`);
+      }
+      process.exit(1);
+    }
+    return;
+  }
 
   if (useMockAi) {
     logger.warn("ANTHROPIC_API_KEY not set — using mocked stage outputs");
   }
 
+  const scope = scopeRegistry.get(args.scopeName);
   const runner = new PipelineRunner();
   const result = await runner.run({
     projectId: args.projectId,

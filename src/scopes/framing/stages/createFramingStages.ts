@@ -1,5 +1,13 @@
 import type { z } from "zod";
 
+/**
+ * LEGACY 16-stage framing pipeline (audit / `--legacy-pipeline` only).
+ *
+ * Production framing CLI uses `src/scopes/framing/reset/runFramingResetTakeoff.ts`
+ * per docs/RESET_IMPLEMENTATION_PLAN.md and D1–D24. Do not add new production
+ * responsibilities here.
+ */
+
 import type { PipelineStage, PipelineStageContext, UserDecisionRunInput } from "../../../core/pipeline/types.js";
 import type {
   ArtifactEnvelope,

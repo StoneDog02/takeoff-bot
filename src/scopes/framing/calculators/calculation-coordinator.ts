@@ -42,8 +42,9 @@ export type FramingCalculationInput = {
  * Roof Framing, Sheathing, then specified Fasteners. Connector and Hardware
  * objects are not calculated here.
  *
- * Pending claims are collected horizontally from calculator-explicit rows and
- * validation quantity blocks without inventing quantities.
+ * LEGACY: still used by createFramingStages Stage 14 / audit. Production
+ * framing uses `calculateFramingTakeoff` in reset/ (no pendingClaims, D22).
+ * pendingClaims collection below is retained only for legacy artifact shape.
  */
 export function coordinateFramingCalculations(
   input: FramingCalculationInput,
