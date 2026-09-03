@@ -9,7 +9,6 @@ import type {
   ResolutionMethod,
 } from "../../../core/schemas/resolved-object.schema.js";
 import type { ReviewItem } from "../../../core/schemas/review-item.schema.js";
-import type { Completion } from "../../../core/schemas/status.schema.js";
 import type { UserDecision } from "../../../core/schemas/user-decision.schema.js";
 import {
   floorFramingPayloadSchema,
@@ -45,8 +44,6 @@ import {
   FLOOR_AREA_PROPERTY_PATHS,
   FLOOR_SYSTEM_PROPERTY_PATHS,
   isFloorFramingUserDecisionPropertyPath,
-  isResolvedFloorAreaPropertyValue,
-  isResolvedFloorSystemPropertyValue,
   normalizeFloorAreaCandidate,
   normalizeFloorAreaRelationshipCandidate,
   normalizeFloorSystemCandidate,
@@ -238,17 +235,12 @@ function createTrace(
   propertyPath: string,
   method: ResolutionMethod,
   explanation: string,
-  evidenceIds: readonly EvidenceId[],
 ): PropertyResolutionTrace {
   return {
     propertyPath,
     method,
     explanation,
-    evidenceIds: uniqueSortedIds(evidenceIds),
     assumptionIds: [],
-    userDecisionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
   };
 }
 
@@ -264,12 +256,7 @@ function tracesForDecision(
         : `Resolved from corroborating project evidence ${decision.evidenceIds.join(", ")}.`;
 
     return [
-      createTrace(
-        propertyPath,
-        "explicit-project-value",
-        explanation,
-        decision.evidenceIds,
-      ),
+      createTrace(propertyPath, "explicit-project-value", explanation),
     ];
   }
 
@@ -279,7 +266,6 @@ function tracesForDecision(
         propertyPath,
         "unresolved",
         `Conflicting candidate values (${formatValues(records, propertyPath)}); this slice does not apply precedence.`,
-        decision.evidenceIds,
       ),
     ];
   }
@@ -353,23 +339,6 @@ function resolveAreaPropertyAuthority(
   };
 }
 
-function createCompletion(resolvedCount: number, totalCount: number): Completion {
-  const percentage = totalCount === 0 ? 0 : (resolvedCount / totalCount) * 100;
-  const status =
-    resolvedCount === 0
-      ? "not-started"
-      : resolvedCount === totalCount
-        ? "complete"
-        : "partial";
-
-  return {
-    status,
-    percentage,
-    completedItems: resolvedCount,
-    totalItems: totalCount,
-  };
-}
-
 function resolvedStringValue(
   decision: CandidateDecision,
   fallback: string | null,
@@ -409,10 +378,9 @@ function groupBySubjectKind(
 function collectRelationshipTags(
   records: readonly Evidence[],
   propertyPath: FloorAreaRelationshipPropertyPath,
-): { tags: string[]; traces: PropertyResolutionTrace[]; evidenceIds: EvidenceId[] } {
+): { tags: string[]; traces: PropertyResolutionTrace[] } {
   const tags: string[] = [];
   const traces: PropertyResolutionTrace[] = [];
-  const evidenceIds: EvidenceId[] = [];
 
   for (const record of records) {
     if (record.propertyPath !== propertyPath) {
@@ -428,13 +396,11 @@ function collectRelationshipTags(
     }
 
     tags.push(tag);
-    evidenceIds.push(record.id);
     traces.push(
       createTrace(
         propertyPath,
         "explicit-project-value",
         `Resolved ${propertyPath} from explicit project evidence ${record.id}.`,
-        [record.id],
       ),
     );
   }
@@ -442,7 +408,6 @@ function collectRelationshipTags(
   return {
     tags: [...new Set(tags)].sort(compareIds),
     traces,
-    evidenceIds: uniqueSortedIds(evidenceIds),
   };
 }
 
@@ -457,12 +422,7 @@ function convergenceTraces(
     return [];
   }
   return [
-    createTrace(
-      "subjectKey",
-      "supported-inference",
-      note,
-      cluster.records.map((record) => record.id),
-    ),
+    createTrace("subjectKey", "supported-inference", note),
   ];
 }
 
@@ -528,32 +488,9 @@ function resolveOneSystem(
     },
   };
 
-  const resolvedCount = FLOOR_SYSTEM_PROPERTY_PATHS.filter((propertyPath) => {
-    if (propertyPath.startsWith("assembly.")) {
-      const key = propertyPath.split(".")[1] as keyof typeof values.assembly;
-      return values.assembly[key] !== null;
-    }
-
-    const scalar = values[propertyPath as keyof typeof values];
-    return isResolvedFloorSystemPropertyValue(
-      propertyPath,
-      typeof scalar === "string" || typeof scalar === "number" ? scalar : null,
-    );
-  }).length;
-
   return {
     id: systemId,
     objectType: "floor-framing-system",
-    completion: createCompletion(
-      resolvedCount,
-      FLOOR_SYSTEM_PROPERTY_PATHS.length,
-    ),
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: uniqueSortedIds(records.map((record) => record.id)),
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces,
     ...values,
     areaIds: [],
@@ -570,10 +507,6 @@ function applyJoistSizeInference(system: FloorFramingSystem): FloorFramingSystem
     return system;
   }
 
-  const joistTypeTrace = system.resolutionTraces.find(
-    (trace) => trace.propertyPath === "assembly.joistType",
-  );
-
   return {
     ...system,
     assembly: {
@@ -586,13 +519,8 @@ function applyJoistSizeInference(system: FloorFramingSystem): FloorFramingSystem
         "assembly.joistSize",
         "supported-inference",
         `Inferred joist size "${inferred}" from resolved joist type assembly string.`,
-        joistTypeTrace?.evidenceIds ?? [],
       ),
     ],
-    completion: createCompletion(
-      (system.completion.completedItems ?? 0) + 1,
-      system.completion.totalItems ?? FLOOR_SYSTEM_PROPERTY_PATHS.length,
-    ),
   };
 }
 
@@ -677,32 +605,9 @@ function resolveOneArea(
     areaSquareFeet: resolvedNumberValue(decisions.areaSquareFeet, null),
   };
 
-  const resolvedCount =
-    FLOOR_AREA_PROPERTY_PATHS.filter((propertyPath) =>
-      isResolvedFloorAreaPropertyValue(propertyPath, values[propertyPath]),
-    ).length + (parentSystemTag ? 1 : 0);
-
-  const totalItems = FLOOR_AREA_PROPERTY_PATHS.length + 1;
-
   return {
     id: areaId,
     objectType: "floor-framing-area",
-    completion: createCompletion(resolvedCount, totalItems),
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: uniqueSortedIds([
-      ...records.map((record) => record.id),
-      ...(parentSystemDecision.kind === "resolved" ||
-      parentSystemDecision.kind === "conflict"
-        ? parentSystemDecision.evidenceIds
-        : []),
-      ...boundingWalls.evidenceIds,
-      ...openings.evidenceIds,
-      ...members.evidenceIds,
-    ]),
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces,
     parentSystemId,
     ...values,
@@ -742,13 +647,8 @@ function applyMemberLengthFromMisassignedSpan(
         "joistMemberLengthFeet",
         "explicit-project-value",
         `Resolved joist member length from explicit MAX SPAN callout evidence (mis-assigned to spanDirection).`,
-        recovered.evidenceIds as EvidenceId[],
       ),
     ],
-    evidenceIds: uniqueSortedIds([
-      ...area.evidenceIds,
-      ...(recovered.evidenceIds as EvidenceId[]),
-    ]),
   };
 }
 
@@ -767,20 +667,6 @@ function applySpacingAxisLayoutAuthority(
     return area;
   }
 
-  const layoutEvidenceIds = areaRecords
-    .filter((record) => record.propertyPath === "joistLayoutLengthFeet")
-    .map((record) => record.id);
-
-  const assemblyEvidenceIds = relatedSystemRecords
-    .filter((record) =>
-      [
-        "assembly.joistType",
-        "assembly.joistSize",
-        "assembly.joistSpacingInches",
-      ].includes(record.propertyPath),
-    )
-    .map((record) => record.id);
-
   const existingLayoutTrace = area.resolutionTraces.find(
     (trace) => trace.propertyPath === "joistLayoutLengthFeet",
   );
@@ -791,7 +677,6 @@ function applySpacingAxisLayoutAuthority(
       ? "explicit-project-value"
       : "supported-inference",
     `${SPACING_AXIS_AUTHORITY_EXPLANATION_MARKER}: explicit bay dimension corroborated as spacing-axis layout length for baseline joist count.`,
-    uniqueSortedIds([...layoutEvidenceIds, ...assemblyEvidenceIds]),
   );
 
   const otherTraces = area.resolutionTraces.filter(
@@ -838,11 +723,6 @@ function applyInferredParentSystemLink(
     ...area,
     parentSystemId: link.systemId,
     resolutionTraces: [...filteredTraces, parentTrace],
-    evidenceIds: uniqueSortedIds([...area.evidenceIds, ...link.evidenceIds]),
-    completion: createCompletion(
-      (area.completion.completedItems ?? 0) + 1,
-      area.completion.totalItems ?? FLOOR_AREA_PROPERTY_PATHS.length + 1,
-    ),
   };
 }
 
@@ -875,7 +755,6 @@ function rejectSlabAreaWoodFloorParentLink(
         "parentSystemTag",
         "unresolved",
         "Slab or non-wood floor surface cannot inherit a wood-joist floor system parent.",
-        area.evidenceIds,
       ),
     ],
   };
@@ -940,10 +819,6 @@ function reapplyAreaScalarsFromRecords(
     ),
     areaSquareFeet: resolvedNumberValue(decisions.areaSquareFeet, null),
     resolutionTraces: [...nonScalarTraces, ...scalarTraces],
-    evidenceIds: uniqueSortedIds([
-      ...area.evidenceIds,
-      ...records.map((record) => record.id),
-    ]),
   };
 }
 

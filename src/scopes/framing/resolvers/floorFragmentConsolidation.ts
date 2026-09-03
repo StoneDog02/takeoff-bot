@@ -1,5 +1,5 @@
 import type { Evidence } from "../../../core/schemas/evidence.schema.js";
-import type { EvidenceId, ObjectId } from "../../../core/schemas/identity.schema.js";
+import type { ObjectId } from "../../../core/schemas/identity.schema.js";
 import type {
   FloorFramingArea,
   FloorFramingSystem,
@@ -51,10 +51,6 @@ export function floorSystemFamilyRootKey(subjectKey: string): string {
   return normalizeToken(key);
 }
 
-function uniqueSortedIds(ids: readonly string[]): EvidenceId[] {
-  return [...new Set(ids)].sort(compareIds) as EvidenceId[];
-}
-
 function splitCombinedJoistTypeValue(
   joistType: string,
 ): { joistType: string; joistSize: string | null } {
@@ -78,17 +74,12 @@ function createTrace(
   propertyPath: string,
   method: PropertyResolutionTrace["method"],
   explanation: string,
-  evidenceIds: readonly EvidenceId[],
 ): PropertyResolutionTrace {
   return {
     propertyPath,
     method,
     explanation,
-    evidenceIds: uniqueSortedIds(evidenceIds),
     assumptionIds: [],
-    userDecisionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
   };
 }
 
@@ -129,13 +120,11 @@ export function applyCombinedJoistTypeSplit(
         "assembly.joistType",
         typeTrace?.method ?? "supported-inference",
         `Split combined joist type string into material type "${split.joistType}".`,
-        typeTrace?.evidenceIds ?? [],
       ),
       createTrace(
         "assembly.joistSize",
         "supported-inference",
         `Split combined joist type string into joist size "${split.joistSize}".`,
-        typeTrace?.evidenceIds ?? [],
       ),
     ],
   };
@@ -178,9 +167,6 @@ export function applySiblingFloorSystemAssemblyMerge(
           candidate.assembly.joistSize !== null,
       );
       if (sizeDonor) {
-        const donorTrace = sizeDonor.resolutionTraces.find(
-          (trace) => trace.propertyPath === "assembly.joistSize",
-        );
         updated = {
           ...updated,
           assembly: {
@@ -193,13 +179,8 @@ export function applySiblingFloorSystemAssemblyMerge(
               "assembly.joistSize",
               "supported-inference",
               `Resolved joist size from sibling floor system ${sizeDonor.id} with matching joist type family.`,
-              donorTrace?.evidenceIds ?? sizeDonor.evidenceIds,
             ),
           ],
-          evidenceIds: uniqueSortedIds([
-            ...updated.evidenceIds,
-            ...sizeDonor.evidenceIds,
-          ]),
         };
       }
     }
@@ -212,9 +193,6 @@ export function applySiblingFloorSystemAssemblyMerge(
           candidate.assembly.joistSpacingInches !== null,
       );
       if (spacingDonor) {
-        const donorTrace = spacingDonor.resolutionTraces.find(
-          (trace) => trace.propertyPath === "assembly.joistSpacingInches",
-        );
         updated = {
           ...updated,
           assembly: {
@@ -227,13 +205,8 @@ export function applySiblingFloorSystemAssemblyMerge(
               "assembly.joistSpacingInches",
               "supported-inference",
               `Resolved joist spacing from sibling floor system ${spacingDonor.id} with matching joist type family.`,
-              donorTrace?.evidenceIds ?? spacingDonor.evidenceIds,
             ),
           ],
-          evidenceIds: uniqueSortedIds([
-            ...updated.evidenceIds,
-            ...spacingDonor.evidenceIds,
-          ]),
         };
       }
     }

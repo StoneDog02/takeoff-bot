@@ -1,7 +1,4 @@
-import type {
-  FloorFramingPayload,
-  ValidationPayload,
-} from "../schemas/framing-artifacts.schema.js";
+import type { FloorFramingPayload } from "../schemas/framing-artifacts.schema.js";
 import {
   framingMaterialLineItemSchema,
   type FramingMaterialLineItem,
@@ -16,7 +13,6 @@ import { hasJoistCountLayoutAxisAuthority } from "../resolvers/floorLayoutAuthor
 import { FLOOR_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createMaterialLineItemId } from "./ids.js";
-import { isQuantityBlocked } from "./isQuantityBlocked.js";
 import { isQuantityInputResolved } from "./isQuantityInputResolved.js";
 
 const LAYOUT_LENGTH_PROPERTY_PATH = "joistLayoutLengthFeet";
@@ -88,15 +84,7 @@ function emitLineItem(
 function resolveBaselineJoistCount(
   system: FloorFramingSystem,
   area: FloorFramingArea,
-  validation: ValidationPayload | undefined,
 ): number | null {
-  const quantityKey = FLOOR_QUANTITY_KEYS.joists;
-  const contributingIds = [system.id, area.id];
-
-  if (isQuantityBlocked(validation, contributingIds, quantityKey)) {
-    return null;
-  }
-
   if (
     !isQuantityInputResolved(
       area.joistLayoutLengthFeet,
@@ -153,7 +141,6 @@ function emitJoistCountLine(
     unit: "each",
     sourceObjectIds: provenance.sourceObjectIds,
     assumptionIds: provenance.assumptionIds,
-    reviewItemIds: provenance.reviewItemIds,
   });
 }
 
@@ -161,14 +148,8 @@ function emitJoistLinearFeetLine(
   system: FloorFramingSystem,
   area: FloorFramingArea,
   joistCount: number,
-  validation: ValidationPayload | undefined,
 ): FramingMaterialLineItem | null {
   const quantityKey = FLOOR_QUANTITY_KEYS.joistLinearFeet;
-  const contributingIds = [system.id, area.id];
-
-  if (isQuantityBlocked(validation, contributingIds, quantityKey)) {
-    return null;
-  }
 
   if (
     !isQuantityInputResolved(
@@ -203,7 +184,6 @@ function emitJoistLinearFeetLine(
     unit: "linear-foot",
     sourceObjectIds: provenance.sourceObjectIds,
     assumptionIds: provenance.assumptionIds,
-    reviewItemIds: provenance.reviewItemIds,
   });
 }
 
@@ -218,7 +198,6 @@ function emitJoistLinearFeetLine(
  */
 export function calculateFloorFraming(
   floorFraming: FloorFramingPayload,
-  validation?: ValidationPayload,
 ): FramingMaterialLineItem[] {
   const systemsById = new Map(
     floorFraming.systems.map((system) => [system.id, system]),
@@ -242,7 +221,7 @@ export function calculateFloorFraming(
       continue;
     }
 
-    const joistCount = resolveBaselineJoistCount(system, area, validation);
+    const joistCount = resolveBaselineJoistCount(system, area);
     if (joistCount === null) {
       continue;
     }
@@ -252,12 +231,7 @@ export function calculateFloorFraming(
       materials.push(countLine);
     }
 
-    const lfLine = emitJoistLinearFeetLine(
-      system,
-      area,
-      joistCount,
-      validation,
-    );
+    const lfLine = emitJoistLinearFeetLine(system, area, joistCount);
     if (lfLine) {
       materials.push(lfLine);
     }

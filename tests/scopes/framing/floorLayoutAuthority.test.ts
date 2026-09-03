@@ -63,11 +63,7 @@ describe("floorLayoutAuthority", () => {
           propertyPath: "spanDirection",
           method: "explicit-project-value" as const,
           explanation: "Explicit span direction.",
-          evidenceIds: ["E-1"],
           assumptionIds: [],
-          userDecisionIds: [],
-          validationIssueIds: [],
-          reviewItemIds: [],
         },
       ],
     };

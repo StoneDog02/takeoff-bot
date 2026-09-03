@@ -134,8 +134,6 @@ describe("resolveFloorFraming", () => {
     assert.equal(payload.areas[0]?.id, "FFA-MAIN-FLOOR-AREA");
     assert.equal(payload.areas[0]?.areaSquareFeet, 1621);
     assert.equal(payload.areas[0]?.layout, "joist");
-    assert.ok(payload.areas[0]?.evidenceIds.includes("E-SPACE"));
-    assert.ok(payload.areas[0]?.evidenceIds.includes("E-HYPHEN"));
     assert.ok(
       payload.areas[0]?.resolutionTraces.some(
         (trace) =>

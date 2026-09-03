@@ -1,6 +1,5 @@
 import type {
   OpeningsPayload,
-  ValidationPayload,
   WallFramingPayload,
 } from "../schemas/framing-artifacts.schema.js";
 import {
@@ -12,7 +11,6 @@ import type { Opening } from "../schemas/opening.schema.js";
 import { WALL_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createMaterialLineItemId } from "./ids.js";
-import { isQuantityBlocked } from "./isQuantityBlocked.js";
 import { isQuantityInputResolved } from "./isQuantityInputResolved.js";
 import {
   computeNetStudDeduction,
@@ -128,21 +126,10 @@ function segmentNetStudDeduction(
 function calculateSegmentStuds(
   wall: BuildingWall,
   segment: WallSegment,
-  validation: ValidationPayload | undefined,
   openings: readonly Opening[],
 ): FramingMaterialLineItem | null {
   const quantityKey = WALL_QUANTITY_KEYS.studs;
   const contributingObjects = [wall, segment];
-
-  if (
-    isQuantityBlocked(
-      validation,
-      contributingObjects.map((object) => object.id),
-      quantityKey,
-    )
-  ) {
-    return null;
-  }
 
   if (
     !isQuantityInputResolved(
@@ -193,27 +180,15 @@ function calculateSegmentStuds(
     unit: "each",
     sourceObjectIds: provenance.sourceObjectIds,
     assumptionIds: provenance.assumptionIds,
-    reviewItemIds: provenance.reviewItemIds,
   });
 }
 
 function calculateSegmentPlates(
   wall: BuildingWall,
   segment: WallSegment,
-  validation: ValidationPayload | undefined,
 ): FramingMaterialLineItem | null {
   const quantityKey = WALL_QUANTITY_KEYS.plates;
   const contributingObjects = [wall, segment];
-
-  if (
-    isQuantityBlocked(
-      validation,
-      contributingObjects.map((object) => object.id),
-      quantityKey,
-    )
-  ) {
-    return null;
-  }
 
   if (
     !isQuantityInputResolved(
@@ -262,7 +237,6 @@ function calculateSegmentPlates(
     unit: "linear-foot",
     sourceObjectIds: provenance.sourceObjectIds,
     assumptionIds: provenance.assumptionIds,
-    reviewItemIds: provenance.reviewItemIds,
   });
 }
 
@@ -274,7 +248,6 @@ function calculateSegmentPlates(
  */
 export function calculateWallFraming(
   wallFraming: WallFramingPayload,
-  validation?: ValidationPayload,
   openings?: OpeningsPayload,
 ): FramingMaterialLineItem[] {
   const wallsById = new Map(wallFraming.walls.map((wall) => [wall.id, wall]));
@@ -290,17 +263,12 @@ export function calculateWallFraming(
       continue;
     }
 
-    const studs = calculateSegmentStuds(
-      wall,
-      segment,
-      validation,
-      openingList,
-    );
+    const studs = calculateSegmentStuds(wall, segment, openingList);
     if (studs) {
       materials.push(studs);
     }
 
-    const plates = calculateSegmentPlates(wall, segment, validation);
+    const plates = calculateSegmentPlates(wall, segment);
     if (plates) {
       materials.push(plates);
     }

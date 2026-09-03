@@ -1,7 +1,4 @@
-import type {
-  SheathingPayload,
-  ValidationPayload,
-} from "../schemas/framing-artifacts.schema.js";
+import type { SheathingPayload } from "../schemas/framing-artifacts.schema.js";
 import {
   framingMaterialLineItemSchema,
   type FramingMaterialCategory,
@@ -14,7 +11,6 @@ import type {
 import { SHEATHING_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createMaterialLineItemId } from "./ids.js";
-import { isQuantityBlocked } from "./isQuantityBlocked.js";
 import { isQuantityInputResolved } from "./isQuantityInputResolved.js";
 
 const AREA_PROPERTY_PATH = "areaSquareFeet";
@@ -78,21 +74,7 @@ function optionalSpecSegment(
 function calculateAreaCoverage(
   area: SheathingArea,
   system: SheathingSystem,
-  validation: ValidationPayload | undefined,
 ): FramingMaterialLineItem | null {
-  const contributingIds = [system.id, area.id];
-
-  if (
-    isQuantityBlocked(validation, contributingIds, SHEATHING_QUANTITY_KEYS.area) ||
-    isQuantityBlocked(
-      validation,
-      contributingIds,
-      SHEATHING_QUANTITY_KEYS.material,
-    )
-  ) {
-    return null;
-  }
-
   if (
     system.application === "unknown" ||
     !isQuantityInputResolved(
@@ -182,7 +164,6 @@ function calculateAreaCoverage(
     unit: "square-foot",
     sourceObjectIds: provenance.sourceObjectIds,
     assumptionIds: provenance.assumptionIds,
-    reviewItemIds: provenance.reviewItemIds,
   });
 }
 
@@ -198,14 +179,12 @@ function calculateAreaCoverage(
  *
  * This function only emits material lines. Resolved `SheathingArea.areaSquareFeet`
  * remains on the object when identity is incomplete (partial objects survive).
- * Blocking either `sheathing.area` or `sheathing.material` suppresses emission
- * because a material line requires both coverage and identity.
+ * A material line requires both coverage and identity.
  *
  * Does not deduct openings, convert to sheets, apply waste, or merge areas.
  */
 export function calculateSheathing(
   sheathing: SheathingPayload,
-  validation?: ValidationPayload,
 ): FramingMaterialLineItem[] {
   const systemsById = new Map(
     sheathing.systems.map((system) => [system.id, system]),
@@ -221,7 +200,7 @@ export function calculateSheathing(
       continue;
     }
 
-    const lineItem = calculateAreaCoverage(area, system, validation);
+    const lineItem = calculateAreaCoverage(area, system);
     if (lineItem) {
       materials.push(lineItem);
     }

@@ -6,26 +6,12 @@ import { computeNetStudDeduction } from "../../src/scopes/framing/calculators/ne
 import type { Opening } from "../../src/scopes/framing/schemas/opening.schema.js";
 import type { WallFramingPayload } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 
-const complete = {
-  status: "complete" as const,
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-};
-
 function buildPayload(lengthFeet = 20): WallFramingPayload {
   return {
     walls: [
       {
         id: "W-001",
         objectType: "building-wall",
-        completion: complete,
-        reviewStatus: "no-review-required",
-        blockingStatus: "not-blocked",
-        evidenceIds: [],
-        assumptionIds: [],
-        validationIssueIds: [],
-        reviewItemIds: [],
         resolutionTraces: [],
         name: "W-001",
         level: null,
@@ -52,22 +38,12 @@ function buildPayload(lengthFeet = 20): WallFramingPayload {
       {
         id: "WS-001",
         objectType: "wall-segment",
-        completion: complete,
-        reviewStatus: "no-review-required",
-        blockingStatus: "not-blocked",
-        evidenceIds: [],
-        assumptionIds: [],
-        validationIssueIds: [],
-        reviewItemIds: [],
         resolutionTraces: [
           {
             propertyPath: "lengthFeet",
             method: "explicit-project-value",
             explanation: "length",
-            evidenceIds: [],
             assumptionIds: [],
-            validationIssueIds: [],
-            reviewItemIds: [],
           },
         ],
         parentWallId: "W-001",
@@ -82,13 +58,6 @@ function buildOpening(overrides: Partial<Opening> = {}): Opening {
   return {
     id: "O-001",
     objectType: "opening",
-    completion: complete,
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: [],
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces: [],
     category: "door",
     identityRole: "occurrence",
@@ -128,7 +97,7 @@ describe("calculateWallFraming net deductions with openings", () => {
       roughWidthFeet: opening.dimensions.roughWidthFeet!,
     });
 
-    const adjustedMaterials = calculateWallFraming(wallPayload, undefined, {
+    const adjustedMaterials = calculateWallFraming(wallPayload, {
       openings: [opening],
     });
     const adjustedStuds = adjustedMaterials.find((m) => m.unit === "each");
@@ -140,7 +109,7 @@ describe("calculateWallFraming net deductions with openings", () => {
   it("leaves baseline unchanged when opening lacks position and width", () => {
     const wallPayload = buildPayload();
     const baseline = calculateWallFraming(wallPayload);
-    const withEmptyOpenings = calculateWallFraming(wallPayload, undefined, {
+    const withEmptyOpenings = calculateWallFraming(wallPayload, {
       openings: [],
     });
     assert.equal(

@@ -7,11 +7,7 @@ import { createMaterialLineItemId } from "../../src/scopes/framing/calculators/i
 import { createStructuralMemberObjectId } from "../../src/scopes/framing/resolvers/ids.js";
 import { resolveStructuralMembers } from "../../src/scopes/framing/resolvers/resolveStructuralMembers.js";
 import { resolveWallFraming } from "../../src/scopes/framing/resolvers/resolveWallFraming.js";
-import {
-  STRUCTURAL_MEMBER_QUANTITY_KEYS,
-  STRUCTURAL_MEMBER_RULE_IDS,
-} from "../../src/scopes/framing/validators/rule-ids.js";
-import { validateStructuralMembers } from "../../src/scopes/framing/validators/structural-members.validator.js";
+import { STRUCTURAL_MEMBER_QUANTITY_KEYS } from "../../src/scopes/framing/validators/rule-ids.js";
 
 const source = {
   page: {
@@ -140,7 +136,6 @@ describe("resolveStructuralMembers", () => {
         (entry) => entry.propertyPath === propertyPath,
       );
       assert.equal(trace?.method, "explicit-project-value");
-      assert.deepEqual(trace?.userDecisionIds, []);
       assert.deepEqual(trace?.assumptionIds, []);
     }
   });
@@ -169,10 +164,8 @@ describe("resolveStructuralMembers", () => {
 
     assert.equal(payload.structuralMembers[0]?.lengthFeet, 6);
     assert.equal(trace?.method, "explicit-project-value");
-    assert.deepEqual(trace?.evidenceIds, [
-      "E-HDR-001-LENGTH-A",
-      "E-HDR-001-LENGTH-B",
-    ]);
+    assert.match(trace?.explanation ?? "", /E\-HDR\-001\-LENGTH\-A/);
+    assert.match(trace?.explanation ?? "", /E\-HDR\-001\-LENGTH\-B/);
   });
 
   it("preserves conflicting lengthFeet candidates as unresolved", () => {
@@ -200,10 +193,6 @@ describe("resolveStructuralMembers", () => {
 
     assert.equal(member?.lengthFeet, null);
     assert.equal(trace?.method, "unresolved");
-    assert.deepEqual(trace?.evidenceIds, [
-      "E-HDR-001-LENGTH-A",
-      "E-HDR-001-LENGTH-B",
-    ]);
   });
 
   it("does not normalize category casing or abbreviations", () => {
@@ -281,10 +270,6 @@ describe("resolveStructuralMembers", () => {
     assert.equal(member?.materialType, "lvl");
     assert.equal(member?.lengthFeet, 6);
     assert.equal(trace?.method, "unresolved");
-    assert.deepEqual(trace?.evidenceIds, [
-      "E-HDR-001-QTY-A",
-      "E-HDR-001-QTY-B",
-    ]);
   });
 
   it("preserves a member with missing location as null", () => {
@@ -331,10 +316,6 @@ describe("resolveStructuralMembers", () => {
     assert.equal(member?.quantity, 1);
     assert.equal(member?.lengthFeet, 6);
     assert.equal(trace?.method, "unresolved");
-    assert.deepEqual(trace?.evidenceIds, [
-      "E-HDR-001-LOCATION-A",
-      "E-HDR-001-LOCATION-B",
-    ]);
   });
 
   it("ignores wall Evidence when resolving structural members", () => {
@@ -417,8 +398,6 @@ describe("resolveStructuralMembers", () => {
 
     assert.equal(payload.structuralMembers.length, 1);
     assert.equal(payload.structuralMembers[0]?.id, "SM-HDR-001");
-    assert.ok(payload.structuralMembers[0]?.evidenceIds.includes("E-HDR-A-CATEGORY"));
-    assert.ok(payload.structuralMembers[0]?.evidenceIds.includes("E-HDR-B-CATEGORY"));
     assert.ok(
       payload.structuralMembers[0]?.resolutionTraces.some(
         (trace) =>
@@ -436,107 +415,7 @@ describe("resolveStructuralMembers", () => {
     assert.deepEqual(evidence, snapshot);
   });
 
-  it("derives completion from resolved supported properties", () => {
-    const complete = resolveStructuralMembers(completeHeaderEvidence())
-      .structuralMembers[0]?.completion;
-    const partial = resolveStructuralMembers([
-      ...completeHeaderEvidence().filter(
-        (record) => record.propertyPath !== "materialType",
-      ),
-    ]).structuralMembers[0]?.completion;
-    const missingQuantity = resolveStructuralMembers(
-      completeHeaderEvidence().filter(
-        (record) => record.propertyPath !== "quantity",
-      ),
-    ).structuralMembers[0]?.completion;
-
-    assert.equal(complete?.status, "complete");
-    assert.equal(complete?.percentage, 100);
-    assert.equal(complete?.completedItems, 6);
-    assert.equal(partial?.status, "partial");
-    assert.equal(partial?.completedItems, 5);
-    assert.ok((partial?.percentage ?? 0) < 100);
-    assert.equal(missingQuantity?.status, "partial");
-    assert.equal(missingQuantity?.completedItems, 5);
-  });
-
-  describe("validation and calculator ownership for partially resolved members", () => {
-    it("creates quantity validation issues for missing quantity", () => {
-      const payload = resolveStructuralMembers(
-        completeHeaderEvidence().filter(
-          (record) => record.propertyPath !== "quantity",
-        ),
-      );
-      const validation = validateStructuralMembers({ payload });
-      const issue = validation.validationIssues.find(
-        (entry) => entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.quantityResolved,
-      );
-
-      assert.ok(issue);
-      assert.equal(issue.quantityImpacts[0]?.canCalculate, false);
-      assert.equal(validation.reviewItems.length, 1);
-      assert.equal(validation.reviewItems[0]?.action?.targetProperty, "quantity");
-    });
-
-    it("creates quantity validation issues for conflicting quantity", () => {
-      const payload = resolveStructuralMembers([
-        ...completeHeaderEvidence().filter(
-          (record) => record.propertyPath !== "quantity",
-        ),
-        memberEvidence("HDR-001", {
-          id: "E-HDR-001-QTY-A",
-          propertyPath: "quantity",
-          candidateValue: 1,
-        }),
-        memberEvidence("HDR-001", {
-          id: "E-HDR-001-QTY-B",
-          propertyPath: "quantity",
-          candidateValue: 2,
-        }),
-      ]);
-      const validation = validateStructuralMembers({ payload });
-      const issue = validation.validationIssues.find(
-        (entry) => entry.ruleId === STRUCTURAL_MEMBER_RULE_IDS.quantityResolved,
-      );
-
-      assert.ok(issue);
-      assert.equal(validation.reviewItems.length, 1);
-    });
-
-    it("does not create validation issues for missing location", () => {
-      const payload = resolveStructuralMembers(
-        completeHeaderEvidence().filter(
-          (record) => record.propertyPath !== "location",
-        ),
-      );
-      const validation = validateStructuralMembers({ payload });
-
-      assert.equal(validation.validationIssues.length, 0);
-      assert.equal(validation.reviewItems.length, 0);
-    });
-
-    it("does not create validation issues for conflicting location", () => {
-      const payload = resolveStructuralMembers([
-        ...completeHeaderEvidence().filter(
-          (record) => record.propertyPath !== "location",
-        ),
-        memberEvidence("HDR-001", {
-          id: "E-HDR-001-LOCATION-A",
-          propertyPath: "location",
-          candidateValue: "over Window W-001 at Wall W-001",
-        }),
-        memberEvidence("HDR-001", {
-          id: "E-HDR-001-LOCATION-B",
-          propertyPath: "location",
-          candidateValue: "over Door D-001",
-        }),
-      ]);
-      const validation = validateStructuralMembers({ payload });
-
-      assert.equal(validation.validationIssues.length, 0);
-      assert.equal(validation.reviewItems.length, 0);
-    });
-
+  describe("calculator ownership for partially resolved members", () => {
     it("blocks material calculation when quantity is missing or conflicted", () => {
       const missingQuantity = resolveStructuralMembers(
         completeHeaderEvidence().filter(
@@ -558,24 +437,9 @@ describe("resolveStructuralMembers", () => {
           candidateValue: 2,
         }),
       ]);
-      const missingValidation = validateStructuralMembers({
-        payload: missingQuantity,
-      });
-      const conflictingValidation = validateStructuralMembers({
-        payload: conflictingQuantity,
-      });
 
-      assert.equal(
-        calculateStructuralMembers(missingQuantity, missingValidation).length,
-        0,
-      );
-      assert.equal(
-        calculateStructuralMembers(
-          conflictingQuantity,
-          conflictingValidation,
-        ).length,
-        0,
-      );
+      assert.equal(calculateStructuralMembers(missingQuantity).length, 0);
+      assert.equal(calculateStructuralMembers(conflictingQuantity).length, 0);
     });
 
     it("calculates only resolved members in a mixed quantity payload", () => {
@@ -585,8 +449,7 @@ describe("resolveStructuralMembers", () => {
           (record) => record.propertyPath !== "quantity",
         ),
       ]);
-      const validation = validateStructuralMembers({ payload });
-      const materials = calculateStructuralMembers(payload, validation);
+      const materials = calculateStructuralMembers(payload);
 
       assert.equal(materials.length, 1);
       assert.equal(materials[0]?.sourceObjectIds[0], "SM-HDR-001");
@@ -615,14 +478,8 @@ describe("resolveStructuralMembers", () => {
         }),
       ]);
 
-      const missingMaterials = calculateStructuralMembers(
-        missingLocation,
-        validateStructuralMembers({ payload: missingLocation }),
-      );
-      const conflictingMaterials = calculateStructuralMembers(
-        conflictingLocation,
-        validateStructuralMembers({ payload: conflictingLocation }),
-      );
+      const missingMaterials = calculateStructuralMembers(missingLocation);
+      const conflictingMaterials = calculateStructuralMembers(conflictingLocation);
 
       assert.equal(missingMaterials.length, 1);
       assert.equal(missingMaterials[0]?.quantity, 6);
@@ -631,13 +488,10 @@ describe("resolveStructuralMembers", () => {
     });
   });
 
-  it("passes existing validation and calculator contracts for a resolved header", () => {
+  it("calculates material for a resolved header", () => {
     const payload = resolveStructuralMembers(completeHeaderEvidence());
-    const validation = validateStructuralMembers({ payload });
-    const materials = calculateStructuralMembers(payload, validation);
+    const materials = calculateStructuralMembers(payload);
 
-    assert.equal(validation.validationIssues.length, 0);
-    assert.equal(validation.reviewItems.length, 0);
     assert.equal(materials.length, 1);
     assert.equal(
       materials[0]?.id,

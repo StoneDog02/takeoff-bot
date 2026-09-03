@@ -14,7 +14,6 @@ import type {
 } from "../../../core/schemas/resolved-object.schema.js";
 import type { ReviewItem } from "../../../core/schemas/review-item.schema.js";
 import type { ReviewRootCause } from "../../../core/schemas/review-root-cause.schema.js";
-import type { Completion } from "../../../core/schemas/status.schema.js";
 import type { UserDecision } from "../../../core/schemas/user-decision.schema.js";
 import {
   wallFramingPayloadSchema,
@@ -43,7 +42,6 @@ import {
   type CanonicalEvidenceCluster,
 } from "./convergeEvidenceByCanonicalObjectId.js";
 import {
-  isSegmentPropertyPath,
   isWallFramingPropertyPath,
   normalizeWallFramingCandidate,
   SEGMENT_PROPERTY_PATHS,
@@ -181,28 +179,16 @@ function formatValues(records: readonly Evidence[], propertyPath: SupportedPrope
   return values.join(", ");
 }
 
-function uniqueSortedReviewItemIds(
-  ids: readonly ReviewItemId[],
-): ReviewItemId[] {
-  return [...new Set(ids)].sort(compareIds) as ReviewItemId[];
-}
-
 function createTrace(
   propertyPath: string,
   method: ResolutionMethod,
   explanation: string,
-  evidenceIds: readonly EvidenceId[],
-  reviewItemIds: readonly ReviewItemId[] = [],
 ): PropertyResolutionTrace {
   return {
     propertyPath,
     method,
     explanation,
-    evidenceIds: uniqueSortedIds(evidenceIds),
     assumptionIds: [],
-    userDecisionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: uniqueSortedReviewItemIds(reviewItemIds),
   };
 }
 
@@ -218,12 +204,7 @@ function tracesForDecision(
         : `Resolved from corroborating project evidence ${decision.evidenceIds.join(", ")}.`;
 
     return [
-      createTrace(
-        propertyPath,
-        "explicit-project-value",
-        explanation,
-        decision.evidenceIds,
-      ),
+      createTrace(propertyPath, "explicit-project-value", explanation),
     ];
   }
 
@@ -233,7 +214,6 @@ function tracesForDecision(
         propertyPath,
         "unresolved",
         `Conflicting candidate values (${formatValues(records, propertyPath)}); this slice does not apply precedence.`,
-        decision.evidenceIds,
       ),
     ];
   }
@@ -275,42 +255,6 @@ function resolvePropertyAuthority(
   };
 }
 
-function isResolvedValue(
-  propertyPath: SupportedPropertyPath,
-  value: string | number | boolean | null,
-): boolean {
-  if (value === null) {
-    return false;
-  }
-
-  if (
-    propertyPath === "location" ||
-    propertyPath === "bearingStatus" ||
-    propertyPath === "constructionPhase"
-  ) {
-    return value !== "unknown";
-  }
-
-  return true;
-}
-
-function createCompletion(resolvedCount: number, totalCount: number): Completion {
-  const percentage = totalCount === 0 ? 0 : (resolvedCount / totalCount) * 100;
-  const status =
-    resolvedCount === 0
-      ? "not-started"
-      : resolvedCount === totalCount
-        ? "complete"
-        : "partial";
-
-  return {
-    status,
-    percentage,
-    completedItems: resolvedCount,
-    totalItems: totalCount,
-  };
-}
-
 function resolvedValue<T extends string | number | boolean>(
   decision: CandidateDecision,
   fallback: T | null,
@@ -348,12 +292,7 @@ function convergenceTraces(
     return [];
   }
   return [
-    createTrace(
-      "subjectKey",
-      "supported-inference",
-      note,
-      cluster.records.map((record) => record.id),
-    ),
+    createTrace("subjectKey", "supported-inference", note),
   ];
 }
 
@@ -467,38 +406,11 @@ function resolveOneWall(
     },
   };
 
-  const wallResolvedCount = WALL_PROPERTY_PATHS.filter((propertyPath) => {
-    if (propertyPath.startsWith("assembly.")) {
-      const key = propertyPath.slice("assembly.".length) as keyof typeof wallValues.assembly;
-      return isResolvedValue(propertyPath, wallValues.assembly[key]);
-    }
-
-    const key = propertyPath as Exclude<WallPropertyPath, `assembly.${string}`>;
-    return isResolvedValue(propertyPath, wallValues[key]);
-  }).length;
-
   const lengthFeet = resolvedValue<number>(lengthResolved.decision, null);
-  const wallEvidenceIds = uniqueSortedIds(
-    wallResolutionRecords
-      .filter((record) => !isSegmentPropertyPath(record.propertyPath))
-      .map((record) => record.id),
-  );
-  const segmentEvidenceIds = uniqueSortedIds(
-    segmentResolutionRecords
-      .filter((record) => isSegmentPropertyPath(record.propertyPath))
-      .map((record) => record.id),
-  );
 
   const wall: BuildingWall = {
     id: wallId,
     objectType: "building-wall",
-    completion: createCompletion(wallResolvedCount, WALL_PROPERTY_PATHS.length),
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: wallEvidenceIds,
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces: wallTraces,
     name: subjectKey,
     level: null,
@@ -511,13 +423,6 @@ function resolveOneWall(
   const segment: WallSegment = {
     id: segmentId,
     objectType: "wall-segment",
-    completion: createCompletion(lengthFeet === null ? 0 : 1, 1),
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: segmentEvidenceIds,
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces: segmentTraces,
     parentWallId: wallId,
     lengthFeet,

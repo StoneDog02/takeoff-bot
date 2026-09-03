@@ -2,17 +2,12 @@ import type { Assumption } from "../../../core/schemas/assumption.schema.js";
 import type {
   ObjectId,
   ReviewItemId,
-  UserDecisionId,
 } from "../../../core/schemas/identity.schema.js";
-import { applyAssumptionUserDecisionLifecycle } from "../claims/applyAssumptionLifecycle.js";
-import { consultAssumptionRegistry } from "../claims/assumptionRegistry.js";
-import { deriveMaterialClaimStatus } from "../claims/deriveClaimStatus.js";
+import { consultAssumptionRegistry } from "../assumptions/assumptionRegistry.js";
 import type {
   OpeningsPayload,
-  ValidationPayload,
   WallFramingPayload,
 } from "../schemas/framing-artifacts.schema.js";
-import type { PendingMaterialClaim } from "../schemas/claim-outcome.schema.js";
 import {
   framingMaterialLineItemSchema,
   type FramingMaterialLineItem,
@@ -27,11 +22,7 @@ import {
 } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createOpeningCrippleLayoutAssumption } from "./createOpeningCrippleLayoutAssumption.js";
-import {
-  createOpeningKingStudCountAssumption,
-} from "./createOpeningKingStudCountAssumption.js";
 import { createMaterialLineItemId } from "./ids.js";
-import { isQuantityBlocked } from "./isQuantityBlocked.js";
 import { isQuantityInputResolved } from "./isQuantityInputResolved.js";
 
 const ELIGIBLE_CATEGORIES = new Set<OpeningCategory>([
@@ -51,7 +42,6 @@ const STUD_SPACING_PROPERTY_PATH = "assembly.studSpacingInches";
 export type OpeningFramingCalculationResult = {
   materials: FramingMaterialLineItem[];
   assumptions: Assumption[];
-  pendingClaims: PendingMaterialClaim[];
 };
 
 function compareIds(left: string, right: string): number {
@@ -172,31 +162,12 @@ function sharedCripplePreconditions(
   opening: Opening,
   wall: BuildingWall,
   segment: WallSegment,
-  validation: ValidationPayload | undefined,
-  quantityKey: string,
 ): {
   roughWidthFeet: number;
   studSpacingInches: number;
   studSize: string;
   occurrenceMultiplier: number;
 } | null {
-  const contributingObjects = [opening, wall, segment];
-
-  if (
-    isQuantityBlocked(
-      validation,
-      contributingObjects.map((object) => object.id),
-      quantityKey,
-    ) ||
-    isQuantityBlocked(
-      validation,
-      [opening.id],
-      OPENING_QUANTITY_KEYS.framing,
-    )
-  ) {
-    return null;
-  }
-
   if (!isOpeningEligibleForWallFraming(opening, wall, segment)) {
     return null;
   }
@@ -258,15 +229,10 @@ function buildCrippleLineItem(input: {
     ...provenance.assumptionIds,
     ...(input.assumption ? [input.assumption.id] : []),
   ];
-  const reviewItemIds = [
-    ...provenance.reviewItemIds,
-    ...(input.assumption ? input.assumption.reviewItemIds : []),
-  ];
 
   return emitLineItem({
     id: createMaterialLineItemId(input.quantityKey, input.opening.id),
     quantityKey: input.quantityKey,
-    claimStatus: "CALCULATED_WITH_ASSUMPTION",
     category: "lumber",
     description: input.description,
     canonicalClassification: input.canonicalClassification,
@@ -274,7 +240,6 @@ function buildCrippleLineItem(input: {
     unit: "each",
     sourceObjectIds: provenance.sourceObjectIds,
     assumptionIds,
-    reviewItemIds,
   });
 }
 
@@ -282,41 +247,28 @@ function calculateOpeningCripples(
   opening: Opening,
   wall: BuildingWall,
   segment: WallSegment,
-  validation: ValidationPayload | undefined,
 ): OpeningFramingCalculationResult {
   const aboveEligible = isEligibleForCripplesAbove(opening);
   const belowEligible = opening.category === "window";
 
   if (!aboveEligible && !belowEligible) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   const abovePreconditions = aboveEligible
-    ? sharedCripplePreconditions(
-        opening,
-        wall,
-        segment,
-        validation,
-        OPENING_QUANTITY_KEYS.cripplesAbove,
-      )
+    ? sharedCripplePreconditions(opening, wall, segment)
     : null;
   const belowPreconditions = belowEligible
-    ? sharedCripplePreconditions(
-        opening,
-        wall,
-        segment,
-        validation,
-        OPENING_QUANTITY_KEYS.cripplesBelow,
-      )
+    ? sharedCripplePreconditions(opening, wall, segment)
     : null;
 
   if (!abovePreconditions && !belowPreconditions) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   const preconditions = abovePreconditions ?? belowPreconditions;
   if (!preconditions) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   const perOccurrenceCount = crippleCountPerOccurrence(
@@ -376,7 +328,7 @@ function calculateOpeningCripples(
   }
 
   if (materials.length === 0) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   const quantityKeyForRegistry = affectedQuantityKeys[0]!;
@@ -387,7 +339,7 @@ function calculateOpeningCripples(
     reviewItemId: crippleLayoutDefaultReviewItemId(opening),
   });
   if (registered.outcome !== "assumed") {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
   // Single assumption covering all emitted cripple quantityKeys for this opening.
   const assumption = createOpeningCrippleLayoutAssumption(
@@ -401,16 +353,10 @@ function calculateOpeningCripples(
       framingMaterialLineItemSchema.parse({
         ...material,
         quantityKey: material.quantityKey,
-        claimStatus: deriveMaterialClaimStatus({
-          assumptions: [assumption],
-          assumptionIds: [assumption.id],
-        }),
         assumptionIds: [assumption.id],
-        reviewItemIds: [...assumption.reviewItemIds],
       }),
     ),
     assumptions: [assumption],
-    pendingClaims: [],
   };
 }
 
@@ -476,29 +422,6 @@ function resolveKingStudCountPerOccurrence(
       KING_STUD_COUNT_PROPERTY_PATH,
     )
   ) {
-    const trace = opening.resolutionTraces.find(
-      (entry) => entry.propertyPath === KING_STUD_COUNT_PROPERTY_PATH,
-    );
-    if (
-      (trace?.method === "user-override" ||
-        trace?.method === "approved-default") &&
-      trace.userDecisionIds.length > 0 &&
-      opening.kingStudCount !== null
-    ) {
-      const reviewItemId = kingStudDefaultReviewItemId(opening);
-      const active = createOpeningKingStudCountAssumption(
-        opening.id,
-        reviewItemId,
-      );
-      return {
-        count: opening.kingStudCount,
-        assumption: applyAssumptionUserDecisionLifecycle(active, {
-          status:
-            trace.method === "approved-default" ? "confirmed" : "replaced",
-          userDecisionId: trace.userDecisionIds[0] as UserDecisionId,
-        }),
-      };
-    }
     return { count: opening.kingStudCount, assumption: null };
   }
 
@@ -525,28 +448,12 @@ function calculateOpeningJackStuds(
   opening: Opening,
   wall: BuildingWall,
   segment: WallSegment,
-  validation: ValidationPayload | undefined,
 ): OpeningFramingCalculationResult {
   const quantityKey = OPENING_QUANTITY_KEYS.jackStuds;
   const contributingObjects = [opening, wall, segment];
 
-  if (
-    isQuantityBlocked(
-      validation,
-      contributingObjects.map((object) => object.id),
-      quantityKey,
-    ) ||
-    isQuantityBlocked(
-      validation,
-      [opening.id],
-      OPENING_QUANTITY_KEYS.framing,
-    )
-  ) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
-  }
-
   if (!isOpeningEligibleForJackStuds(opening, wall, segment)) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   if (
@@ -556,7 +463,7 @@ function calculateOpeningJackStuds(
       QUANTITY_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   if (
@@ -566,8 +473,7 @@ function calculateOpeningJackStuds(
       JACK_STUD_COUNT_PROPERTY_PATH,
     )
   ) {
-    // D22: no PendingMaterialClaim — skip when required input is missing.
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   const quantity = opening.jackStudCount * opening.quantity;
@@ -580,7 +486,6 @@ function calculateOpeningJackStuds(
   const lineItem = emitLineItem({
     id: createMaterialLineItemId(quantityKey, opening.id),
     quantityKey,
-    claimStatus: "CONFIRMED",
     category: "lumber",
     description: `${wall.assembly.studSize} jack studs`,
     canonicalClassification: `jack-stud-${wall.assembly.studSize}`,
@@ -588,42 +493,25 @@ function calculateOpeningJackStuds(
     unit: "each",
     sourceObjectIds: provenance.sourceObjectIds,
     assumptionIds: provenance.assumptionIds,
-    reviewItemIds: provenance.reviewItemIds,
   });
 
   if (!lineItem) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
-  return { materials: [lineItem], assumptions: [], pendingClaims: [] };
+  return { materials: [lineItem], assumptions: [] };
 }
 
 function calculateOpeningKingStuds(
   opening: Opening,
   wall: BuildingWall,
   segment: WallSegment,
-  validation: ValidationPayload | undefined,
 ): OpeningFramingCalculationResult {
   const quantityKey = OPENING_QUANTITY_KEYS.kingStuds;
   const contributingObjects = [opening, wall, segment];
 
-  if (
-    isQuantityBlocked(
-      validation,
-      contributingObjects.map((object) => object.id),
-      quantityKey,
-    ) ||
-    isQuantityBlocked(
-      validation,
-      [opening.id],
-      OPENING_QUANTITY_KEYS.framing,
-    )
-  ) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
-  }
-
   if (!isOpeningEligibleForKingStuds(opening, wall, segment)) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   if (
@@ -633,12 +521,12 @@ function calculateOpeningKingStuds(
       QUANTITY_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   const kingStudCount = resolveKingStudCountPerOccurrence(opening);
   if (!kingStudCount) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   const quantity = kingStudCount.count * opening.quantity;
@@ -656,21 +544,10 @@ function calculateOpeningKingStuds(
     ...provenance.assumptionIds,
     ...(kingStudCount.assumption ? [kingStudCount.assumption.id] : []),
   ];
-  const reviewItemIds = [
-    ...provenance.reviewItemIds,
-    ...(kingStudCount.assumption
-      ? kingStudCount.assumption.reviewItemIds
-      : []),
-  ];
 
-  const assumptions = kingStudCount.assumption ? [kingStudCount.assumption] : [];
   const lineItem = emitLineItem({
     id: createMaterialLineItemId(quantityKey, opening.id),
     quantityKey,
-    claimStatus: deriveMaterialClaimStatus({
-      assumptions,
-      assumptionIds,
-    }),
     category: "lumber",
     description: `${wall.assembly.studSize} king studs`,
     canonicalClassification: `king-stud-${wall.assembly.studSize}`,
@@ -678,25 +555,15 @@ function calculateOpeningKingStuds(
     unit: "each",
     sourceObjectIds: provenance.sourceObjectIds,
     assumptionIds,
-    reviewItemIds,
   });
 
   if (!lineItem) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
-
-  // Replaced assumptions are retained for lifecycle provenance but are not "active".
-  const emittedAssumptions =
-    kingStudCount.assumption && kingStudCount.assumption.status === "active"
-      ? [kingStudCount.assumption]
-      : kingStudCount.assumption
-        ? [kingStudCount.assumption]
-        : [];
 
   return {
     materials: [lineItem],
-    assumptions: emittedAssumptions,
-    pendingClaims: [],
+    assumptions: kingStudCount.assumption ? [kingStudCount.assumption] : [],
   };
 }
 
@@ -704,32 +571,16 @@ function calculateOpeningRoughSill(
   opening: Opening,
   wall: BuildingWall,
   segment: WallSegment,
-  validation: ValidationPayload | undefined,
 ): OpeningFramingCalculationResult {
   const quantityKey = OPENING_QUANTITY_KEYS.roughSill;
   const contributingObjects = [opening, wall, segment];
 
-  if (
-    isQuantityBlocked(
-      validation,
-      contributingObjects.map((object) => object.id),
-      quantityKey,
-    ) ||
-    isQuantityBlocked(
-      validation,
-      [opening.id],
-      OPENING_QUANTITY_KEYS.framing,
-    )
-  ) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
-  }
-
   if (opening.category !== "window") {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   if (!isOpeningEligibleForWallFraming(opening, wall, segment)) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   if (
@@ -739,7 +590,7 @@ function calculateOpeningRoughSill(
       QUANTITY_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   if (
@@ -749,14 +600,14 @@ function calculateOpeningRoughSill(
       ROUGH_WIDTH_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   const roughSillLinearFeet =
     opening.dimensions.roughWidthFeet * opening.quantity;
   const studSize = wall.assembly.studSize;
   if (studSize === null) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   const reviewItemId = roughSillSizeDefaultReviewItemId(opening);
@@ -770,7 +621,7 @@ function calculateOpeningRoughSill(
     reviewItemId,
   });
   if (consulted.outcome !== "assumed") {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
   const sillSizeAssumption = consulted.assumption;
 
@@ -785,18 +636,10 @@ function calculateOpeningRoughSill(
     ...provenance.assumptionIds,
     sillSizeAssumption.id,
   ];
-  const reviewItemIds = [
-    ...provenance.reviewItemIds,
-    ...sillSizeAssumption.reviewItemIds,
-  ];
 
   const lineItem = emitLineItem({
     id: createMaterialLineItemId(quantityKey, opening.id),
     quantityKey,
-    claimStatus: deriveMaterialClaimStatus({
-      assumptions: [sillSizeAssumption],
-      assumptionIds,
-    }),
     category: "lumber",
     description: `${studSize} rough sill`,
     canonicalClassification: `rough-sill-${studSize}`,
@@ -804,17 +647,15 @@ function calculateOpeningRoughSill(
     unit: "linear-foot",
     sourceObjectIds: provenance.sourceObjectIds,
     assumptionIds,
-    reviewItemIds,
   });
 
   if (!lineItem) {
-    return { materials: [], assumptions: [], pendingClaims: [] };
+    return { materials: [], assumptions: [] };
   }
 
   return {
     materials: [lineItem],
     assumptions: [sillSizeAssumption],
-    pendingClaims: [],
   };
 }
 
@@ -827,7 +668,6 @@ function calculateOpeningRoughSill(
 export function calculateOpeningFraming(
   openings: OpeningsPayload,
   wallFraming: WallFramingPayload,
-  validation?: ValidationPayload,
 ): OpeningFramingCalculationResult {
   const wallsById = new Map(wallFraming.walls.map((wall) => [wall.id, wall]));
   const segmentsById = new Map(
@@ -839,7 +679,6 @@ export function calculateOpeningFraming(
 
   const materials: FramingMaterialLineItem[] = [];
   const assumptions: Assumption[] = [];
-  const pendingClaims: PendingMaterialClaim[] = [];
 
   for (const opening of sortedOpenings) {
     const segment = resolveParentSegment(opening, segmentsById);
@@ -852,10 +691,10 @@ export function calculateOpeningFraming(
       continue;
     }
 
-    const kingResult = calculateOpeningKingStuds(opening, wall, segment, validation);
-    const jackResult = calculateOpeningJackStuds(opening, wall, segment, validation);
-    const sillResult = calculateOpeningRoughSill(opening, wall, segment, validation);
-    const crippleResult = calculateOpeningCripples(opening, wall, segment, validation);
+    const kingResult = calculateOpeningKingStuds(opening, wall, segment);
+    const jackResult = calculateOpeningJackStuds(opening, wall, segment);
+    const sillResult = calculateOpeningRoughSill(opening, wall, segment);
+    const crippleResult = calculateOpeningCripples(opening, wall, segment);
     materials.push(
       ...kingResult.materials,
       ...jackResult.materials,
@@ -868,13 +707,7 @@ export function calculateOpeningFraming(
       ...sillResult.assumptions,
       ...crippleResult.assumptions,
     );
-    pendingClaims.push(
-      ...kingResult.pendingClaims,
-      ...jackResult.pendingClaims,
-      ...sillResult.pendingClaims,
-      ...crippleResult.pendingClaims,
-    );
   }
 
-  return { materials, assumptions, pendingClaims };
+  return { materials, assumptions };
 }

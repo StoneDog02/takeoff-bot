@@ -7,21 +7,11 @@ import {
   hardwareSchema,
 } from "../../src/scopes/framing/schemas/connectors-hardware.schema.js";
 
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
-
 describe("connector domain contracts", () => {
   it("accepts a connector that references members, hardware, and fasteners by ID only", () => {
     const connector = connectorSchema.parse({
       id: "CN-001",
       objectType: "connector",
-      completion: complete,
-      reviewStatus: "no-review-required",
-      blockingStatus: "not-blocked",
       connectorType: "joist hanger",
       model: "HUS26",
       associatedObjectIds: ["SM-008"],
@@ -41,14 +31,6 @@ describe("connector domain contracts", () => {
     const connector = connectorSchema.parse({
       id: "CN-002",
       objectType: "connector",
-      completion: {
-        status: "partial",
-        percentage: 25,
-        completedItems: 1,
-        totalItems: 4,
-      },
-      reviewStatus: "review-required",
-      blockingStatus: "not-blocked",
     });
 
     assert.equal(connector.connectorType, null);
@@ -64,9 +46,6 @@ describe("fastener domain contracts", () => {
     const fastener = fastenerSchema.parse({
       id: "FS-001",
       objectType: "fastener",
-      completion: complete,
-      reviewStatus: "no-review-required",
-      blockingStatus: "not-blocked",
       fastenerType: "nail",
       diameter: "0.148\"",
       length: "3-1/2\"",
@@ -83,14 +62,6 @@ describe("fastener domain contracts", () => {
     const fastener = fastenerSchema.parse({
       id: "FS-002",
       objectType: "fastener",
-      completion: {
-        status: "partial",
-        percentage: 20,
-        completedItems: 1,
-        totalItems: 5,
-      },
-      reviewStatus: "review-required",
-      blockingStatus: "not-blocked",
     });
 
     assert.equal(fastener.fastenerType, null);
@@ -108,9 +79,6 @@ describe("hardware domain contracts", () => {
     const hardware = hardwareSchema.parse({
       id: "HW-001",
       objectType: "hardware",
-      completion: complete,
-      reviewStatus: "no-review-required",
-      blockingStatus: "not-blocked",
       hardwareType: "bearing plate",
       associatedObjectIds: ["SM-014", "CN-001"],
     });
@@ -124,14 +92,6 @@ describe("hardware domain contracts", () => {
     const hardware = hardwareSchema.parse({
       id: "HW-002",
       objectType: "hardware",
-      completion: {
-        status: "partial",
-        percentage: 50,
-        completedItems: 1,
-        totalItems: 2,
-      },
-      reviewStatus: "review-required",
-      blockingStatus: "not-blocked",
     });
 
     assert.equal(hardware.hardwareType, null);

@@ -1,7 +1,4 @@
-import type {
-  StructuralMembersPayload,
-  ValidationPayload,
-} from "../schemas/framing-artifacts.schema.js";
+import type { StructuralMembersPayload } from "../schemas/framing-artifacts.schema.js";
 import {
   framingMaterialLineItemSchema,
   type FramingMaterialCategory,
@@ -11,7 +8,6 @@ import type { StructuralMember } from "../schemas/structural-member.schema.js";
 import { STRUCTURAL_MEMBER_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createMaterialLineItemId } from "./ids.js";
-import { isQuantityBlocked } from "./isQuantityBlocked.js";
 import { isQuantityInputResolved } from "./isQuantityInputResolved.js";
 
 const LENGTH_PROPERTY_PATH = "lengthFeet";
@@ -101,15 +97,7 @@ function emitLineItem(
 
 function calculateMemberMaterial(
   member: StructuralMember,
-  validation: ValidationPayload | undefined,
 ): FramingMaterialLineItem | null {
-  if (
-    isQuantityBlocked(validation, [member.id], STRUCTURAL_MEMBER_QUANTITY_KEYS.material) ||
-    isQuantityBlocked(validation, [member.id], STRUCTURAL_MEMBER_QUANTITY_KEYS.length)
-  ) {
-    return null;
-  }
-
   const builtUp = isExplicitlyBuiltUp(member);
   if (
     member.category === "unknown" ||
@@ -191,7 +179,6 @@ function calculateMemberMaterial(
     unit: "linear-foot",
     sourceObjectIds: provenance.sourceObjectIds,
     assumptionIds: provenance.assumptionIds,
-    reviewItemIds: provenance.reviewItemIds,
   });
 }
 
@@ -202,7 +189,6 @@ function calculateMemberMaterial(
  */
 export function calculateStructuralMembers(
   structuralMembers: StructuralMembersPayload,
-  validation?: ValidationPayload,
 ): FramingMaterialLineItem[] {
   const members = [...structuralMembers.structuralMembers].sort((left, right) =>
     compareIds(left.id, right.id),
@@ -210,7 +196,7 @@ export function calculateStructuralMembers(
   const materials: FramingMaterialLineItem[] = [];
 
   for (const member of members) {
-    const lineItem = calculateMemberMaterial(member, validation);
+    const lineItem = calculateMemberMaterial(member);
     if (lineItem) {
       materials.push(lineItem);
     }

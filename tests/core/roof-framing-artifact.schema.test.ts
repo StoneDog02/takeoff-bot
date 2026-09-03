@@ -3,13 +3,6 @@ import { describe, it } from "node:test";
 
 import { roofFramingArtifactSchema } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
-
 const timestamp = "2026-07-10T12:00:00.000Z";
 
 describe("roof framing artifact contract", () => {
@@ -32,9 +25,6 @@ describe("roof framing artifact contract", () => {
           {
             id: "RFS-001",
             objectType: "roof-framing-system",
-            completion: complete,
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
             name: "Main roof framing",
             level: "Roof",
             constructionPhase: "new",
@@ -50,9 +40,6 @@ describe("roof framing artifact contract", () => {
           {
             id: "RP-001",
             objectType: "roof-plane",
-            completion: complete,
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
             parentSystemId: "RFS-001",
             pitch: "6:12",
             spanDirection: "east-west",

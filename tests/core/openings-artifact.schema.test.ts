@@ -3,13 +3,6 @@ import { describe, it } from "node:test";
 
 import { openingsArtifactSchema } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
-
 const timestamp = "2026-07-10T12:00:00.000Z";
 
 describe("openings artifact contract", () => {
@@ -32,9 +25,6 @@ describe("openings artifact contract", () => {
           {
             id: "O-014",
             objectType: "opening",
-            completion: complete,
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
             category: "window",
             parentObjectId: "WS-001",
             parentWallId: "W-001",
@@ -75,14 +65,6 @@ describe("openings artifact contract", () => {
           {
             id: "O-001",
             objectType: "opening",
-            completion: {
-              status: "partial",
-              percentage: 50,
-              completedItems: 3,
-              totalItems: 6,
-            },
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
             category: "window",
             parentObjectId: null,
             parentWallId: null,

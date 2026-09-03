@@ -10,8 +10,12 @@ import {
   emptyFramingConstruction,
   type FramingConstruction,
 } from "../../../../src/scopes/framing/reset/framingConstruction.schema.js";
-import { interpretFramingConstruction } from "../../../../src/scopes/framing/reset/interpretFramingConstruction.js";
-import { interpretFloorFraming } from "../../../../src/scopes/framing/reset/interpretFloorFraming.js";
+import { resolveFloorFraming } from "../../../../src/scopes/framing/resolvers/resolveFloorFraming.js";
+import { resolveOpenings } from "../../../../src/scopes/framing/resolvers/resolveOpenings.js";
+import { resolveRoofFraming } from "../../../../src/scopes/framing/resolvers/resolveRoofFraming.js";
+import { resolveSheathing } from "../../../../src/scopes/framing/resolvers/resolveSheathing.js";
+import { resolveStructuralMembers } from "../../../../src/scopes/framing/resolvers/resolveStructuralMembers.js";
+import { resolveWallFraming } from "../../../../src/scopes/framing/resolvers/resolveWallFraming.js";
 import { runFramingResetTakeoff } from "../../../../src/scopes/framing/reset/runFramingResetTakeoff.js";
 import {
   buildResetTakeoff,
@@ -21,22 +25,12 @@ import {
 import { becksteadCrawlSpaceEvidence } from "../../../fixtures/becksteadCsFloorAuthorityEvidence.js";
 import type { PlanIndex } from "../../../../src/plans/PlanIndex.js";
 
-const complete = {
-  status: "complete" as const,
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-};
-
 function resolvedTrace(propertyPath: string) {
   return {
     propertyPath,
     method: "explicit-project-value" as const,
     explanation: `${propertyPath} is explicit.`,
-    evidenceIds: ["E-1"],
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
+    assumptionIds: [] as string[],
   };
 }
 
@@ -47,13 +41,6 @@ function wallConstructionFixture(): FramingConstruction {
       {
         id: "BW-001",
         objectType: "building-wall",
-        completion: complete,
-        reviewStatus: "no-review-required",
-        blockingStatus: "not-blocked",
-        evidenceIds: ["E-1"],
-        assumptionIds: [],
-        validationIssueIds: [],
-        reviewItemIds: [],
         resolutionTraces: [
           resolvedTrace("assembly.studSize"),
           resolvedTrace("assembly.studSpacingInches"),
@@ -84,13 +71,6 @@ function wallConstructionFixture(): FramingConstruction {
       {
         id: "WS-001",
         objectType: "wall-segment",
-        completion: complete,
-        reviewStatus: "no-review-required",
-        blockingStatus: "not-blocked",
-        evidenceIds: ["E-1"],
-        assumptionIds: [],
-        validationIssueIds: [],
-        reviewItemIds: [],
         resolutionTraces: [resolvedTrace("lengthFeet")],
         parentWallId: "BW-001",
         lengthFeet: 20,
@@ -178,14 +158,14 @@ describe("reset takeoff output", () => {
   });
 });
 
-describe("reset floor interpret → calculate (Beckstead crawl 31/527)", () => {
-  it("interprets crawl Evidence and emits 31 joists / 527 LF when inputs resolve", () => {
+describe("reset floor resolve → calculate (Beckstead crawl 31/527)", () => {
+  it("resolves crawl Evidence and emits 31 joists / 527 LF when inputs resolve", () => {
     const evidence = becksteadCrawlSpaceEvidence() as Evidence[];
-    const floor = interpretFloorFraming(evidence);
+    const floor = resolveFloorFraming(evidence);
     const construction = emptyFramingConstruction();
     construction.floorFraming = floor;
 
-    // If interpret did not establish spacing-axis layout length + member length,
+    // If resolve did not establish spacing-axis layout length + member length,
     // materials may be empty — that is an honest gap. Prefer full path when ready.
     const calculated = calculateFramingTakeoff(construction);
     const joists = calculated.materials.find((m) => m.quantityKey === "floor.joists");
@@ -205,13 +185,6 @@ describe("reset floor interpret → calculate (Beckstead crawl 31/527)", () => {
             {
               id: "FFS-CRAWL",
               objectType: "floor-framing-system",
-              completion: complete,
-              reviewStatus: "no-review-required",
-              blockingStatus: "not-blocked",
-              evidenceIds: [],
-              assumptionIds: [],
-              validationIssueIds: [],
-              reviewItemIds: [],
               resolutionTraces: [
                 resolvedTrace("assembly.joistType"),
                 resolvedTrace("assembly.joistSize"),
@@ -233,13 +206,6 @@ describe("reset floor interpret → calculate (Beckstead crawl 31/527)", () => {
             {
               id: "FFA-CRAWL",
               objectType: "floor-framing-area",
-              completion: complete,
-              reviewStatus: "no-review-required",
-              blockingStatus: "not-blocked",
-              evidenceIds: [],
-              assumptionIds: [],
-              validationIssueIds: [],
-              reviewItemIds: [],
               resolutionTraces: [
                 resolvedTrace("spanDirection"),
                 resolvedTrace("joistLayoutLengthFeet"),
@@ -275,9 +241,16 @@ describe("reset floor interpret → calculate (Beckstead crawl 31/527)", () => {
   });
 });
 
-describe("interpretFramingConstruction", () => {
+describe("resolve framing construction from empty Evidence", () => {
   it("returns empty domains for empty Evidence without throwing", () => {
-    const construction = interpretFramingConstruction([]);
+    const construction = {
+      walls: resolveWallFraming([]),
+      openings: resolveOpenings([]),
+      structuralMembers: resolveStructuralMembers([]),
+      floorFraming: resolveFloorFraming([]),
+      roofFraming: resolveRoofFraming([]),
+      sheathing: resolveSheathing([]),
+    };
     assert.equal(construction.walls.walls.length, 0);
     assert.equal(construction.openings.openings.length, 0);
     assert.equal(construction.floorFraming.systems.length, 0);
@@ -292,13 +265,6 @@ describe("reset opening assumptions disclosure", () => {
         {
           id: "O-001",
           objectType: "opening",
-          completion: complete,
-          reviewStatus: "no-review-required",
-          blockingStatus: "not-blocked",
-          evidenceIds: ["E-O"],
-          assumptionIds: [],
-          validationIssueIds: [],
-          reviewItemIds: [],
           resolutionTraces: [
             resolvedTrace("quantity"),
             resolvedTrace("dimensions.roughWidthFeet"),

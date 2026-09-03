@@ -3,21 +3,11 @@ import { describe, it } from "node:test";
 
 import { blockingSchema } from "../../src/scopes/framing/schemas/blocking.schema.js";
 
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
-
 describe("blocking domain contracts", () => {
   it("accepts blocking that references associated objects by ID only", () => {
     const blocking = blockingSchema.parse({
       id: "BLK-001",
       objectType: "blocking",
-      completion: complete,
-      reviewStatus: "no-review-required",
-      blockingStatus: "not-blocked",
       blockingType: "solid blocking",
       purpose: "sheathing edge support",
       structuralRole: "structural",
@@ -37,14 +27,6 @@ describe("blocking domain contracts", () => {
     const blocking = blockingSchema.parse({
       id: "BLK-002",
       objectType: "blocking",
-      completion: {
-        status: "partial",
-        percentage: 25,
-        completedItems: 1,
-        totalItems: 4,
-      },
-      reviewStatus: "review-required",
-      blockingStatus: "not-blocked",
       structuralRole: "unknown",
     });
 

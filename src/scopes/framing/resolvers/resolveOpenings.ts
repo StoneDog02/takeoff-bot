@@ -21,7 +21,6 @@ import type {
   PropertyResolutionTrace,
   ResolutionMethod,
 } from "../../../core/schemas/resolved-object.schema.js";
-import type { Completion } from "../../../core/schemas/status.schema.js";
 import {
   openingsPayloadSchema,
   type OpeningsPayload,
@@ -37,14 +36,11 @@ import {
   sanitizeSubjectKey,
 } from "./ids.js";
 import {
-  isResolvedOpeningPropertyValue,
   normalizeOpeningCandidate,
   normalizeOpeningRelationshipCandidate,
-  OPENING_COMPLETION_PROPERTY_PATHS,
   OPENING_PROPERTY_PATHS,
   OPENING_RELATIONSHIP_PROPERTY_PATHS,
   isOpeningPropertyPath,
-  type OpeningCompletionPropertyPath,
   type OpeningPropertyPath,
   type OpeningRelationshipPropertyPath,
 } from "./openingPropertyPaths.js";
@@ -163,17 +159,12 @@ function createTrace(
   propertyPath: string,
   method: ResolutionMethod,
   explanation: string,
-  evidenceIds: readonly EvidenceId[],
 ): PropertyResolutionTrace {
   return {
     propertyPath,
     method,
     explanation,
-    evidenceIds: uniqueSortedIds(evidenceIds),
     assumptionIds: [],
-    userDecisionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
   };
 }
 
@@ -189,12 +180,7 @@ function tracesForDecision(
         : `Resolved from corroborating project evidence ${decision.evidenceIds.join(", ")}.`;
 
     return [
-      createTrace(
-        propertyPath,
-        "explicit-project-value",
-        explanation,
-        decision.evidenceIds,
-      ),
+      createTrace(propertyPath, "explicit-project-value", explanation),
     ];
   }
 
@@ -204,29 +190,11 @@ function tracesForDecision(
         propertyPath,
         "unresolved",
         `Conflicting candidate values (${formatValues(records, propertyPath)}); this slice does not apply precedence.`,
-        decision.evidenceIds,
       ),
     ];
   }
 
   return [];
-}
-
-function createCompletion(resolvedCount: number, totalCount: number): Completion {
-  const percentage = totalCount === 0 ? 0 : (resolvedCount / totalCount) * 100;
-  const status =
-    resolvedCount === 0
-      ? "not-started"
-      : resolvedCount === totalCount
-        ? "complete"
-        : "partial";
-
-  return {
-    status,
-    percentage,
-    completedItems: resolvedCount,
-    totalItems: totalCount,
-  };
 }
 
 function resolvedStringValue(
@@ -241,30 +209,6 @@ function resolvedNumberValue(
   fallback: number | null,
 ): number | null {
   return decision.kind === "resolved" ? (decision.value as number) : fallback;
-}
-
-function valueForCompletionPath(
-  values: {
-    category: Opening["category"];
-    dimensions: Opening["dimensions"];
-    quantity: number | null;
-  },
-  propertyPath: OpeningCompletionPropertyPath,
-): string | number | null {
-  switch (propertyPath) {
-    case "category":
-      return values.category;
-    case "dimensions.nominalWidthFeet":
-      return values.dimensions.nominalWidthFeet;
-    case "dimensions.nominalHeightFeet":
-      return values.dimensions.nominalHeightFeet;
-    case "dimensions.roughWidthFeet":
-      return values.dimensions.roughWidthFeet;
-    case "dimensions.roughHeightFeet":
-      return values.dimensions.roughHeightFeet;
-    case "quantity":
-      return values.quantity;
-  }
 }
 
 function resolvePhysicalRunRelationship(
@@ -307,13 +251,11 @@ function resolvePhysicalRunRelationship(
         "parentWallId",
         "deterministic-calculation",
         `Mapped physical run key ${runKey} to resolved wall ${parentWallId}.`,
-        parentPhysicalRunKeyDecision.evidenceIds,
       ),
       createTrace(
         "parentObjectId",
         "deterministic-calculation",
         `Mapped physical run key ${runKey} to wall segment ${parentObjectId}.`,
-        parentPhysicalRunKeyDecision.evidenceIds,
       ),
     );
 
@@ -329,13 +271,11 @@ function resolvePhysicalRunRelationship(
       "parentWallId",
       "deterministic-calculation",
       `Mapped physical run key ${runKey} to ObjectId ${parentWallId}, but no matching resolved wall exists.`,
-      parentPhysicalRunKeyDecision.evidenceIds,
     ),
     createTrace(
       "parentObjectId",
       "deterministic-calculation",
       `Mapped physical run key ${runKey} to segment ObjectId ${parentObjectId}, but no matching wall segment exists.`,
-      parentPhysicalRunKeyDecision.evidenceIds,
     ),
   );
 
@@ -382,13 +322,11 @@ function resolveWallRelationship(
         "parentWallId",
         "deterministic-calculation",
         `Mapped explicit wall tag ${wallTag} to resolved wall ${parentWallId}.`,
-        parentWallTagDecision.evidenceIds,
       ),
       createTrace(
         "parentObjectId",
         "deterministic-calculation",
         `Mapped explicit wall tag ${wallTag} to current wall segment ${parentObjectId}.`,
-        parentWallTagDecision.evidenceIds,
       ),
     );
 
@@ -404,13 +342,11 @@ function resolveWallRelationship(
       "parentWallId",
       "deterministic-calculation",
       `Mapped explicit wall tag ${wallTag} to ObjectId ${parentWallId}, but no matching resolved wall exists.`,
-      parentWallTagDecision.evidenceIds,
     ),
     createTrace(
       "parentObjectId",
       "deterministic-calculation",
       `Mapped explicit wall tag ${wallTag} to segment ObjectId ${parentObjectId}, but no matching resolved wall segment exists.`,
-      parentWallTagDecision.evidenceIds,
     ),
   );
 
@@ -985,7 +921,6 @@ function identityTracesForCluster(cluster: OpeningResolveCluster): PropertyResol
         "physicalIdentity",
         "semantic-cluster-pending-physical-link",
         `Semantic subjectKeys ${cluster.rawSubjectKeys.map((key) => `"${key}"`).join(", ")} sanitize to the same label without sufficient physical-location authority to confirm one physical opening.`,
-        cluster.records.map((record) => record.id),
       ),
     );
   }
@@ -996,7 +931,6 @@ function identityTracesForCluster(cluster: OpeningResolveCluster): PropertyResol
         "physicalIdentity",
         "deterministic-calculation",
         `Corroborating physical signals merge semantic subjectKeys ${cluster.rawSubjectKeys.map((key) => `"${key}"`).join(", ")} into one opening.`,
-        cluster.records.map((record) => record.id),
       ),
     );
   }
@@ -1007,7 +941,6 @@ function identityTracesForCluster(cluster: OpeningResolveCluster): PropertyResol
         "physicalIdentity",
         "deterministic-calculation",
         `Distinct physical geometry or location disambiguates semantic label "${cluster.canonicalSubjectKey}" at ${locationFingerprint(cluster.records)}.`,
-        cluster.records.map((record) => record.id),
       ),
     );
   }
@@ -1018,7 +951,6 @@ function identityTracesForCluster(cluster: OpeningResolveCluster): PropertyResol
         "physicalIdentity",
         "identity-binding-merge",
         `Explicit identity.boundSubjectKey Evidence merges subjectKeys ${cluster.rawSubjectKeys.map((key) => `"${key}"`).join(", ")} into opening ${cluster.openingId}.`,
-        cluster.bindingEvidenceIds ?? cluster.records.map((record) => record.id),
       ),
     );
   }
@@ -1029,9 +961,6 @@ function identityTracesForCluster(cluster: OpeningResolveCluster): PropertyResol
         "physicalIdentity",
         "unresolved",
         `Competing or unbound identity.boundSubjectKey Evidence left subjectKeys ${cluster.rawSubjectKeys.map((key) => `"${key}"`).join(", ")} unmerged.`,
-        cluster.records
-          .filter((record) => record.propertyPath === "identity.boundSubjectKey")
-          .map((record) => record.id),
       ),
     );
   }
@@ -1291,19 +1220,6 @@ function resolveOneOpening(
       ? (positionOffsetDecision.value as number)
       : null;
 
-  const completionValues = {
-    category,
-    dimensions,
-    quantity,
-  };
-
-  const resolvedCount = OPENING_COMPLETION_PROPERTY_PATHS.filter((propertyPath) =>
-    isResolvedOpeningPropertyValue(
-      propertyPath,
-      valueForCompletionPath(completionValues, propertyPath),
-    ),
-  ).length;
-
   const identityRole = classifyOpeningIdentityRole({
     cluster,
     parentObjectId: relationship.parentObjectId,
@@ -1320,16 +1236,6 @@ function resolveOneOpening(
   return {
     id: openingId,
     objectType: "opening",
-    completion: createCompletion(
-      resolvedCount,
-      OPENING_COMPLETION_PROPERTY_PATHS.length,
-    ),
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: uniqueSortedIds(records.map((record) => record.id)),
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces,
     category,
     identityRole,

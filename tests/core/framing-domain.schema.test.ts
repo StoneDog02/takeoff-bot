@@ -8,21 +8,11 @@ import {
 import { finalFramingTakeoffArtifactSchema } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 import { buildingWallSchema } from "../../src/scopes/framing/schemas/wall.schema.js";
 
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
-
 describe("framing domain contracts", () => {
   it("accepts a resolved wall without embedding related objects", () => {
     const wall = buildingWallSchema.parse({
       id: "W-001",
       objectType: "building-wall",
-      completion: complete,
-      reviewStatus: "no-review-required",
-      blockingStatus: "not-blocked",
       name: "Demo exterior wall",
       level: "Level 1",
       wallType: "wood-stud-exterior",
@@ -47,9 +37,6 @@ describe("framing domain contracts", () => {
     const system = floorFramingSystemSchema.parse({
       id: "FFS-001",
       objectType: "floor-framing-system",
-      completion: complete,
-      reviewStatus: "no-review-required",
-      blockingStatus: "not-blocked",
       name: "Level 2 floor framing",
       level: "Level 2",
       constructionPhase: "new",
@@ -70,14 +57,6 @@ describe("framing domain contracts", () => {
     const area = floorFramingAreaSchema.parse({
       id: "FFA-001",
       objectType: "floor-framing-area",
-      completion: {
-        status: "partial",
-        percentage: 50,
-        completedItems: 1,
-        totalItems: 2,
-      },
-      reviewStatus: "review-required",
-      blockingStatus: "not-blocked",
       parentSystemId: "FFS-001",
       boundingWallIds: ["W-001"],
       openingIds: ["O-014"],
@@ -98,9 +77,6 @@ describe("framing domain contracts", () => {
     const result = floorFramingAreaSchema.safeParse({
       id: "FFA-002",
       objectType: "floor-framing-area",
-      completion: complete,
-      reviewStatus: "no-review-required",
-      blockingStatus: "not-blocked",
     });
 
     assert.equal(result.success, false);
@@ -140,7 +116,6 @@ describe("framing domain contracts", () => {
         connectorIds: ["CN-001"],
         hardwareIds: ["HW-001"],
         fastenerIds: ["FS-001"],
-        confidenceEvaluationId: "CE-001",
         summary: {
           wallCount: 1,
           wallSegmentCount: 1,
@@ -159,10 +134,6 @@ describe("framing domain contracts", () => {
           materialLineItemCount: 1,
           reviewItemCount: 0,
           validationIssueCount: 0,
-          completion: complete,
-          confidenceLabel: "high",
-          reviewStatus: "no-review-required",
-          blockingStatus: "not-blocked",
         },
       },
     });

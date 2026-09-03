@@ -6,21 +6,11 @@ import {
   sheathingSystemSchema,
 } from "../../src/scopes/framing/schemas/sheathing.schema.js";
 
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
-
 describe("sheathing domain contracts", () => {
   it("accepts a sheathing system that references areas by ID only", () => {
     const system = sheathingSystemSchema.parse({
       id: "SHS-001",
       objectType: "sheathing-system",
-      completion: complete,
-      reviewStatus: "no-review-required",
-      blockingStatus: "not-blocked",
       name: "Level 1 exterior wall sheathing",
       level: "Level 1",
       application: "wall",
@@ -42,14 +32,6 @@ describe("sheathing domain contracts", () => {
     const area = sheathingAreaSchema.parse({
       id: "SHA-001",
       objectType: "sheathing-area",
-      completion: {
-        status: "partial",
-        percentage: 50,
-        completedItems: 1,
-        totalItems: 2,
-      },
-      reviewStatus: "review-required",
-      blockingStatus: "not-blocked",
       parentSystemId: "SHS-001",
       coveredObjectIds: ["W-001"],
       openingIds: ["O-014"],
@@ -66,9 +48,6 @@ describe("sheathing domain contracts", () => {
     const result = sheathingAreaSchema.safeParse({
       id: "SHA-002",
       objectType: "sheathing-area",
-      completion: complete,
-      reviewStatus: "no-review-required",
-      blockingStatus: "not-blocked",
     });
 
     assert.equal(result.success, false);

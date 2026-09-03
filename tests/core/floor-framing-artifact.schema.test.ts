@@ -3,13 +3,6 @@ import { describe, it } from "node:test";
 
 import { floorFramingArtifactSchema } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
-
 const timestamp = "2026-07-10T12:00:00.000Z";
 
 describe("floor framing artifact contract", () => {
@@ -32,9 +25,6 @@ describe("floor framing artifact contract", () => {
           {
             id: "FFS-001",
             objectType: "floor-framing-system",
-            completion: complete,
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
             name: "Level 2 floor framing",
             level: "Level 2",
             constructionPhase: "new",
@@ -51,9 +41,6 @@ describe("floor framing artifact contract", () => {
           {
             id: "FFA-001",
             objectType: "floor-framing-area",
-            completion: complete,
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
             parentSystemId: "FFS-001",
             spanDirection: "north-south",
             boundingWallIds: ["W-001"],

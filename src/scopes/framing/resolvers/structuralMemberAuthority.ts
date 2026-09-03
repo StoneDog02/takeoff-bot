@@ -236,17 +236,12 @@ function createTrace(
   propertyPath: string,
   method: PropertyResolutionTrace["method"],
   explanation: string,
-  evidenceIds: readonly EvidenceId[],
 ): PropertyResolutionTrace {
   return {
     propertyPath,
     method,
     explanation,
-    evidenceIds: uniqueSortedIds(evidenceIds),
     assumptionIds: [],
-    userDecisionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
   };
 }
 
@@ -569,7 +564,6 @@ export function applyStructuralMemberAuthority(
           "category",
           "supported-inference",
           categoryResolution.explanation,
-          categoryResolution.evidenceIds,
         ),
       );
       next = {
@@ -600,7 +594,6 @@ export function applyStructuralMemberAuthority(
           "size",
           "supported-inference",
           sizeResolution.explanation,
-          sizeResolution.evidenceIds,
         ),
       );
       next = {
@@ -624,7 +617,6 @@ export function applyStructuralMemberAuthority(
         "quantity",
         "supported-inference",
         quantityResolution.explanation,
-        quantityResolution.evidenceIds,
       ),
     );
     next = {
@@ -643,32 +635,8 @@ export function applyStructuralMemberAuthority(
     return member;
   }
 
-  const completionPaths = [
-    "category",
-    "materialType",
-    "size",
-    "lengthFeet",
-    "quantity",
-    "location",
-  ] as const;
-  const resolvedCount = completionPaths.filter((propertyPath) => {
-    const value = next[propertyPath];
-    return value !== null && value !== "unknown";
-  }).length;
-
   return {
     ...next,
     resolutionTraces: traces,
-    completion: {
-      status:
-        resolvedCount === 0
-          ? "not-started"
-          : resolvedCount === completionPaths.length
-            ? "complete"
-            : "partial",
-      percentage: (resolvedCount / completionPaths.length) * 100,
-      completedItems: resolvedCount,
-      totalItems: completionPaths.length,
-    },
   };
 }

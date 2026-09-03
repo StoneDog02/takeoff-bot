@@ -3,13 +3,6 @@ import { describe, it } from "node:test";
 
 import { structuralMembersArtifactSchema } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
-
 const timestamp = "2026-07-10T12:00:00.000Z";
 
 describe("structural members artifact contract", () => {
@@ -32,9 +25,6 @@ describe("structural members artifact contract", () => {
           {
             id: "SM-008",
             objectType: "structural-member",
-            completion: complete,
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
             category: "header",
             materialType: "lvl",
             size: "1.75x11.875",
@@ -77,9 +67,6 @@ describe("structural members artifact contract", () => {
           {
             id: "SM-008",
             objectType: "structural-member",
-            completion: complete,
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
             category: "header",
             materialType: "lvl",
             size: "1.75x11.875",

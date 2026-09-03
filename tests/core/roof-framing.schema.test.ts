@@ -6,21 +6,11 @@ import {
   roofPlaneSchema,
 } from "../../src/scopes/framing/schemas/roof-framing.schema.js";
 
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
-
 describe("roof framing domain contracts", () => {
   it("accepts a roof framing system that references planes by ID only", () => {
     const system = roofFramingSystemSchema.parse({
       id: "RFS-001",
       objectType: "roof-framing-system",
-      completion: complete,
-      reviewStatus: "no-review-required",
-      blockingStatus: "not-blocked",
       name: "Main roof framing",
       level: "Roof",
       constructionPhase: "new",
@@ -40,14 +30,6 @@ describe("roof framing domain contracts", () => {
     const plane = roofPlaneSchema.parse({
       id: "RP-001",
       objectType: "roof-plane",
-      completion: {
-        status: "partial",
-        percentage: 50,
-        completedItems: 1,
-        totalItems: 2,
-      },
-      reviewStatus: "review-required",
-      blockingStatus: "not-blocked",
       parentSystemId: "RFS-001",
       boundingWallIds: ["W-001"],
       openingIds: ["O-021"],
@@ -68,9 +50,6 @@ describe("roof framing domain contracts", () => {
     const result = roofPlaneSchema.safeParse({
       id: "RP-002",
       objectType: "roof-plane",
-      completion: complete,
-      reviewStatus: "no-review-required",
-      blockingStatus: "not-blocked",
     });
 
     assert.equal(result.success, false);

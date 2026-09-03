@@ -6,36 +6,21 @@ import {
   countRegularlySpacedJoists,
   isSimpleAreaJoistLinearFeetTypeSupported,
 } from "../../src/scopes/framing/calculators/calculateFloorFraming.js";
-import type {
-  FloorFramingPayload,
-  ValidationPayload,
-} from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
+import type { FloorFramingPayload } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 import { framingMaterialLineItemSchema } from "../../src/scopes/framing/schemas/material.schema.js";
 import type {
   FloorFramingArea,
   FloorFramingSystem,
 } from "../../src/scopes/framing/schemas/floor-framing.schema.js";
-import { createValidationIssue } from "../../src/scopes/framing/validators/createValidationIssue.js";
-import { createObjectTarget } from "../../src/scopes/framing/validators/ids.js";
 import { FLOOR_QUANTITY_KEYS } from "../../src/scopes/framing/validators/rule-ids.js";
 import { createMaterialLineItemId } from "../../src/scopes/framing/calculators/ids.js";
-
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
 
 function resolvedTrace(propertyPath: string) {
   return {
     propertyPath,
     method: "explicit-project-value" as const,
     explanation: `${propertyPath} is explicit on the plans.`,
-    evidenceIds: ["E-FFS-001"],
     assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
   };
 }
 
@@ -45,13 +30,6 @@ function buildSystem(
   return {
     id: "FFS-001",
     objectType: "floor-framing-system",
-    completion: complete,
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: ["E-FFS-001"],
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces: [
       resolvedTrace("assembly.joistType"),
       resolvedTrace("assembly.joistSize"),
@@ -75,13 +53,6 @@ function buildArea(overrides: Partial<FloorFramingArea> = {}): FloorFramingArea 
   return {
     id: "FFA-001",
     objectType: "floor-framing-area",
-    completion: complete,
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: ["E-FFA-001"],
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces: [
       resolvedTrace("spanDirection"),
       resolvedTrace("joistLayoutLengthFeet"),
@@ -304,41 +275,6 @@ describe("calculateFloorFraming", () => {
       ).length,
       0,
     );
-  });
-
-  it("respects independent validation blocks for count vs LF", () => {
-    const lfBlocked: ValidationPayload = {
-      validationIssues: [
-        createValidationIssue({
-          ruleId: "floor.area.joistMemberLength.resolved",
-          level: "object",
-          severity: "warning",
-          ruleViolated: "member length missing",
-          explanation: "blocked lf",
-          target: createObjectTarget("FFA-001", "floor-framing-area"),
-          recommendedUserAction: "provide member length",
-          evidenceIds: [],
-          quantityImpacts: [
-            {
-              quantityKey: FLOOR_QUANTITY_KEYS.joists,
-              description: "count ok",
-              canCalculate: true,
-            },
-            {
-              quantityKey: FLOOR_QUANTITY_KEYS.joistLinearFeet,
-              description: "lf blocked",
-              canCalculate: false,
-            },
-          ],
-        }),
-      ],
-      validationResults: [],
-      reviewItems: [],
-    };
-
-    const materials = calculateFloorFraming(buildPayload(), lfBlocked);
-    assert.equal(joistCountLine(materials, "FFA-001")?.quantity, 16);
-    assert.equal(joistLfLine(materials, "FFA-001"), undefined);
   });
 
   it("does not deduct openings and does not invent structural-member quantities", () => {

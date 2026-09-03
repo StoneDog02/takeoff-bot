@@ -2,7 +2,6 @@
 import path from "node:path";
 import { resolveUseMockAi } from "./config/aiMode.js";
 import { isAnthropicConfigured } from "./config/env.js";
-import { PipelineRunner } from "./core/pipeline/PipelineRunner.js";
 import { logger } from "./core/logging/logger.js";
 import { generateProjectId } from "./core/utils/ids.js";
 import { indexPlan } from "./plans/indexPlan.js";
@@ -14,8 +13,6 @@ interface CliArgs {
   scopeName: string;
   projectId: string;
   live: boolean;
-  /** Escape hatch: run legacy 16-stage pipeline (dev/audit only). */
-  legacyPipeline: boolean;
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -23,7 +20,6 @@ function parseArgs(argv: string[]): CliArgs {
   let scopeName = "framing";
   let projectId = generateProjectId();
   let live = false;
-  let legacyPipeline = false;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -35,30 +31,27 @@ function parseArgs(argv: string[]): CliArgs {
       projectId = argv[++i];
     } else if (arg === "--live") {
       live = true;
-    } else if (arg === "--legacy-pipeline") {
-      legacyPipeline = true;
     } else if (arg === "--help" || arg === "-h") {
       printHelp();
       process.exit(0);
     }
   }
 
-  return { pdfPath, scopeName, projectId, live, legacyPipeline };
+  return { pdfPath, scopeName, projectId, live };
 }
 
 function printHelp(): void {
   console.log(`
-Takeoff Bot — framing factory-reset path (D1–D24)
+Takeoff Bot — framing production path
 
 Usage:
   npm run dev -- --pdf <path> --scope framing [--project <id>] [--live]
 
 Options:
   --pdf               Path to plan PDF
-  --scope             Scope name (framing uses reset path; others use PipelineRunner)
+  --scope             Scope name (framing is the production path)
   --project           Project ID for artifact storage (auto-generated if omitted)
   --live              Require Anthropic extraction; never fall back to mock Evidence
-  --legacy-pipeline   Dev/audit escape hatch: run the old 16-stage PipelineRunner
   --help              Show this help
 
 Examples:
@@ -93,83 +86,53 @@ async function main(): Promise<void> {
     anthropicConfigured: isAnthropicConfigured(),
     live: args.live,
     useMockAi,
-    legacyPipeline: args.legacyPipeline,
     availableScopes: scopeRegistry.list(),
   });
 
+  if (args.scopeName !== "framing") {
+    logger.error("Only the framing scope is implemented", {
+      scope: args.scopeName,
+    });
+    console.error(`Unknown or unimplemented scope '${args.scopeName}'. Use --scope framing.`);
+    process.exit(1);
+  }
+
   const planIndex = await indexPlan(pdfPath);
 
-  if (args.scopeName === "framing" && !args.legacyPipeline) {
-    if (useMockAi) {
-      logger.warn("ANTHROPIC_API_KEY not set — using mocked reader outputs");
-    }
+  if (useMockAi) {
+    logger.warn("ANTHROPIC_API_KEY not set — using mocked reader outputs");
+  }
 
-    const result = await runFramingResetTakeoff({
-      projectId: args.projectId,
-      pdfPath,
-      planIndex,
-      useMockAi,
-      writeDebugArtifacts: true,
+  const result = await runFramingResetTakeoff({
+    projectId: args.projectId,
+    pdfPath,
+    planIndex,
+    useMockAi,
+    writeDebugArtifacts: true,
+  });
+
+  if (result.success && result.takeoffPath) {
+    logger.info("Reset takeoff completed successfully", {
+      projectId: result.projectId,
+      takeoffPath: result.takeoffPath,
+      materialCount: result.takeoff?.materials.length ?? 0,
     });
-
-    if (result.success && result.takeoffPath) {
-      logger.info("Reset takeoff completed successfully", {
-        projectId: result.projectId,
-        takeoffPath: result.takeoffPath,
-        materialCount: result.takeoff?.materials.length ?? 0,
-      });
-      console.log(`\n✓ Reset takeoff complete`);
-      console.log(`  Project:  ${result.projectId}`);
-      console.log(`  Takeoff:  ${result.takeoffPath}`);
-      console.log(`  Materials:${result.takeoff?.materials.length ?? 0}`);
-      if (result.debugPaths.length > 0) {
-        console.log(`  Debug:    ${result.debugPaths.length} companion file(s)`);
-      }
-    } else {
-      logger.error("Reset takeoff failed", { errors: result.errors });
-      console.error(`\n✗ Reset takeoff failed`);
-      for (const error of result.errors) {
-        console.error(`  - ${error}`);
-      }
-      process.exit(1);
+    console.log(`\n✓ Reset takeoff complete`);
+    console.log(`  Project:  ${result.projectId}`);
+    console.log(`  Takeoff:  ${result.takeoffPath}`);
+    console.log(`  Materials:${result.takeoff?.materials.length ?? 0}`);
+    if (result.debugPaths.length > 0) {
+      console.log(`  Debug:    ${result.debugPaths.length} companion file(s)`);
     }
     return;
   }
 
-  if (useMockAi) {
-    logger.warn("ANTHROPIC_API_KEY not set — using mocked stage outputs");
+  logger.error("Reset takeoff failed", { errors: result.errors });
+  console.error(`\n✗ Reset takeoff failed`);
+  for (const error of result.errors) {
+    console.error(`  - ${error}`);
   }
-
-  const scope = scopeRegistry.get(args.scopeName);
-  const runner = new PipelineRunner();
-  const result = await runner.run({
-    projectId: args.projectId,
-    pdfPath,
-    scopeName: args.scopeName,
-    planIndex,
-    useMockAi,
-    stages: scope.stages,
-  });
-
-  if (result.success) {
-    logger.info("Pipeline completed successfully", {
-      projectId: result.projectId,
-      reportPath: result.reportPath,
-      stagesRun: result.stageResults.length,
-    });
-    console.log(`\n✓ Pipeline complete`);
-    console.log(`  Project:  ${result.projectId}`);
-    console.log(`  Scope:    ${result.scopeName}`);
-    console.log(`  Report:   ${result.reportPath}`);
-    console.log(`  Stages:   ${result.stageResults.length}`);
-  } else {
-    logger.error("Pipeline failed", { errors: result.errors });
-    console.error(`\n✗ Pipeline failed`);
-    for (const error of result.errors) {
-      console.error(`  - ${error}`);
-    }
-    process.exit(1);
-  }
+  process.exit(1);
 }
 
 main().catch((error) => {

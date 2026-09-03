@@ -52,7 +52,7 @@ import {
   normalizeWallFramingCandidate,
   type WallFramingPropertyPath,
 } from "./wallFramingPropertyPaths.js";
-import { lookupAssumptionRegistryEntry } from "../claims/assumptionRegistry.js";
+import { lookupAssumptionRegistryEntry } from "../assumptions/assumptionRegistry.js";
 import { OPENING_QUANTITY_KEYS } from "../validators/rule-ids.js";
 
 export type UserDecisionPropertyPath =
@@ -611,11 +611,7 @@ export function createUserOverrideTrace(
       propertyPath: applied.propertyPath,
       method: "approved-default",
       explanation: `Confirmed industry-default assumption via User Decision ${applied.decision.id}.`,
-      evidenceIds: [],
       assumptionIds: [],
-      userDecisionIds: [applied.decision.id],
-      validationIssueIds: [],
-      reviewItemIds: [applied.reviewItem.id],
     };
   }
 
@@ -624,23 +620,11 @@ export function createUserOverrideTrace(
       ? `Resolved from User Decision ${applied.decision.id} providing reviewer value without plan evidence.`
       : `Resolved from User Decision ${applied.decision.id} selecting explicit project evidence ${applied.acceptedEvidenceIds.join(", ")} after conflicting candidates remained unresolved.`;
 
-  const evidenceIds =
-    applied.resolutionKind === "value-provided"
-      ? []
-      : uniqueSortedIds([
-          ...applied.acceptedEvidenceIds,
-          ...applied.rejectedEvidenceIds,
-        ]);
-
   return {
     propertyPath: applied.propertyPath,
     method: "user-override",
     explanation,
-    evidenceIds,
     assumptionIds: [],
-    userDecisionIds: [applied.decision.id],
-    validationIssueIds: [],
-    reviewItemIds: [applied.reviewItem.id],
   };
 }
 

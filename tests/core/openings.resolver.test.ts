@@ -6,8 +6,6 @@ import { createOpeningObjectId } from "../../src/scopes/framing/resolvers/ids.js
 import { resolveOpenings } from "../../src/scopes/framing/resolvers/resolveOpenings.js";
 import { resolveStructuralMembers } from "../../src/scopes/framing/resolvers/resolveStructuralMembers.js";
 import { resolveWallFraming } from "../../src/scopes/framing/resolvers/resolveWallFraming.js";
-import { validateOpenings } from "../../src/scopes/framing/validators/openings.validator.js";
-import { OPENINGS_RULE_IDS } from "../../src/scopes/framing/validators/rule-ids.js";
 import {
   buildCompleteOpeningEvidence,
   openingEvidence,
@@ -66,9 +64,6 @@ describe("resolveOpenings", () => {
     assert.equal(opening?.parentWallId, null);
     assert.equal(opening?.headerMemberId, null);
     assert.equal(opening?.kingStudCount, null);
-    assert.equal(opening?.completion.status, "complete");
-    assert.equal(opening?.completion.completedItems, 6);
-    assert.equal(opening?.completion.totalItems, 6);
   });
 
   it("preserves a partially unresolved opening instead of dropping it", () => {
@@ -85,8 +80,6 @@ describe("resolveOpenings", () => {
     assert.equal(opening?.quantity, null);
     assert.equal(opening?.dimensions.roughWidthFeet, null);
     assert.equal(opening?.category, "window");
-    assert.equal(opening?.completion.status, "partial");
-    assert.equal(opening?.completion.completedItems, 4);
   });
 
   it("does not default missing quantity to 1", () => {
@@ -133,7 +126,8 @@ describe("resolveOpenings", () => {
 
     assert.equal(opening?.dimensions.nominalWidthFeet, 3);
     assert.equal(trace?.method, "explicit-project-value");
-    assert.deepEqual(trace?.evidenceIds, ["E-O001-NOM-WIDTH-A", "E-O001-NOM-WIDTH-B"]);
+    assert.match(trace?.explanation ?? "", /E-O001-NOM-WIDTH-A/);
+    assert.match(trace?.explanation ?? "", /E-O001-NOM-WIDTH-B/);
   });
 
   it("marks conflicting candidates unresolved without choosing a winner", () => {
@@ -163,7 +157,7 @@ describe("resolveOpenings", () => {
     assert.match(trace?.explanation ?? "", /Conflicting candidate values/);
   });
 
-  it("does not count optional references toward completion", () => {
+  it("resolves without optional references", () => {
     const payload = resolveOpenings(
       buildCompleteOpeningEvidence().filter(
         (record) =>
@@ -173,7 +167,8 @@ describe("resolveOpenings", () => {
       ),
     );
 
-    assert.equal(payload.openings[0]?.completion.status, "complete");
+    assert.equal(payload.openings[0]?.category, "window");
+    assert.equal(payload.openings[0]?.quantity, 1);
     assert.equal(payload.openings[0]?.scheduleReference, null);
   });
 
@@ -198,8 +193,6 @@ describe("resolveOpenings", () => {
 
     assert.equal(payload.openings.length, 1);
     assert.equal(opening?.id, "O-001");
-    assert.ok(opening?.evidenceIds.includes("E-O-A-CATEGORY"));
-    assert.ok(opening?.evidenceIds.includes("E-O-B-CATEGORY"));
     const identityTrace = opening?.resolutionTraces.find(
       (entry) => entry.propertyPath === "physicalIdentity",
     );
@@ -315,20 +308,11 @@ describe("resolveOpenings", () => {
     assert.equal(walls.segments[0]?.openingIds.length, 0);
   });
 
-  it("fails parent validation for independent openings with null parentObjectId", () => {
+  it("leaves independent openings with null parentObjectId and unresolved identity", () => {
     const payload = resolveOpenings(buildCompleteOpeningEvidence());
-    const validation = validateOpenings({ payload });
 
-    const parentResult = validation.validationResults.find(
-      (entry) => entry.ruleId === OPENINGS_RULE_IDS.parentResolved,
-    );
-
-    assert.equal(parentResult?.outcome, "failed");
-    assert.ok(
-      validation.validationIssues.some(
-        (issue) => issue.ruleId === OPENINGS_RULE_IDS.parentResolved,
-      ),
-    );
+    assert.equal(payload.openings[0]?.parentObjectId, null);
+    assert.equal(payload.openings[0]?.parentWallId, null);
     assert.equal(payload.openings[0]?.identityRole, "unresolved_identity");
   });
 
@@ -350,7 +334,7 @@ describe("resolveOpenings", () => {
       (entry) => entry.propertyPath === "kingStudCount",
     );
     assert.equal(trace?.method, "explicit-project-value");
-    assert.deepEqual(trace?.evidenceIds, ["E-O001-KING"]);
+    assert.match(trace?.explanation ?? "", /E-O001-KING/);
   });
 
   it("resolves explicit jackStudCount and leaves missing count null", () => {

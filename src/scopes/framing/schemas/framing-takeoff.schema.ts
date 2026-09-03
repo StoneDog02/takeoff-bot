@@ -1,20 +1,12 @@
 import { z } from "zod";
 
-import {
-  confidenceEvaluationIdSchema,
-  objectIdSchema,
-  reviewItemIdSchema,
-  validationIssueIdSchema,
-} from "../../../core/schemas/identity.schema.js";
-import {
-  blockingStatusSchema,
-  completionSchema,
-  confidenceLabelSchema,
-  reviewStatusSchema,
-} from "../../../core/schemas/status.schema.js";
+import { objectIdSchema } from "../../../core/schemas/identity.schema.js";
 import { framingMaterialLineItemSchema } from "./material.schema.js";
-import { pendingMaterialClaimSchema } from "./claim-outcome.schema.js";
 
+/**
+ * Legacy Stage-16 takeoff envelope (kept only for frozen artifact parsing).
+ * Production output is reset-takeoff.json (see reset/resetTakeoff.schema.ts).
+ */
 export const framingTakeoffStatusSchema = z.enum([
   "completed",
   "completed-with-review",
@@ -38,20 +30,15 @@ export const framingTakeoffSummarySchema = z.object({
   hardwareCount: z.number().int().nonnegative().default(0),
   fastenerCount: z.number().int().nonnegative().default(0),
   materialLineItemCount: z.number().int().nonnegative(),
-  pendingClaimCount: z.number().int().nonnegative().default(0),
-  reviewItemCount: z.number().int().nonnegative(),
-  validationIssueCount: z.number().int().nonnegative(),
-  completion: completionSchema,
-  confidenceLabel: confidenceLabelSchema,
-  reviewStatus: reviewStatusSchema,
-  blockingStatus: blockingStatusSchema,
+  reviewItemCount: z.number().int().nonnegative().default(0),
+  validationIssueCount: z.number().int().nonnegative().default(0),
 });
 
 export const framingTakeoffSchema = z.object({
   projectId: z.string().trim().min(1),
   scopeName: z.literal("framing"),
-  executionMode: z.enum(["mock", "anthropic"]),
-  status: framingTakeoffStatusSchema,
+  executionMode: z.enum(["mock", "anthropic"]).optional(),
+  status: framingTakeoffStatusSchema.optional(),
   wallIds: z.array(objectIdSchema).default([]),
   wallSegmentIds: z.array(objectIdSchema).default([]),
   openingIds: z.array(objectIdSchema).default([]),
@@ -67,11 +54,7 @@ export const framingTakeoffSchema = z.object({
   hardwareIds: z.array(objectIdSchema).default([]),
   fastenerIds: z.array(objectIdSchema).default([]),
   materials: z.array(framingMaterialLineItemSchema).default([]),
-  pendingClaims: z.array(pendingMaterialClaimSchema).default([]),
-  reviewItemIds: z.array(reviewItemIdSchema).default([]),
-  validationIssueIds: z.array(validationIssueIdSchema).default([]),
-  confidenceEvaluationId: confidenceEvaluationIdSchema,
-  summary: framingTakeoffSummarySchema,
+  summary: framingTakeoffSummarySchema.optional(),
 });
 
 export type FramingTakeoffStatus = z.infer<

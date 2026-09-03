@@ -2,33 +2,22 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { calculateOpeningFraming } from "../../src/scopes/framing/calculators/calculateOpeningFraming.js";
-import { coordinateFramingCalculations } from "../../src/scopes/framing/calculators/calculation-coordinator.js";
 import { createMaterialLineItemId } from "../../src/scopes/framing/calculators/ids.js";
 import { createOpeningKingStudCountAssumptionId } from "../../src/scopes/framing/calculators/createOpeningKingStudCountAssumption.js";
 import { createOpeningCrippleLayoutAssumptionId } from "../../src/scopes/framing/calculators/createOpeningCrippleLayoutAssumption.js";
 import { createOpeningRoughSillSizeAssumptionId } from "../../src/scopes/framing/calculators/createOpeningRoughSillSizeAssumption.js";
+import { calculateFramingTakeoff } from "../../src/scopes/framing/reset/calculateFramingTakeoff.js";
+import { emptyFramingConstruction } from "../../src/scopes/framing/reset/framingConstruction.schema.js";
 import type {
   OpeningsPayload,
-  ValidationPayload,
   WallFramingPayload,
 } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 import type { Opening } from "../../src/scopes/framing/schemas/opening.schema.js";
-import { createValidationIssue } from "../../src/scopes/framing/validators/createValidationIssue.js";
-import { createObjectTarget } from "../../src/scopes/framing/validators/ids.js";
 import {
   OPENING_QUANTITY_KEYS,
-  OPENINGS_RULE_IDS,
   STRUCTURAL_MEMBER_QUANTITY_KEYS,
   WALL_QUANTITY_KEYS,
 } from "../../src/scopes/framing/validators/rule-ids.js";
-import { validateOpenings } from "../../src/scopes/framing/validators/openings.validator.js";
-
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
 
 function resolvedTrace(
   propertyPath: string,
@@ -41,10 +30,7 @@ function resolvedTrace(
     propertyPath,
     method,
     explanation: `${propertyPath} is resolved.`,
-    evidenceIds: ["E-001"],
     assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
   };
 }
 
@@ -56,13 +42,6 @@ function buildWallFraming(
       {
         id: "W-001",
         objectType: "building-wall",
-        completion: complete,
-        reviewStatus: "no-review-required",
-        blockingStatus: "not-blocked",
-        evidenceIds: ["E-WALL"],
-        assumptionIds: [],
-        validationIssueIds: [],
-        reviewItemIds: [],
         resolutionTraces: [
           resolvedTrace("assembly.studSize"),
           resolvedTrace("assembly.heightFeet"),
@@ -72,6 +51,8 @@ function buildWallFraming(
         name: "Exterior wall W-001",
         level: "Level 1",
         wallType: "exterior-wood-stud-wall",
+        semanticTypeKey: null,
+        bindingAuthorityGrade: null,
         location: "exterior",
         bearingStatus: "non-bearing",
         isShearOrBraced: false,
@@ -93,13 +74,6 @@ function buildWallFraming(
       {
         id: "WS-001",
         objectType: "wall-segment",
-        completion: complete,
-        reviewStatus: "no-review-required",
-        blockingStatus: "not-blocked",
-        evidenceIds: ["E-SEG"],
-        assumptionIds: [],
-        validationIssueIds: [],
-        reviewItemIds: [],
         resolutionTraces: [resolvedTrace("lengthFeet")],
         parentWallId: "W-001",
         lengthFeet: 20,
@@ -113,13 +87,6 @@ function buildOpening(overrides: Partial<Opening> = {}): Opening {
   return {
     id: "O-001",
     objectType: "opening",
-    completion: complete,
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: ["E-O001"],
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces: [
       resolvedTrace("quantity"),
       resolvedTrace("dimensions.nominalWidthFeet"),
@@ -143,22 +110,13 @@ function buildOpening(overrides: Partial<Opening> = {}): Opening {
     fireRating: null,
     kingStudCount: null,
     jackStudCount: null,
+    positionOffsetFeetFromSegmentStart: null,
     ...overrides,
   };
 }
 
 function buildOpenings(openings: Opening[] = [buildOpening()]): OpeningsPayload {
   return { openings };
-}
-
-function emptyValidation(
-  issues: ValidationPayload["validationIssues"] = [],
-): ValidationPayload {
-  return {
-    validationIssues: issues,
-    validationResults: [],
-    reviewItems: [],
-  };
 }
 
 function kingStudLine(
@@ -277,25 +235,6 @@ describe("calculateOpeningFraming king stud slice", () => {
         }),
       ]),
       buildWallFraming(),
-      emptyValidation([
-        createValidationIssue({
-          ruleId: OPENINGS_RULE_IDS.quantityResolved,
-          level: "object",
-          severity: "critical",
-          ruleViolated: "Opening quantity must be resolved.",
-          explanation: "Quantity unresolved.",
-          target: createObjectTarget("O-001", "opening"),
-          recommendedUserAction: "Resolve quantity.",
-          evidenceIds: [],
-          quantityImpacts: [
-            {
-              quantityKey: OPENING_QUANTITY_KEYS.kingStuds,
-              description: "Blocked.",
-              canCalculate: false,
-            },
-          ],
-        }),
-      ]),
     );
 
     assert.equal(result.materials.length, 0);
@@ -403,47 +342,6 @@ describe("calculateOpeningFraming king stud slice", () => {
       buildWallFraming(),
     );
 
-    assert.equal(
-      result.materials.find(
-        (item) =>
-          item.id === createMaterialLineItemId(OPENING_QUANTITY_KEYS.jackStuds, "O-001"),
-      ),
-      undefined,
-    );
-    assert.ok(kingStudLine(result));
-  });
-
-  it("does not emit jack studs when jack quantity is validation-blocked", () => {
-    const opening = buildOpening({
-      jackStudCount: 2,
-      resolutionTraces: [
-        resolvedTrace("quantity"),
-        resolvedTrace("jackStudCount"),
-      ],
-    });
-    const validation = emptyValidation([
-      createValidationIssue({
-        ruleId: OPENINGS_RULE_IDS.jackStudCountResolved,
-        level: "object",
-        severity: "warning",
-        ruleViolated: "blocked",
-        explanation: "blocked",
-        target: createObjectTarget(opening.id, opening.objectType),
-        quantityImpacts: [
-          {
-            quantityKey: OPENING_QUANTITY_KEYS.jackStuds,
-            description: "blocked",
-            canCalculate: false,
-          },
-        ],
-      }),
-    ]);
-
-    const result = calculateOpeningFraming(
-      buildOpenings([opening]),
-      buildWallFraming(),
-      validation,
-    );
     assert.equal(
       result.materials.find(
         (item) =>
@@ -628,36 +526,6 @@ describe("calculateOpeningFraming cripple stud slice", () => {
     assert.equal(result.materials.length, 0);
   });
 
-  it("blocks only the cripple quantity targeted by validation", () => {
-    const result = calculateOpeningFraming(
-      buildOpenings(),
-      buildWallFraming(),
-      emptyValidation([
-        createValidationIssue({
-          ruleId: OPENINGS_RULE_IDS.quantityResolved,
-          level: "object",
-          severity: "critical",
-          ruleViolated: "Blocked below cripples only.",
-          explanation: "Below cripples blocked.",
-          target: createObjectTarget("O-001", "opening"),
-          recommendedUserAction: "Review.",
-          evidenceIds: [],
-          quantityImpacts: [
-            {
-              quantityKey: OPENING_QUANTITY_KEYS.cripplesBelow,
-              description: "Blocked.",
-              canCalculate: false,
-            },
-          ],
-        }),
-      ]),
-    );
-
-    assert.equal(cripplesAboveLine(result)?.quantity, 2);
-    assert.equal(cripplesBelowLine(result), undefined);
-    assert.equal(kingStudLine(result)?.quantity, 2);
-    assert.equal(roughSillLine(result)?.quantity, 3.5);
-  });
 });
 
 describe("calculateOpeningFraming rough sill slice", () => {
@@ -746,25 +614,6 @@ describe("calculateOpeningFraming rough sill slice", () => {
         }),
       ]),
       buildWallFraming(),
-      emptyValidation([
-        createValidationIssue({
-          ruleId: OPENINGS_RULE_IDS.quantityResolved,
-          level: "object",
-          severity: "critical",
-          ruleViolated: "Opening quantity must be resolved.",
-          explanation: "Quantity unresolved.",
-          target: createObjectTarget("O-001", "opening"),
-          recommendedUserAction: "Resolve quantity.",
-          evidenceIds: [],
-          quantityImpacts: [
-            {
-              quantityKey: OPENING_QUANTITY_KEYS.roughSill,
-              description: "Blocked.",
-              canCalculate: false,
-            },
-          ],
-        }),
-      ]),
     );
 
     assert.equal(roughSillLine(result), undefined);
@@ -919,47 +768,38 @@ describe("calculateOpeningFraming rough sill slice", () => {
   });
 });
 
-describe("coordinateFramingCalculations opening quantities", () => {
+describe("calculateFramingTakeoff opening quantities", () => {
   it("preserves baseline wall studs and header while adding opening materials", () => {
-    const wallFraming = buildWallFraming();
-    const openings = buildOpenings();
-    const payload = coordinateFramingCalculations({
-      wallFraming,
-      openings,
-      structuralMembers: {
-        structuralMembers: [
-          {
-            id: "SM-HDR-001",
-            objectType: "structural-member",
-            completion: complete,
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
-            evidenceIds: ["E-HDR"],
-            assumptionIds: [],
-            validationIssueIds: [],
-            reviewItemIds: [],
-            resolutionTraces: [
-              resolvedTrace("category"),
-              resolvedTrace("materialType"),
-              resolvedTrace("size"),
-              resolvedTrace("lengthFeet"),
-              resolvedTrace("quantity"),
-            ],
-            category: "header",
-            materialType: "dimensional-lumber",
-            size: "2x10",
-            plyCount: null,
-            lengthFeet: 6,
-            quantity: 1,
-            location: null,
-            associatedObjectIds: [],
-            supportedObjectIds: ["O-001"],
-            supportingObjectIds: [],
-            connectorIds: [],
-          },
-        ],
-      },
-    });
+    const construction = emptyFramingConstruction();
+    construction.walls = buildWallFraming();
+    construction.openings = buildOpenings();
+    construction.structuralMembers = {
+      structuralMembers: [
+        {
+          id: "SM-HDR-001",
+          objectType: "structural-member",
+          resolutionTraces: [
+            resolvedTrace("category"),
+            resolvedTrace("materialType"),
+            resolvedTrace("size"),
+            resolvedTrace("lengthFeet"),
+            resolvedTrace("quantity"),
+          ],
+          category: "header",
+          materialType: "dimensional-lumber",
+          size: "2x10",
+          plyCount: null,
+          lengthFeet: 6,
+          quantity: 1,
+          location: null,
+          associatedObjectIds: [],
+          supportedObjectIds: ["O-001"],
+          supportingObjectIds: [],
+          connectorIds: [],
+        },
+      ],
+    };
+    const payload = calculateFramingTakeoff(construction);
 
     const studs = payload.materials.find(
       (item) =>
@@ -997,108 +837,3 @@ describe("coordinateFramingCalculations opening quantities", () => {
   });
 });
 
-describe("validateOpenings quantity and king default", () => {
-  it("blocks opening-framing quantities when quantity is unresolved", () => {
-    const batch = validateOpenings({
-      payload: {
-        openings: [
-          buildOpening({
-            quantity: null,
-            resolutionTraces: [],
-          }),
-        ],
-      },
-      parentObjectsById: new Map([
-        ["WS-001", { objectId: "WS-001", objectType: "wall-segment" }],
-        ["W-001", { objectId: "W-001", objectType: "building-wall" }],
-      ]),
-    });
-
-    const issue = batch.validationIssues.find(
-      (entry) => entry.ruleId === OPENINGS_RULE_IDS.quantityResolved,
-    );
-    assert.ok(issue);
-    assert.ok(
-      issue?.quantityImpacts.some(
-        (impact) =>
-          impact.quantityKey === OPENING_QUANTITY_KEYS.roughSill &&
-          impact.canCalculate === false,
-      ),
-    );
-  });
-
-  it("blocks rough sill but not king studs when rough width is unresolved", () => {
-    const batch = validateOpenings({
-      payload: {
-        openings: [
-          buildOpening({
-            dimensions: {
-              nominalWidthFeet: 3,
-              nominalHeightFeet: 4,
-              roughWidthFeet: null,
-              roughHeightFeet: null,
-            },
-            resolutionTraces: [
-              resolvedTrace("quantity"),
-              resolvedTrace("dimensions.nominalWidthFeet"),
-              resolvedTrace("dimensions.nominalHeightFeet"),
-            ],
-          }),
-        ],
-      },
-      parentObjectsById: new Map([
-        ["WS-001", { objectId: "WS-001", objectType: "wall-segment" }],
-        ["W-001", { objectId: "W-001", objectType: "building-wall" }],
-      ]),
-    });
-
-    const issue = batch.validationIssues.find(
-      (entry) => entry.ruleId === OPENINGS_RULE_IDS.roughDimensionsResolved,
-    );
-    assert.ok(issue);
-    assert.equal(
-      issue?.quantityImpacts.find(
-        (impact) => impact.quantityKey === OPENING_QUANTITY_KEYS.framing,
-      )?.canCalculate,
-      true,
-    );
-    assert.equal(
-      issue?.quantityImpacts.find(
-        (impact) => impact.quantityKey === OPENING_QUANTITY_KEYS.roughSill,
-      )?.canCalculate,
-      false,
-    );
-  });
-
-  it("creates review for industry-default rough sill size when explicit size is absent", () => {
-    const batch = validateOpenings({
-      payload: { openings: [buildOpening()] },
-      parentObjectsById: new Map([
-        ["WS-001", { objectId: "WS-001", objectType: "wall-segment" }],
-        ["W-001", { objectId: "W-001", objectType: "building-wall" }],
-      ]),
-    });
-
-    const reviewItem = batch.reviewItems.find(
-      (entry) => entry.title.includes("Confirm rough sill size"),
-    );
-    assert.ok(reviewItem);
-    assert.equal(reviewItem?.blockingStatus, "not-blocked");
-  });
-
-  it("creates review for industry-default king count when explicit count is absent", () => {
-    const batch = validateOpenings({
-      payload: { openings: [buildOpening()] },
-      parentObjectsById: new Map([
-        ["WS-001", { objectId: "WS-001", objectType: "wall-segment" }],
-        ["W-001", { objectId: "W-001", objectType: "building-wall" }],
-      ]),
-    });
-
-    const reviewItem = batch.reviewItems.find(
-      (entry) => entry.title.includes("Confirm king stud count"),
-    );
-    assert.ok(reviewItem);
-    assert.equal(reviewItem?.blockingStatus, "not-blocked");
-  });
-});

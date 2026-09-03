@@ -9,7 +9,6 @@ import type {
   ResolutionMethod,
 } from "../../../core/schemas/resolved-object.schema.js";
 import type { ReviewItem } from "../../../core/schemas/review-item.schema.js";
-import type { Completion } from "../../../core/schemas/status.schema.js";
 import type { UserDecision } from "../../../core/schemas/user-decision.schema.js";
 import {
   roofFramingPayloadSchema,
@@ -44,8 +43,6 @@ import {
 import {
   ROOF_PLANE_PROPERTY_PATHS,
   ROOF_SYSTEM_PROPERTY_PATHS,
-  isResolvedRoofPlanePropertyValue,
-  isResolvedRoofSystemPropertyValue,
   isRoofFramingUserDecisionPropertyPath,
   normalizeRoofPlaneCandidate,
   normalizeRoofPlaneRelationshipCandidate,
@@ -149,17 +146,12 @@ function createTrace(
   propertyPath: string,
   method: ResolutionMethod,
   explanation: string,
-  evidenceIds: readonly EvidenceId[],
 ): PropertyResolutionTrace {
   return {
     propertyPath,
     method,
     explanation,
-    evidenceIds: uniqueSortedIds(evidenceIds),
     assumptionIds: [],
-    userDecisionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
   };
 }
 
@@ -175,12 +167,7 @@ function tracesForDecision(
         : `Resolved from corroborating project evidence ${decision.evidenceIds.join(", ")}.`;
 
     return [
-      createTrace(
-        propertyPath,
-        "explicit-project-value",
-        explanation,
-        decision.evidenceIds,
-      ),
+      createTrace(propertyPath, "explicit-project-value", explanation),
     ];
   }
 
@@ -190,7 +177,6 @@ function tracesForDecision(
         propertyPath,
         "unresolved",
         `Conflicting candidate values (${formatValues(records, propertyPath)}); this slice does not apply precedence.`,
-        decision.evidenceIds,
       ),
     ];
   }
@@ -228,23 +214,6 @@ function resolvePropertyAuthority(
   return {
     decision,
     traces: tracesForDecision(propertyPath, decision, records),
-  };
-}
-
-function createCompletion(resolvedCount: number, totalCount: number): Completion {
-  const percentage = totalCount === 0 ? 0 : (resolvedCount / totalCount) * 100;
-  const status =
-    resolvedCount === 0
-      ? "not-started"
-      : resolvedCount === totalCount
-        ? "complete"
-        : "partial";
-
-  return {
-    status,
-    percentage,
-    completedItems: resolvedCount,
-    totalItems: totalCount,
   };
 }
 
@@ -287,10 +256,9 @@ function groupBySubjectKind(
 function collectRelationshipTags(
   records: readonly Evidence[],
   propertyPath: RoofPlaneRelationshipPropertyPath,
-): { tags: string[]; traces: PropertyResolutionTrace[]; evidenceIds: EvidenceId[] } {
+): { tags: string[]; traces: PropertyResolutionTrace[] } {
   const tags: string[] = [];
   const traces: PropertyResolutionTrace[] = [];
-  const evidenceIds: EvidenceId[] = [];
 
   for (const record of records) {
     if (record.propertyPath !== propertyPath) {
@@ -306,13 +274,11 @@ function collectRelationshipTags(
     }
 
     tags.push(tag);
-    evidenceIds.push(record.id);
     traces.push(
       createTrace(
         propertyPath,
         "explicit-project-value",
         `Resolved ${propertyPath} from explicit project evidence ${record.id}.`,
-        [record.id],
       ),
     );
   }
@@ -320,7 +286,6 @@ function collectRelationshipTags(
   return {
     tags: [...new Set(tags)].sort(compareIds),
     traces,
-    evidenceIds: uniqueSortedIds(evidenceIds),
   };
 }
 
@@ -335,12 +300,7 @@ function convergenceTraces(
     return [];
   }
   return [
-    createTrace(
-      "subjectKey",
-      "supported-inference",
-      note,
-      cluster.records.map((record) => record.id),
-    ),
+    createTrace("subjectKey", "supported-inference", note),
   ];
 }
 
@@ -405,32 +365,9 @@ function resolveOneSystem(
     },
   };
 
-  const resolvedCount = ROOF_SYSTEM_PROPERTY_PATHS.filter((propertyPath) => {
-    if (propertyPath.startsWith("assembly.")) {
-      const key = propertyPath.split(".")[1] as keyof typeof values.assembly;
-      return values.assembly[key] !== null;
-    }
-
-    const scalar = values[propertyPath as keyof typeof values];
-    return isResolvedRoofSystemPropertyValue(
-      propertyPath,
-      typeof scalar === "string" || typeof scalar === "number" ? scalar : null,
-    );
-  }).length;
-
   return {
     id: systemId,
     objectType: "roof-framing-system",
-    completion: createCompletion(
-      resolvedCount,
-      ROOF_SYSTEM_PROPERTY_PATHS.length,
-    ),
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: uniqueSortedIds(records.map((record) => record.id)),
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces,
     ...values,
     planeIds: [],
@@ -515,32 +452,9 @@ function resolveOnePlane(
     areaSquareFeet: resolvedNumberValue(decisions.areaSquareFeet, null),
   };
 
-  const resolvedCount =
-    ROOF_PLANE_PROPERTY_PATHS.filter((propertyPath) =>
-      isResolvedRoofPlanePropertyValue(propertyPath, values[propertyPath]),
-    ).length + (parentSystemTag ? 1 : 0);
-
-  const totalItems = ROOF_PLANE_PROPERTY_PATHS.length + 1;
-
   return {
     id: planeId,
     objectType: "roof-plane",
-    completion: createCompletion(resolvedCount, totalItems),
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: uniqueSortedIds([
-      ...records.map((record) => record.id),
-      ...(parentSystemDecision.kind === "resolved" ||
-      parentSystemDecision.kind === "conflict"
-        ? parentSystemDecision.evidenceIds
-        : []),
-      ...boundingWalls.evidenceIds,
-      ...openings.evidenceIds,
-      ...members.evidenceIds,
-    ]),
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces,
     parentSystemId,
     ...values,
@@ -598,11 +512,6 @@ function applyExplicitParentSystemLink(
     ...plane,
     parentSystemId: link.systemId,
     resolutionTraces: [...filteredTraces, parentTrace],
-    evidenceIds: uniqueSortedIds([...plane.evidenceIds, ...link.evidenceIds]),
-    completion: createCompletion(
-      (plane.completion.completedItems ?? 0) + 1,
-      plane.completion.totalItems ?? ROOF_PLANE_PROPERTY_PATHS.length + 1,
-    ),
   };
 }
 

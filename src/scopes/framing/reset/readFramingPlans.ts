@@ -45,17 +45,22 @@ import {
   type PageClassificationPayload,
   type PlanReadingOrderPayload,
 } from "../schemas/framing-artifacts.schema.js";
+import { resolveFloorFraming } from "../resolvers/resolveFloorFraming.js";
+import { resolveOpenings } from "../resolvers/resolveOpenings.js";
+import { resolveRoofFraming } from "../resolvers/resolveRoofFraming.js";
+import { resolveSheathing } from "../resolvers/resolveSheathing.js";
+import { resolveStructuralMembers } from "../resolvers/resolveStructuralMembers.js";
+import { resolveWallFraming } from "../resolvers/resolveWallFraming.js";
 import {
   framingConstructionSchema,
   type FramingConstruction,
 } from "./framingConstruction.schema.js";
-import { interpretFramingConstruction } from "./interpretFramingConstruction.js";
 
 export type ReadFramingPlansInput = {
   projectId: string;
   planIndex: PlanIndex;
   useMockAi: boolean;
-  /** When set, skip live extraction and interpret this Evidence directly. */
+  /** When set, skip live extraction and resolve this Evidence directly. */
   evidenceReplay?: readonly Evidence[];
   writeDebugArtifacts?: boolean;
   artifactsRoot?: string;
@@ -200,6 +205,21 @@ async function writeDebugJson(
   const artifactPath = path.join(directory, fileName);
   await writeFile(artifactPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
   return artifactPath;
+}
+
+function buildFramingConstructionFromEvidence(
+  evidence: readonly Evidence[],
+): FramingConstruction {
+  const walls = resolveWallFraming([...evidence]);
+  const openings = resolveOpenings([...evidence], { wallFraming: walls });
+  return framingConstructionSchema.parse({
+    walls,
+    openings,
+    structuralMembers: resolveStructuralMembers([...evidence]),
+    floorFraming: resolveFloorFraming([...evidence]),
+    roofFraming: resolveRoofFraming([...evidence]),
+    sheathing: resolveSheathing([...evidence]),
+  });
 }
 
 /**
@@ -474,9 +494,7 @@ export async function readFramingPlans(
     );
   }
 
-  const construction = framingConstructionSchema.parse(
-    interpretFramingConstruction(evidence),
-  );
+  const construction = buildFramingConstructionFromEvidence(evidence);
 
   if (input.writeDebugArtifacts) {
     debugPaths.push(

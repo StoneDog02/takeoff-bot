@@ -15,22 +15,12 @@ import type {
 } from "../../src/scopes/framing/schemas/roof-framing.schema.js";
 import { ROOF_QUANTITY_KEYS } from "../../src/scopes/framing/validators/rule-ids.js";
 
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
-
 function resolvedTrace(propertyPath: string) {
   return {
     propertyPath,
     method: "explicit-project-value" as const,
     explanation: `${propertyPath} is explicit on the plans.`,
-    evidenceIds: ["E-RFS-001"],
     assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
   };
 }
 
@@ -40,13 +30,6 @@ function buildSystem(
   return {
     id: "RFS-001",
     objectType: "roof-framing-system",
-    completion: complete,
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: ["E-RFS-001"],
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces: [
       resolvedTrace("assembly.framingType"),
       resolvedTrace("assembly.memberSize"),
@@ -69,13 +52,6 @@ function buildPlane(overrides: Partial<RoofPlane> = {}): RoofPlane {
   return {
     id: "RFP-001",
     objectType: "roof-plane",
-    completion: complete,
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: ["E-RFP-001"],
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces: [
       resolvedTrace("spanDirection"),
       resolvedTrace("rafterLayoutLengthFeet"),

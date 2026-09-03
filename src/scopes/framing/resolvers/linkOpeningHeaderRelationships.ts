@@ -127,17 +127,12 @@ function createTrace(
   propertyPath: string,
   method: PropertyResolutionTrace["method"],
   explanation: string,
-  evidenceIds: readonly EvidenceId[],
 ): PropertyResolutionTrace {
   return {
     propertyPath,
     method,
     explanation,
-    evidenceIds: uniqueSortedIds(evidenceIds),
     assumptionIds: [],
-    userDecisionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
   };
 }
 
@@ -153,7 +148,7 @@ function tracesForTagDecision(
         : `Resolved from corroborating project evidence ${decision.evidenceIds.join(", ")}.`;
 
     return [
-      createTrace(propertyPath, "explicit-project-value", explanation, decision.evidenceIds),
+      createTrace(propertyPath, "explicit-project-value", explanation),
     ];
   }
 
@@ -163,7 +158,6 @@ function tracesForTagDecision(
         propertyPath,
         "unresolved",
         `Conflicting candidate values (${formatValues(records, propertyPath)}); this slice does not apply precedence.`,
-        decision.evidenceIds,
       ),
     ];
   }
@@ -240,7 +234,6 @@ function resolveHeaderMemberId(
         "headerMemberId",
         "deterministic-calculation",
         `Mapped explicit header tag ${decision.value} to resolved structural member ${headerMemberId}.`,
-        decision.evidenceIds,
       ),
     );
   } else {
@@ -249,7 +242,6 @@ function resolveHeaderMemberId(
         "headerMemberId",
         "deterministic-calculation",
         `Mapped explicit header tag ${decision.value} to ObjectId ${headerMemberId}, but no matching resolved structural member exists.`,
-        decision.evidenceIds,
       ),
     );
   }
@@ -330,7 +322,6 @@ function applyMemberSupportedOpeningTags(
             "headerMemberId",
             "deterministic-calculation",
             `Mapped explicit supported opening tag ${decision.value} from structural member ${member.id}.`,
-            decision.evidenceIds,
           ),
         ],
       });

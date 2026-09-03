@@ -9,7 +9,6 @@ import type {
   ResolutionMethod,
 } from "../../../core/schemas/resolved-object.schema.js";
 import type { ReviewItem } from "../../../core/schemas/review-item.schema.js";
-import type { Completion } from "../../../core/schemas/status.schema.js";
 import type { UserDecision } from "../../../core/schemas/user-decision.schema.js";
 import {
   structuralMembersPayloadSchema,
@@ -127,17 +126,12 @@ function createTrace(
   propertyPath: string,
   method: ResolutionMethod,
   explanation: string,
-  evidenceIds: readonly EvidenceId[],
 ): PropertyResolutionTrace {
   return {
     propertyPath,
     method,
     explanation,
-    evidenceIds: uniqueSortedIds(evidenceIds),
     assumptionIds: [],
-    userDecisionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
   };
 }
 
@@ -153,12 +147,7 @@ function tracesForDecision(
         : `Resolved from corroborating project evidence ${decision.evidenceIds.join(", ")}.`;
 
     return [
-      createTrace(
-        propertyPath,
-        "explicit-project-value",
-        explanation,
-        decision.evidenceIds,
-      ),
+      createTrace(propertyPath, "explicit-project-value", explanation),
     ];
   }
 
@@ -168,7 +157,6 @@ function tracesForDecision(
         propertyPath,
         "unresolved",
         `Conflicting candidate values (${formatValues(records, propertyPath)}); this slice does not apply precedence.`,
-        decision.evidenceIds,
       ),
     ];
   }
@@ -205,23 +193,6 @@ function resolvePropertyAuthority(
   };
 }
 
-function createCompletion(resolvedCount: number, totalCount: number): Completion {
-  const percentage = totalCount === 0 ? 0 : (resolvedCount / totalCount) * 100;
-  const status =
-    resolvedCount === 0
-      ? "not-started"
-      : resolvedCount === totalCount
-        ? "complete"
-        : "partial";
-
-  return {
-    status,
-    percentage,
-    completedItems: resolvedCount,
-    totalItems: totalCount,
-  };
-}
-
 function resolvedStringValue(
   decision: CandidateDecision,
   fallback: string | null,
@@ -234,21 +205,6 @@ function resolvedNumberValue(
   fallback: number | null,
 ): number | null {
   return decision.kind === "resolved" ? (decision.value as number) : fallback;
-}
-
-function isResolvedPropertyValue(
-  propertyPath: StructuralMemberPropertyPath,
-  value: string | number | null,
-): boolean {
-  if (value === null) {
-    return false;
-  }
-
-  if (propertyPath === "category") {
-    return value !== "unknown";
-  }
-
-  return true;
 }
 
 function groupBySubjectKey(evidence: readonly Evidence[]): Map<string, Evidence[]> {
@@ -281,12 +237,7 @@ function convergenceTraces(
     return [];
   }
   return [
-    createTrace(
-      "subjectKey",
-      "supported-inference",
-      note,
-      cluster.records.map((record) => record.id),
-    ),
+    createTrace("subjectKey", "supported-inference", note),
   ];
 }
 
@@ -342,24 +293,9 @@ function resolveOneMember(
     plyCount: resolvedNumberValue(decisions.plyCount, null),
   };
 
-  const completionPaths = STRUCTURAL_MEMBER_PROPERTY_PATHS.filter(
-    (propertyPath) => propertyPath !== "plyCount",
-  );
-  const resolvedCount = completionPaths.filter((propertyPath) => {
-    const value = values[propertyPath];
-    return isResolvedPropertyValue(propertyPath, value);
-  }).length;
-
   return {
     id: memberId,
     objectType: "structural-member",
-    completion: createCompletion(resolvedCount, completionPaths.length),
-    reviewStatus: "no-review-required",
-    blockingStatus: "not-blocked",
-    evidenceIds: uniqueSortedIds(records.map((record) => record.id)),
-    assumptionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
     resolutionTraces,
     ...values,
     associatedObjectIds: [],

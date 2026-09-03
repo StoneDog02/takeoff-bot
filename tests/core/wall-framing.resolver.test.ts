@@ -8,11 +8,7 @@ import {
   createWallSegmentObjectId,
 } from "../../src/scopes/framing/resolvers/ids.js";
 import { resolveWallFraming } from "../../src/scopes/framing/resolvers/resolveWallFraming.js";
-import {
-  WALL_FRAMING_RULE_IDS,
-  WALL_QUANTITY_KEYS,
-} from "../../src/scopes/framing/validators/rule-ids.js";
-import { validateWallFraming } from "../../src/scopes/framing/validators/wall-framing.validator.js";
+import { WALL_QUANTITY_KEYS } from "../../src/scopes/framing/validators/rule-ids.js";
 import { calculateWallFraming } from "../../src/scopes/framing/calculators/calculateWallFraming.js";
 import { createMaterialLineItemId } from "../../src/scopes/framing/calculators/ids.js";
 
@@ -252,7 +248,7 @@ describe("resolveWallFraming", () => {
       (entry) => entry.propertyPath === "assembly.studSize",
     );
     assert.equal(trace?.method, "explicit-project-value");
-    assert.deepEqual(trace?.evidenceIds, ["E-W001-SIZE"]);
+    assert.match(trace?.explanation ?? "", /E\-W001\-SIZE/);
   });
 
   it("resolves identical candidates and preserves every supporting Evidence ID", () => {
@@ -276,10 +272,8 @@ describe("resolveWallFraming", () => {
       (entry) => entry.propertyPath === "assembly.studSpacingInches",
     );
     assert.equal(trace?.method, "explicit-project-value");
-    assert.deepEqual(trace?.evidenceIds, [
-      "E-W001-SPACING-NOTE",
-      "E-W001-SPACING-SCHEDULE",
-    ]);
+    assert.match(trace?.explanation ?? "", /E\-W001\-SPACING\-NOTE/);
+    assert.match(trace?.explanation ?? "", /E\-W001\-SPACING\-SCHEDULE/);
   });
 
   it("leaves conflicting candidates unresolved without choosing a winner", () => {
@@ -303,10 +297,6 @@ describe("resolveWallFraming", () => {
       (entry) => entry.propertyPath === "assembly.studSpacingInches",
     );
     assert.equal(trace?.method, "unresolved");
-    assert.deepEqual(trace?.evidenceIds, [
-      "E-W001-SPACING-NOTE",
-      "E-W001-SPACING-SCHEDULE",
-    ]);
     assert.match(trace?.explanation ?? "", /does not apply precedence/);
   });
 
@@ -392,23 +382,14 @@ describe("resolveWallFraming", () => {
     assert.equal(segment.parentWallId, wall.id);
   });
 
-  it("does not create assumptions or validation records", () => {
+  it("does not attach assumption ids on resolution traces", () => {
     const payload = resolveWallFraming(completeWallEvidence());
     const wall = payload.walls[0]!;
     const segment = payload.segments[0]!;
 
-    assert.deepEqual(wall.assumptionIds, []);
-    assert.deepEqual(segment.assumptionIds, []);
-    assert.deepEqual(wall.validationIssueIds, []);
-    assert.deepEqual(segment.validationIssueIds, []);
-    assert.deepEqual(wall.reviewItemIds, []);
-    assert.deepEqual(segment.reviewItemIds, []);
     assert.equal(
       [...wall.resolutionTraces, ...segment.resolutionTraces].every(
-        (trace) =>
-          trace.assumptionIds.length === 0 &&
-          trace.validationIssueIds.length === 0 &&
-          trace.reviewItemIds.length === 0,
+        (trace) => trace.assumptionIds.length === 0,
       ),
       true,
     );
@@ -419,44 +400,6 @@ describe("resolveWallFraming", () => {
   it("parses output through the WallFramingPayload schema", () => {
     const payload = resolveWallFraming(completeWallEvidence());
     assert.deepEqual(wallFramingPayloadSchema.parse(payload), payload);
-  });
-
-  it("lets Wall validation flag unresolved required properties after resolution", () => {
-    const payload = resolveWallFraming([
-      evidence({
-        id: "E-W001-LOCATION",
-        propertyPath: "location",
-        candidateValue: "exterior",
-      }),
-    ]);
-    const batch = validateWallFraming(payload);
-
-    assert.equal(payload.walls[0]?.wallType, null);
-    assert.equal(payload.segments[0]?.lengthFeet, null);
-    assert.ok(
-      batch.validationResults.some(
-        (result) =>
-          result.ruleId === WALL_FRAMING_RULE_IDS.typeResolved &&
-          result.outcome === "failed",
-      ),
-    );
-    assert.ok(
-      batch.validationResults.some(
-        (result) =>
-          result.ruleId === WALL_FRAMING_RULE_IDS.geometryLengthResolved &&
-          result.outcome === "failed",
-      ),
-    );
-    assert.ok(
-      batch.validationIssues.some(
-        (issue) => issue.ruleId === WALL_FRAMING_RULE_IDS.typeResolved,
-      ),
-    );
-    assert.ok(
-      batch.reviewItems.some(
-        (item) => item.validationIssueIds.length > 0,
-      ),
-    );
   });
 
   it("does not attach resolved traces to properties that remain missing", () => {
@@ -585,12 +528,9 @@ describe("resolveWallFraming", () => {
       );
 
       assert.equal(trace001?.method, "explicit-project-value");
-      assert.deepEqual(trace001?.evidenceIds, ["E-W001-GEOMETRY"]);
+      assert.match(trace001?.explanation ?? "", /E\-W001\-GEOMETRY/);
       assert.equal(trace002?.method, "unresolved");
-      assert.deepEqual(trace002?.evidenceIds, [
-        "E-W002-GEOMETRY-A",
-        "E-W002-GEOMETRY-B",
-      ]);
+      assert.match(trace002?.explanation ?? "", /does not apply precedence/);
     });
 
     it("resolves identical candidates within one subject and preserves supporting Evidence IDs", () => {
@@ -615,10 +555,8 @@ describe("resolveWallFraming", () => {
         (entry) => entry.propertyPath === "assembly.studSpacingInches",
       );
       assert.equal(trace?.method, "explicit-project-value");
-      assert.deepEqual(trace?.evidenceIds, [
-        "E-W002-SPACING-NOTE",
-        "E-W002-SPACING-SCHEDULE",
-      ]);
+      assert.match(trace?.explanation ?? "", /E\-W002\-SPACING\-NOTE/);
+      assert.match(trace?.explanation ?? "", /E\-W002\-SPACING\-SCHEDULE/);
     });
 
     it("returns deterministic output ordering regardless of input Evidence order", () => {
@@ -658,8 +596,6 @@ describe("resolveWallFraming", () => {
       assert.equal(payload.walls[0]?.id, "W-001");
       assert.equal(payload.walls[0]?.wallType, "wood stud wall");
       assert.equal(payload.walls[0]?.location, "exterior");
-      assert.ok(payload.walls[0]?.evidenceIds.includes("E-W001-CLASS"));
-      assert.ok(payload.walls[0]?.evidenceIds.includes("E-W001-SPACE-CLASS"));
       assert.ok(
         payload.walls[0]?.resolutionTraces.some(
           (trace) =>
@@ -706,19 +642,13 @@ describe("resolveWallFraming", () => {
       assert.equal(wallLabel.name, "Wall W-001");
     });
 
-    it("does not create assumptions, validation, or review records for multi-wall output", () => {
+    it("does not attach assumption ids on multi-wall resolution traces", () => {
       const payload = resolveWallFraming(completeTwoWallEvidence());
 
       for (const object of [...payload.walls, ...payload.segments]) {
-        assert.deepEqual(object.assumptionIds, []);
-        assert.deepEqual(object.validationIssueIds, []);
-        assert.deepEqual(object.reviewItemIds, []);
         assert.equal(
           object.resolutionTraces.every(
-            (trace) =>
-              trace.assumptionIds.length === 0 &&
-              trace.validationIssueIds.length === 0 &&
-              trace.reviewItemIds.length === 0,
+            (trace) => trace.assumptionIds.length === 0,
           ),
           true,
         );
@@ -728,10 +658,9 @@ describe("resolveWallFraming", () => {
       assert.equal("reviewItems" in payload, false);
     });
 
-    it("lets validation and calculation produce independent outputs for two resolved walls", () => {
+    it("calculates independent outputs for two resolved walls", () => {
       const payload = resolveWallFraming(completeTwoWallEvidence());
-      const validation = validateWallFraming(payload);
-      const materials = calculateWallFraming(payload, validation);
+      const materials = calculateWallFraming(payload);
 
       const stud001 = materials.find(
         (item) =>
@@ -815,7 +744,7 @@ describe("resolveWallFraming", () => {
       assert.equal(
         payload.segments[0]?.resolutionTraces.find(
           (trace) => trace.propertyPath === "lengthFeet",
-        )?.evidenceIds.includes("E-MEMBER-LENGTH"),
+        )?.explanation.includes("E-MEMBER-LENGTH"),
         false,
       );
     });

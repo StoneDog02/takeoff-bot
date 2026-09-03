@@ -2,21 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { calculateWallFraming } from "../../src/scopes/framing/calculators/calculateWallFraming.js";
-import type {
-  ValidationPayload,
-  WallFramingPayload,
-} from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
+import type { WallFramingPayload } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 import { framingMaterialLineItemSchema } from "../../src/scopes/framing/schemas/material.schema.js";
-import { createValidationIssue } from "../../src/scopes/framing/validators/createValidationIssue.js";
-import { createObjectTarget } from "../../src/scopes/framing/validators/ids.js";
-import { WALL_QUANTITY_KEYS } from "../../src/scopes/framing/validators/rule-ids.js";
-
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
 
 function buildCompletePayload(
   overrides: Partial<WallFramingPayload> = {},
@@ -26,54 +13,37 @@ function buildCompletePayload(
       {
         id: "W-001",
         objectType: "building-wall",
-        completion: complete,
-        reviewStatus: "no-review-required",
-        blockingStatus: "not-blocked",
-        evidenceIds: ["E-001"],
-        assumptionIds: ["A-WALL"],
-        validationIssueIds: [],
-        reviewItemIds: ["RI-WALL"],
         resolutionTraces: [
           {
             propertyPath: "assembly.heightFeet",
             method: "explicit-project-value",
             explanation: "Height is explicit on the plan.",
-            evidenceIds: ["E-001"],
             assumptionIds: [],
-            validationIssueIds: [],
-            reviewItemIds: [],
           },
           {
             propertyPath: "assembly.studSpacingInches",
             method: "explicit-project-value",
             explanation: "Spacing is explicit on the plan.",
-            evidenceIds: ["E-001"],
             assumptionIds: ["A-SPACING"],
-            validationIssueIds: [],
-            reviewItemIds: ["RI-SPACING"],
           },
           {
             propertyPath: "assembly.studSize",
             method: "explicit-project-value",
             explanation: "Stud size is explicit on the plan.",
-            evidenceIds: ["E-001"],
             assumptionIds: [],
-            validationIssueIds: [],
-            reviewItemIds: [],
           },
           {
             propertyPath: "assembly.plateCount",
             method: "explicit-project-value",
             explanation: "Plate count is explicit on the plan.",
-            evidenceIds: ["E-001"],
             assumptionIds: ["A-PLATES"],
-            validationIssueIds: [],
-            reviewItemIds: [],
           },
         ],
         name: "Exterior wall W-001",
         level: "Level 1",
         wallType: "exterior-wood-stud-wall",
+        semanticTypeKey: null,
+        bindingAuthorityGrade: null,
         location: "exterior",
         bearingStatus: "non-bearing",
         isShearOrBraced: false,
@@ -94,22 +64,12 @@ function buildCompletePayload(
       {
         id: "WS-001",
         objectType: "wall-segment",
-        completion: complete,
-        reviewStatus: "no-review-required",
-        blockingStatus: "not-blocked",
-        evidenceIds: ["E-002"],
-        assumptionIds: ["A-SEG"],
-        validationIssueIds: [],
-        reviewItemIds: ["RI-SEG"],
         resolutionTraces: [
           {
             propertyPath: "lengthFeet",
             method: "explicit-project-value",
             explanation: "Length is explicit on the plan.",
-            evidenceIds: ["E-002"],
             assumptionIds: ["A-LENGTH"],
-            validationIssueIds: [],
-            reviewItemIds: ["RI-LENGTH"],
           },
         ],
         parentWallId: "W-001",
@@ -155,16 +115,6 @@ function withSegment(
         ...segment,
       },
     ],
-  };
-}
-
-function emptyValidation(
-  issues: ValidationPayload["validationIssues"] = [],
-): ValidationPayload {
-  return {
-    validationIssues: issues,
-    validationResults: [],
-    reviewItems: [],
   };
 }
 
@@ -270,10 +220,7 @@ describe("calculateWallFraming", () => {
           propertyPath: "lengthFeet",
           method: "unresolved",
           explanation: "Length was not resolved.",
-          evidenceIds: [],
           assumptionIds: [],
-          validationIssueIds: [],
-          reviewItemIds: [],
         },
       ],
     });
@@ -292,7 +239,6 @@ describe("calculateWallFraming", () => {
               method: "unresolved" as const,
               explanation: "Stud spacing was not resolved.",
               assumptionIds: [],
-              reviewItemIds: [],
             }
           : trace,
       ),
@@ -314,7 +260,6 @@ describe("calculateWallFraming", () => {
               method: "unresolved" as const,
               explanation: "Plate count was not resolved.",
               assumptionIds: [],
-              reviewItemIds: [],
             }
           : trace,
       ),
@@ -349,70 +294,13 @@ describe("calculateWallFraming", () => {
     );
   });
 
-  it("suppresses only the quantity Validation marks as non-calculable", () => {
-    const payload = buildCompletePayload();
-    const wall = payload.walls[0]!;
-    const validation = emptyValidation([
-      createValidationIssue({
-        ruleId: "wall.geometry.length.resolved",
-        level: "calculation",
-        severity: "blocking",
-        ruleViolated: "Stud quantity cannot be calculated.",
-        explanation: "Validation blocked studs only.",
-        target: createObjectTarget(wall.id, wall.objectType),
-        quantityImpacts: [
-          {
-            quantityKey: WALL_QUANTITY_KEYS.studs,
-            description: "Stud quantities cannot be calculated.",
-            canCalculate: false,
-          },
-          {
-            quantityKey: WALL_QUANTITY_KEYS.plates,
-            description: "Plate linear feet may still be calculated.",
-            canCalculate: true,
-          },
-        ],
-      }),
-      createValidationIssue({
-        ruleId: "wall.location.resolved",
-        level: "object",
-        severity: "warning",
-        ruleViolated: "Location is unrelated to these quantities.",
-        explanation: "Unrelated classification review.",
-        target: createObjectTarget(wall.id, wall.objectType),
-        quantityImpacts: [
-          {
-            quantityKey: "wall.location",
-            description: "Location classification is unrelated.",
-            canCalculate: true,
-          },
-        ],
-      }),
-    ]);
-    const materials = calculateWallFraming(payload, validation);
-
-    assert.equal(lineItemByUnit(materials, "each"), undefined);
-    assert.equal(lineItemByUnit(materials, "linear-foot")?.quantity, 60);
-  });
-
-  it("preserves source object, assumption, and review provenance", () => {
+  it("preserves source object and assumption provenance from used traces", () => {
     const materials = calculateWallFraming(buildCompletePayload());
     const studs = lineItemByUnit(materials, "each");
     const plates = lineItemByUnit(materials, "linear-foot");
 
     assert.deepEqual(studs?.sourceObjectIds, ["W-001", "WS-001"]);
-    assert.deepEqual(studs?.assumptionIds, [
-      "A-LENGTH",
-      "A-SEG",
-      "A-SPACING",
-      "A-WALL",
-    ]);
-    assert.deepEqual(studs?.reviewItemIds, [
-      "RI-LENGTH",
-      "RI-SEG",
-      "RI-SPACING",
-      "RI-WALL",
-    ]);
+    assert.deepEqual(studs?.assumptionIds, ["A-LENGTH", "A-SPACING"]);
 
     assert.deepEqual(plates?.sourceObjectIds, ["W-001", "WS-001"]);
     assert.ok(plates?.assumptionIds.includes("A-PLATES"));

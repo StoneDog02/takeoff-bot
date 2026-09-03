@@ -16,7 +16,7 @@ export type FramingTakeoffCalculationResult = {
 /**
  * CALCULATE / DERIVE / ASSUME for the reset path.
  *
- * No Stage 13 validation permission, no pendingClaims lifecycle (D20–D22).
+ * No Stage 13 validation permission (D20–D22).
  * Opening governed assumptions remain reachable via calculateOpeningFraming.
  */
 export function calculateFramingTakeoff(
@@ -26,28 +26,22 @@ export function calculateFramingTakeoff(
   const assumptions: Assumption[] = [];
 
   materials.push(
-    ...calculateWallFraming(
-      construction.walls,
-      undefined,
-      construction.openings,
-    ),
+    ...calculateWallFraming(construction.walls, construction.openings),
   );
 
   const openingResult = calculateOpeningFraming(
     construction.openings,
     construction.walls,
-    undefined,
   );
   materials.push(...openingResult.materials);
   assumptions.push(...openingResult.assumptions);
-  // Explicitly discard pendingClaims (D22).
 
   materials.push(
-    ...calculateStructuralMembers(construction.structuralMembers, undefined),
+    ...calculateStructuralMembers(construction.structuralMembers),
   );
-  materials.push(...calculateFloorFraming(construction.floorFraming, undefined));
-  materials.push(...calculateRoofFraming(construction.roofFraming, undefined));
-  materials.push(...calculateSheathing(construction.sheathing, undefined));
+  materials.push(...calculateFloorFraming(construction.floorFraming));
+  materials.push(...calculateRoofFraming(construction.roofFraming));
+  materials.push(...calculateSheathing(construction.sheathing));
 
   return { materials, assumptions };
 }

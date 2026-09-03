@@ -1,14 +1,11 @@
 import type {
   AssumptionId,
   ObjectId,
-  ReviewItemId,
 } from "../../../core/schemas/identity.schema.js";
 import type { PropertyResolutionTrace } from "../../../core/schemas/resolved-object.schema.js";
 
 export type ProvenanceSource = {
   id: ObjectId;
-  assumptionIds: AssumptionId[];
-  reviewItemIds: ReviewItemId[];
   resolutionTraces: PropertyResolutionTrace[];
 };
 
@@ -19,8 +16,8 @@ function uniqueSortedIds<T extends string>(ids: readonly T[]): T[] {
 }
 
 /**
- * Copies source object IDs and applicable assumption/review IDs already
- * present on contributing objects and the property traces used to calculate.
+ * Copies source object IDs and assumption IDs from the property traces
+ * used to calculate a quantity.
  */
 export function collectLineItemProvenance(
   sourceObjects: readonly ProvenanceSource[],
@@ -28,7 +25,6 @@ export function collectLineItemProvenance(
 ): {
   sourceObjectIds: ObjectId[];
   assumptionIds: AssumptionId[];
-  reviewItemIds: ReviewItemId[];
 } {
   const usedPathSet = new Set(usedPropertyPaths);
   const usedTraces = sourceObjects.flatMap((object) =>
@@ -39,13 +35,8 @@ export function collectLineItemProvenance(
 
   return {
     sourceObjectIds: sourceObjects.map((object) => object.id),
-    assumptionIds: uniqueSortedIds([
-      ...sourceObjects.flatMap((object) => object.assumptionIds),
-      ...usedTraces.flatMap((trace) => trace.assumptionIds),
-    ]),
-    reviewItemIds: uniqueSortedIds([
-      ...sourceObjects.flatMap((object) => object.reviewItemIds),
-      ...usedTraces.flatMap((trace) => trace.reviewItemIds),
-    ]),
+    assumptionIds: uniqueSortedIds(
+      usedTraces.flatMap((trace) => trace.assumptionIds),
+    ),
   };
 }

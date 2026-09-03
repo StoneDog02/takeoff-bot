@@ -26,7 +26,6 @@ import {
 } from "./floor-framing.schema.js";
 import { framingScopeSchema } from "./framing-scope.schema.js";
 import { framingTakeoffSchema } from "./framing-takeoff.schema.js";
-import { pendingMaterialClaimSchema } from "./claim-outcome.schema.js";
 import { framingMaterialLineItemSchema } from "./material.schema.js";
 import { openingSchema } from "./opening.schema.js";
 import {
@@ -45,9 +44,6 @@ import { governedProjectDictionarySchema } from "../../../project-interpreter/sc
 import { projectLearningPayloadSchema } from "../../../project-interpreter/projectLearning/projectLearningTypes.js";
 import { extractionBudgetAuditSchema } from "../extraction/extractionBudgetAudit.schema.js";
 import { planReferenceTraceSchema } from "../extraction/planReferenceTrace.schema.js";
-import {
-  framingPackageProductStateSchema,
-} from "../observability/framingPackageProductState.schema.js";
 
 export const verifiedPlanSetPayloadSchema = z.object({
   pdfPath: z.string().trim().min(1),
@@ -209,7 +205,6 @@ export const framingObjectsPayloadSchema = z.object({
 export const framingCalculationsPayloadSchema = z.object({
   materials: z.array(framingMaterialLineItemSchema),
   assumptions: z.array(assumptionSchema).default([]),
-  pendingClaims: z.array(pendingMaterialClaimSchema).default([]),
 });
 
 export const validationConfidencePayloadSchema = z.object({
@@ -251,11 +246,6 @@ export const planReferenceTraceArtifactSchema =
   createTypedArtifactEnvelopeSchema(
     "plan-reference-trace",
     planReferenceTraceSchema,
-  );
-export const framingPackageProductStateArtifactSchema =
-  createTypedArtifactEnvelopeSchema(
-    "framing-package-product-state",
-    framingPackageProductStateSchema,
   );
 export const compiledDrawingPagesArtifactSchema =
   createTypedArtifactEnvelopeSchema(

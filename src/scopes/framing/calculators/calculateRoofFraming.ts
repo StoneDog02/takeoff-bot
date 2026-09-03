@@ -1,7 +1,4 @@
-import type {
-  RoofFramingPayload,
-  ValidationPayload,
-} from "../schemas/framing-artifacts.schema.js";
+import type { RoofFramingPayload } from "../schemas/framing-artifacts.schema.js";
 import {
   framingMaterialLineItemSchema,
   type FramingMaterialLineItem,
@@ -14,7 +11,6 @@ import { isStickCommonRafterFramingType } from "../resolvers/roofFramingProperty
 import { ROOF_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createMaterialLineItemId } from "./ids.js";
-import { isQuantityBlocked } from "./isQuantityBlocked.js";
 import { isQuantityInputResolved } from "./isQuantityInputResolved.js";
 
 const LAYOUT_LENGTH_PROPERTY_PATH = "rafterLayoutLengthFeet";
@@ -56,14 +52,8 @@ function emitLineItem(
 function calculatePlaneCommonRafters(
   system: RoofFramingSystem,
   plane: RoofPlane,
-  validation: ValidationPayload | undefined,
 ): FramingMaterialLineItem | null {
   const quantityKey = ROOF_QUANTITY_KEYS.commonRafters;
-  const contributingIds = [system.id, plane.id];
-
-  if (isQuantityBlocked(validation, contributingIds, quantityKey)) {
-    return null;
-  }
 
   if (
     !isQuantityInputResolved(
@@ -127,7 +117,6 @@ function calculatePlaneCommonRafters(
     unit: "each",
     sourceObjectIds: provenance.sourceObjectIds,
     assumptionIds: provenance.assumptionIds,
-    reviewItemIds: provenance.reviewItemIds,
   });
 }
 
@@ -142,7 +131,6 @@ function calculatePlaneCommonRafters(
  */
 export function calculateRoofFraming(
   roofFraming: RoofFramingPayload,
-  validation?: ValidationPayload,
 ): FramingMaterialLineItem[] {
   const systemsById = new Map(
     roofFraming.systems.map((system) => [system.id, system]),
@@ -162,7 +150,7 @@ export function calculateRoofFraming(
       continue;
     }
 
-    const lineItem = calculatePlaneCommonRafters(system, plane, validation);
+    const lineItem = calculatePlaneCommonRafters(system, plane);
     if (lineItem) {
       materials.push(lineItem);
     }

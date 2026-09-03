@@ -114,8 +114,6 @@ describe("resolveSheathing", () => {
     assert.equal(payload.systems[0]?.id, "SHS-FLOOR-SHEATHING");
     assert.equal(payload.systems[0]?.application, "floor");
     assert.equal(payload.systems[0]?.panelSpecification.panelType, "T&G");
-    assert.ok(payload.systems[0]?.evidenceIds.includes("E-SPACE"));
-    assert.ok(payload.systems[0]?.evidenceIds.includes("E-HYPHEN"));
     assert.ok(
       payload.systems[0]?.resolutionTraces.some(
         (trace) =>
@@ -221,8 +219,6 @@ describe("resolveSheathing", () => {
     assert.equal(payload.systems.length, 1);
     assert.equal(payload.systems[0]?.application, "floor");
     assert.equal(payload.systems[0]?.panelSpecification.thickness, '3/4"');
-    assert.ok(payload.systems[0]?.evidenceIds.includes("E-PASS1"));
-    assert.ok(payload.systems[0]?.evidenceIds.includes("E-PASS2"));
   });
 
   it("sorts systems and areas deterministically regardless of evidence order", () => {

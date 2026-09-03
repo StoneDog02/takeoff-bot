@@ -3,13 +3,6 @@ import { describe, it } from "node:test";
 
 import { blockingArtifactSchema } from "../../src/scopes/framing/schemas/framing-artifacts.schema.js";
 
-const complete = {
-  status: "complete",
-  percentage: 100,
-  completedItems: 1,
-  totalItems: 1,
-} as const;
-
 const timestamp = "2026-07-10T12:00:00.000Z";
 
 describe("blocking artifact contract", () => {
@@ -32,9 +25,6 @@ describe("blocking artifact contract", () => {
           {
             id: "BLK-001",
             objectType: "blocking",
-            completion: complete,
-            reviewStatus: "no-review-required",
-            blockingStatus: "not-blocked",
             blockingType: "solid blocking",
             purpose: "sheathing edge support",
             structuralRole: "structural",

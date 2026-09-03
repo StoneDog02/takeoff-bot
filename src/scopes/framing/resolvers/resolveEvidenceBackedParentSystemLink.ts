@@ -102,10 +102,6 @@ export function parentSystemLinkTrace(
     propertyPath: "parentSystemTag",
     method: "explicit-project-value",
     explanation: link.explanation,
-    evidenceIds: link.evidenceIds,
     assumptionIds: [],
-    userDecisionIds: [],
-    validationIssueIds: [],
-    reviewItemIds: [],
   };
 }
