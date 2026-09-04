@@ -11,8 +11,11 @@ import {
   type FramingMaterialLine,
   type FramingTakeoff,
 } from "../schemas/framingTakeoff.schema.js";
+import type { ProductAccounting } from "../schemas/productAccounting.schema.js";
 
 export const FRAMING_TAKEOFF_FILENAME = "framing-takeoff.json";
+export const FRAMING_PRODUCT_ACCOUNTING_FILENAME =
+  "framing-product-accounting.json";
 
 function domainFromQuantityKey(
   quantityKey: string | undefined,
@@ -62,12 +65,15 @@ export function buildFramingTakeoff(input: {
     const assumptionIds = line.assumptionIds ?? [];
     const assumptionUsed = assumptionIds.length > 0;
     const row: FramingMaterialLine = {
+      material: line.material,
+      lengthOrType: line.lengthOrType,
       description: line.description,
       quantity: line.quantity,
       unit: line.unit,
       category: line.category,
       domain: domainFromQuantityKey(line.quantityKey),
       quantityKey: line.quantityKey,
+      canonicalClassification: line.canonicalClassification,
       debugSourceIds: [...line.sourceObjectIds],
     };
     if (assumptionUsed) {
@@ -90,7 +96,7 @@ export function buildFramingTakeoff(input: {
 
   const { construction } = input;
   return framingTakeoffSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     projectId: input.projectId,
     pdfPath: input.pdfPath,
     createdAt: input.createdAt ?? new Date().toISOString(),
@@ -126,6 +132,25 @@ export async function writeFramingTakeoff(input: {
   await writeFile(
     artifactPath,
     `${JSON.stringify(input.takeoff, null, 2)}\n`,
+    "utf8",
+  );
+  return artifactPath;
+}
+
+export async function writeProductAccounting(input: {
+  projectId: string;
+  scopeName?: string;
+  artifactsRoot?: string;
+  accounting: ProductAccounting;
+}): Promise<string> {
+  const scopeName = input.scopeName ?? "framing";
+  const root = input.artifactsRoot ?? "artifacts";
+  const directory = path.resolve(root, input.projectId, scopeName);
+  await mkdir(directory, { recursive: true });
+  const artifactPath = path.join(directory, FRAMING_PRODUCT_ACCOUNTING_FILENAME);
+  await writeFile(
+    artifactPath,
+    `${JSON.stringify(input.accounting, null, 2)}\n`,
     "utf8",
   );
   return artifactPath;

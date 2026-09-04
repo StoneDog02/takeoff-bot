@@ -53,5 +53,8 @@ OCR-heavy residential PDFs (e.g. Beckstead) typically need env flags such as `TA
 
 ## Output
 
-- Production material output: `artifacts/{projectId}/framing/framing-takeoff.json`
-- Master Taxonomy runtime mapping / Recommended Format UI are **not** implemented yet (product phase after this repository cleanup).
+- Production material output: `artifacts/{projectId}/framing/framing-takeoff.json` (`schemaVersion: 2`)
+- Recommended Format fields on each line: `material`, `lengthOrType` (nullable), `quantity`, `unit`
+- Structural members remain **LF** (Construction Brain); size/length are preserved in presentation fields only — not converted to orderable pcs
+- Product accounting sibling: `artifacts/{projectId}/framing/framing-product-accounting.json` (house-first taxonomy completeness; statuses `calculated` | `unaccounted` only)
+- UI: contractor table is Recommended Format; developer diagnostics require `TAKEOFF_UI_ACCESS=developer` (customer API omits accounting/debug fields)

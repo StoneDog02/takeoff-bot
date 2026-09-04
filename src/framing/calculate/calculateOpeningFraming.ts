@@ -191,6 +191,8 @@ function buildCrippleLineItem(input: {
   quantityKey: string;
   quantity: number;
   description: string;
+  material: string;
+  lengthOrType: string | null;
   canonicalClassification: string;
   usedPropertyPaths: string[];
   assumption: Assumption | null;
@@ -209,6 +211,8 @@ function buildCrippleLineItem(input: {
     quantityKey: input.quantityKey,
     category: "lumber",
     description: input.description,
+    material: input.material,
+    lengthOrType: input.lengthOrType,
     canonicalClassification: input.canonicalClassification,
     quantity: input.quantity,
     unit: "each",
@@ -263,6 +267,8 @@ function calculateOpeningCripples(
       quantityKey: OPENING_QUANTITY_KEYS.cripplesAbove,
       quantity: totalCount,
       description: `${preconditions.studSize} cripple studs above header`,
+      material: preconditions.studSize,
+      lengthOrType: "cripples above header",
       canonicalClassification: `cripple-above-${preconditions.studSize}`,
       usedPropertyPaths: [
         QUANTITY_PROPERTY_PATH,
@@ -287,6 +293,8 @@ function calculateOpeningCripples(
       quantityKey: OPENING_QUANTITY_KEYS.cripplesBelow,
       quantity: totalCount,
       description: `${preconditions.studSize} cripple studs below sill`,
+      material: preconditions.studSize,
+      lengthOrType: "cripples below sill",
       canonicalClassification: `cripple-below-${preconditions.studSize}`,
       usedPropertyPaths: [
         QUANTITY_PROPERTY_PATH,
@@ -458,6 +466,8 @@ function calculateOpeningJackStuds(
     quantityKey,
     category: "lumber",
     description: `${wall.assembly.studSize} jack studs`,
+    material: wall.assembly.studSize!,
+    lengthOrType: "jack studs",
     canonicalClassification: `jack-stud-${wall.assembly.studSize}`,
     quantity,
     unit: "each",
@@ -520,6 +530,8 @@ function calculateOpeningKingStuds(
     quantityKey,
     category: "lumber",
     description: `${wall.assembly.studSize} king studs`,
+    material: wall.assembly.studSize!,
+    lengthOrType: "king studs",
     canonicalClassification: `king-stud-${wall.assembly.studSize}`,
     quantity,
     unit: "each",
@@ -610,6 +622,8 @@ function calculateOpeningRoughSill(
     quantityKey,
     category: "lumber",
     description: `${studSize} rough sill`,
+    material: studSize,
+    lengthOrType: "rough sill",
     canonicalClassification: `rough-sill-${studSize}`,
     quantity: roughSillLinearFeet,
     unit: "linear-foot",

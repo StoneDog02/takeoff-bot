@@ -5,6 +5,7 @@ import {
   type FramingMaterialLineItem,
 } from "../schemas/material.schema.js";
 import type { StructuralMember } from "../schemas/structural-member.schema.js";
+import { formatLengthFeetLabel } from "../product/formatPresentation.js";
 import { STRUCTURAL_MEMBER_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createMaterialLineItemId } from "./ids.js";
@@ -165,6 +166,12 @@ function calculateMemberMaterial(
   );
   const provenance = collectLineItemProvenance([member], usedPropertyPaths);
   const plyLabel = plyCount === null ? "" : `${plyCount}-ply `;
+  const lengthLabel = formatLengthFeetLabel(member.lengthFeet!);
+  const lengthOrTypeParts = [
+    plyCount === null ? null : `${plyCount}-ply`,
+    member.category,
+    lengthLabel,
+  ].filter((part): part is string => part != null && part.length > 0);
 
   return emitLineItem({
     id: createMaterialLineItemId(
@@ -174,6 +181,8 @@ function calculateMemberMaterial(
     quantityKey: STRUCTURAL_MEMBER_QUANTITY_KEYS.material,
     category: framingMaterialCategoryForMember(member),
     description: `${plyLabel}${member.size} ${member.materialType} ${member.category}`,
+    material: `${member.size} ${member.materialType}`,
+    lengthOrType: lengthOrTypeParts.join(" · "),
     canonicalClassification: `${member.category}-${member.materialType}-${member.size}`,
     quantity,
     unit: "linear-foot",

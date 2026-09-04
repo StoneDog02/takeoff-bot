@@ -34,6 +34,10 @@ export const framingMaterialLineItemSchema = z.object({
   quantityKey: z.string().trim().min(1).optional(),
   category: framingMaterialCategorySchema,
   description: z.string().trim().min(1),
+  /** Recommended Format column 1 (Material). */
+  material: z.string().trim().min(1),
+  /** Recommended Format column 2 (Length / Type); null when not known. */
+  lengthOrType: z.string().trim().min(1).nullable(),
   canonicalClassification: z.string().trim().min(1),
   quantity: z.number().finite().positive(),
   unit: materialQuantityUnitSchema,

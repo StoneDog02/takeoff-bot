@@ -3,18 +3,33 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Takeoff Bot — Framing Review</title>
+    <title>Takeoff Bot — Framing Takeoff</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <header class="app-header">
       <div>
-        <h1>Framing Takeoff Review</h1>
-        <p class="subtitle">Thin vertical slice — engine-backed review workflow</p>
+        <h1>Residential Framing Takeoff</h1>
+        <p class="subtitle" id="access-subtitle">Loading access mode…</p>
       </div>
       <div class="header-actions">
+        <label class="path-label" for="pdf-path-input">PDF path</label>
+        <input
+          id="pdf-path-input"
+          type="text"
+          class="path-input"
+          placeholder="tests/fixtures/beckstead-residence-plans.pdf"
+        />
         <button id="export-csv-btn" type="button" class="secondary" disabled>
           Export CSV
+        </button>
+        <button
+          id="export-developer-run-btn"
+          type="button"
+          class="secondary hidden"
+          disabled
+        >
+          Export Developer Run
         </button>
         <button id="run-takeoff-btn" type="button">Run Takeoff</button>
       </div>
@@ -23,19 +38,6 @@
     <section id="status-banner" class="status-banner hidden"></section>
 
     <main id="workspace" class="workspace hidden">
-      <section class="panel run-meta">
-        <h2>Run</h2>
-        <dl id="run-meta"></dl>
-        <div id="run-lineage" class="run-lineage"></div>
-        <ul id="limitations" class="limitations"></ul>
-      </section>
-
-      <section class="panel packages-panel">
-        <h2>Packages</h2>
-        <p id="package-summary" class="panel-summary"></p>
-        <div id="package-dashboard" class="package-dashboard"></div>
-      </section>
-
       <section class="panel materials-panel">
         <h2>Material Takeoff</h2>
         <p id="material-summary" class="panel-summary"></p>
@@ -43,34 +45,52 @@
           <table id="materials-table">
             <thead>
               <tr>
-                <th>Description</th>
+                <th>Material</th>
+                <th>Length / Type</th>
                 <th>Quantity</th>
-                <th>Unit</th>
-                <th>Claim Status</th>
-                <th>Source Objects</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="assumption-footnote" class="assumption-footnote hidden">
+          * Quantity uses a governed assumption — verify against plans.
+        </p>
+      </section>
+
+      <section id="assumptions-panel" class="panel assumptions-panel hidden">
+        <h2>Assumptions to verify</h2>
+        <ul id="assumptions-list" class="assumptions-list"></ul>
+      </section>
+
+      <section id="developer-panel" class="panel developer-panel hidden">
+        <h2>Developer diagnostics</h2>
+        <p id="completeness-summary" class="panel-summary"></p>
+        <dl id="run-meta" class="run-meta"></dl>
+        <ul id="limitations" class="limitations"></ul>
+        <h3>Taxonomy gap map</h3>
+        <div class="table-wrap">
+          <table id="gap-map-table">
+            <thead>
+              <tr>
+                <th>Section</th>
+                <th>Material</th>
+                <th>Status</th>
+                <th>Gap class</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
       </section>
-
-      <section class="panel review-panel">
-        <h2>Review Items</h2>
-        <p id="review-summary" class="panel-summary"></p>
-        <ul id="review-list" class="review-list"></ul>
-      </section>
-
-      <section class="panel detail-panel">
-        <h2>Review Detail</h2>
-        <div id="review-detail" class="review-detail empty">
-          Select a review item to inspect provenance and impact.
-        </div>
-      </section>
     </main>
 
     <section id="empty-state" class="empty-state">
-      <p>Run the demo takeoff to load engine-derived materials and review items.</p>
+      <p>
+        Run a framing takeoff to see the contractor material list
+        (Material | Length / Type | Quantity).
+      </p>
     </section>
 
     <script type="module" src="/app.js"></script>

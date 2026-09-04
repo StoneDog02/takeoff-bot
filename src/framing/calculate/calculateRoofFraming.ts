@@ -112,6 +112,8 @@ function calculatePlaneCommonRafters(
     quantityKey,
     category: "lumber",
     description: `${memberSize} common rafters`,
+    material: memberSize!,
+    lengthOrType: "common rafters",
     canonicalClassification: `common-rafter-${normalizeToken(framingType)}-${normalizeToken(memberSize)}`,
     quantity,
     unit: "each",

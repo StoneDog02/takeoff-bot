@@ -6,7 +6,8 @@
   "main": "dist/app.js",
   "scripts": {
     "dev": "tsx src/app.ts",
-    "ui:dev": "tsx src/ui/startUiServer.ts",
+    "ui:dev": "TAKEOFF_UI_ACCESS=developer tsx src/ui/startUiServer.ts",
+    "ui:customer": "TAKEOFF_UI_ACCESS=customer tsx src/ui/startUiServer.ts",
     "build": "tsc",
     "start": "node dist/app.js",
     "ui": "node dist/ui/startUiServer.js",

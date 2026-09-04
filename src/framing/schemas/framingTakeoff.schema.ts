@@ -11,12 +11,15 @@ export const framingMaterialDomainSchema = z.enum([
 ]);
 
 export const framingMaterialLineSchema = z.object({
+  material: z.string().trim().min(1),
+  lengthOrType: z.string().trim().min(1).nullable(),
   description: z.string().trim().min(1),
   quantity: z.number().finite().positive(),
   unit: z.string().trim().min(1),
   category: z.string().trim().min(1).optional(),
   domain: framingMaterialDomainSchema.optional(),
   quantityKey: z.string().trim().min(1).optional(),
+  canonicalClassification: z.string().trim().min(1).optional(),
   assumptionUsed: z.boolean().optional(),
   assumptionNote: z.string().trim().min(1).optional(),
   debugSourceIds: z.array(z.string()).optional(),
@@ -42,7 +45,7 @@ export const framingTakeoffMetaSchema = z.object({
 });
 
 export const framingTakeoffSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   projectId: z.string().trim().min(1),
   pdfPath: z.string().trim().min(1),
   createdAt: z.string().datetime(),

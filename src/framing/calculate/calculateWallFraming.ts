@@ -8,6 +8,7 @@ import {
 } from "../schemas/material.schema.js";
 import type { BuildingWall, WallSegment } from "../schemas/wall.schema.js";
 import type { Opening } from "../schemas/opening.schema.js";
+import { formatStudLengthOrType } from "../product/formatPresentation.js";
 import { WALL_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createMaterialLineItemId } from "./ids.js";
@@ -22,6 +23,7 @@ const LENGTH_PROPERTY_PATH = "lengthFeet";
 const STUD_SPACING_PROPERTY_PATH = "assembly.studSpacingInches";
 const STUD_SIZE_PROPERTY_PATH = "assembly.studSize";
 const PLATE_COUNT_PROPERTY_PATH = "assembly.plateCount";
+const HEIGHT_PROPERTY_PATH = "assembly.heightFeet";
 
 function compareIds(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -164,10 +166,16 @@ function calculateSegmentStuds(
     ? baseline
     : Math.max(0, baseline - deductCount);
 
+  const heightResolved = isQuantityInputResolved(
+    wall.assembly.heightFeet,
+    wall.resolutionTraces,
+    HEIGHT_PROPERTY_PATH,
+  );
   const provenance = collectLineItemProvenance(contributingObjects, [
     LENGTH_PROPERTY_PATH,
     STUD_SPACING_PROPERTY_PATH,
     STUD_SIZE_PROPERTY_PATH,
+    ...(heightResolved ? [HEIGHT_PROPERTY_PATH] : []),
   ]);
 
   return emitLineItem({
@@ -175,6 +183,10 @@ function calculateSegmentStuds(
     quantityKey,
     category: "lumber",
     description: `${wall.assembly.studSize} regularly spaced studs at ${wall.assembly.studSpacingInches} in O.C.`,
+    material: wall.assembly.studSize!,
+    lengthOrType: heightResolved
+      ? formatStudLengthOrType(wall.assembly.heightFeet)
+      : null,
     canonicalClassification: `stud-${wall.assembly.studSize}-regular-spacing`,
     quantity,
     unit: "each",
@@ -230,6 +242,8 @@ function calculateSegmentPlates(
     quantityKey,
     category: "lumber",
     description: `${sizeLabel}wall plates`.trim(),
+    material: studSizeResolved ? wall.assembly.studSize! : "wall plates",
+    lengthOrType: "plates",
     canonicalClassification: studSizeResolved
       ? `plate-${wall.assembly.studSize}`
       : "plate",

@@ -49,13 +49,14 @@ function buildPayload(
 }
 
 describe("calculateStructuralMembers", () => {
-  it("calculates net LF for a resolved single-piece member", () => {
+  it("preserves structural quantity as linear-foot with size/length presentation", () => {
     const [item] = calculateStructuralMembers(buildPayload());
-
     assert.equal(item?.quantity, 6);
     assert.equal(item?.unit, "linear-foot");
     assert.equal(item?.category, "engineered-wood");
     assert.equal(item?.canonicalClassification, "header-lvl-1.75x11.875");
+    assert.equal(item?.material, "1.75x11.875 lvl");
+    assert.match(item?.lengthOrType ?? "", /6 ft/);
   });
 
   it("multiplies length by repeated single-piece quantity", () => {

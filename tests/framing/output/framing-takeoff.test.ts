@@ -102,8 +102,14 @@ describe("framing takeoff output", () => {
     const root = await mkdtemp(path.join(tmpdir(), "framing-takeoff-"));
     try {
       const construction = wallConstructionFixture();
+      construction.walls.walls[0]!.resolutionTraces.push(
+        resolvedTrace("assembly.heightFeet"),
+      );
       const calculated = calculateFramingTakeoff(construction);
       assert.ok(calculated.materials.length >= 2);
+      const studs = calculated.materials.find((m) => m.quantityKey === "wall.studs");
+      assert.equal(studs?.material, "2x4");
+      assert.equal(studs?.lengthOrType, "8 ft studs");
       assert.equal(
         calculated.materials.every((m) => !("pendingClaims" in m)),
         true,
@@ -117,7 +123,18 @@ describe("framing takeoff output", () => {
         assumptions: calculated.assumptions,
       });
 
-      assert.equal(takeoff.schemaVersion, 1);
+      assert.equal(takeoff.schemaVersion, 2);
+      assert.ok(takeoff.materials.every((m) => typeof m.material === "string"));
+      assert.ok(
+        takeoff.materials.every(
+          (m) => m.lengthOrType === null || typeof m.lengthOrType === "string",
+        ),
+      );
+      assert.ok(
+        takeoff.materials.every(
+          (m) => typeof m.canonicalClassification === "string",
+        ),
+      );
       assert.ok(takeoff.materials.some((m) => m.domain === "wall"));
       assert.equal(
         Object.prototype.hasOwnProperty.call(takeoff, "pendingClaims"),
@@ -151,7 +168,10 @@ describe("framing takeoff output", () => {
       });
       assert.equal(result.success, true);
       assert.ok(result.takeoffPath?.endsWith(FRAMING_TAKEOFF_FILENAME));
+      assert.ok(result.accountingPath?.endsWith("framing-product-accounting.json"));
+      assert.ok(result.accounting);
       assert.ok((result.takeoff?.materials.length ?? 0) >= 2);
+      assert.ok((result.accounting?.summary.checklistItemCount ?? 0) > 0);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

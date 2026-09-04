@@ -2,12 +2,15 @@ import { logger } from "../../core/logging/logger.js";
 import type { Evidence } from "../../core/schemas/evidence.schema.js";
 import type { PlanIndex } from "../../pdf/PlanIndex.js";
 import { calculateFramingTakeoff } from "../calculate/calculateFramingTakeoff.js";
+import { buildProductAccounting } from "../product/buildProductAccounting.js";
 import type { FramingConstruction } from "../schemas/framingConstruction.schema.js";
 import { readFramingPlans } from "../read/readFramingPlans.js";
 import type { FramingTakeoff } from "../schemas/framingTakeoff.schema.js";
+import type { ProductAccounting } from "../schemas/productAccounting.schema.js";
 import {
   buildFramingTakeoff,
   writeFramingTakeoff,
+  writeProductAccounting,
 } from "./writeFramingTakeoff.js";
 
 export type RunFramingTakeoffInput = {
@@ -28,16 +31,18 @@ export type RunFramingTakeoffResult = {
   projectId: string;
   pdfPath: string;
   takeoffPath: string | null;
+  accountingPath: string | null;
   takeoff: FramingTakeoff | null;
+  accounting: ProductAccounting | null;
   construction: FramingConstruction | null;
   debugPaths: string[];
   errors: string[];
 };
 
 /**
- * Factory-reset production orchestrator:
+ * Production orchestrator:
  * UPLOAD (caller indexes PDF) → READ THE PLANS → CALCULATE / DERIVE / ASSUME
- * → temporary MATERIAL OUTPUT (framing-takeoff.json).
+ * → MATERIAL OUTPUT + product accounting sibling.
  */
 export async function runFramingTakeoff(
   input: RunFramingTakeoffInput,
@@ -62,24 +67,40 @@ export async function runFramingTakeoff(
     }
 
     const calculated = calculateFramingTakeoff(construction);
+    const createdAt = new Date().toISOString();
     const takeoff = buildFramingTakeoff({
       projectId: input.projectId,
       pdfPath: input.pdfPath,
+      createdAt,
       construction,
       materials: calculated.materials,
       assumptions: calculated.assumptions,
+    });
+    const accounting = buildProductAccounting({
+      projectId: input.projectId,
+      createdAt,
+      construction,
+      materials: calculated.materials,
     });
     const takeoffPath = await writeFramingTakeoff({
       projectId: input.projectId,
       artifactsRoot: input.artifactsRoot,
       takeoff,
     });
+    const accountingPath = await writeProductAccounting({
+      projectId: input.projectId,
+      artifactsRoot: input.artifactsRoot,
+      accounting,
+    });
 
     logger.info("Framing takeoff complete", {
       projectId: input.projectId,
       takeoffPath,
+      accountingPath,
       materialCount: takeoff.materials.length,
       assumptionCount: takeoff.assumptions?.length ?? 0,
+      calculatedChecklistItems: accounting.summary.calculatedCount,
+      unaccountedChecklistItems: accounting.summary.unaccountedCount,
     });
 
     return {
@@ -87,7 +108,9 @@ export async function runFramingTakeoff(
       projectId: input.projectId,
       pdfPath: input.pdfPath,
       takeoffPath,
+      accountingPath,
       takeoff,
+      accounting,
       construction,
       debugPaths,
       errors,
@@ -101,7 +124,9 @@ export async function runFramingTakeoff(
       projectId: input.projectId,
       pdfPath: input.pdfPath,
       takeoffPath: null,
+      accountingPath: null,
       takeoff: null,
+      accounting: null,
       construction,
       debugPaths,
       errors,

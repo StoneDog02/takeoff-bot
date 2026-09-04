@@ -10,6 +10,7 @@ import type {
 import { isIJoistType } from "../resolve/floorFramingPropertyPaths.js";
 import { isNonWoodFloorTakeoffAreaFromTraces } from "../resolve/floorAreaMaterialCompatibility.js";
 import { hasJoistCountLayoutAxisAuthority } from "../resolve/floorLayoutAuthority.js";
+import { formatLengthFeetLabel } from "../product/formatPresentation.js";
 import { FLOOR_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createMaterialLineItemId } from "./ids.js";
@@ -131,11 +132,21 @@ function emitJoistCountLine(
     [...COUNT_PROPERTY_PATHS],
   );
 
+  const memberLengthResolved = isQuantityInputResolved(
+    area.joistMemberLengthFeet,
+    area.resolutionTraces,
+    MEMBER_LENGTH_PROPERTY_PATH,
+  );
+
   return emitLineItem({
     id: createMaterialLineItemId(quantityKey, area.id),
     quantityKey,
     category: "lumber",
     description: `${joistSize} ${joistType} floor joists`,
+    material: `${joistSize} ${joistType}`,
+    lengthOrType: memberLengthResolved
+      ? formatLengthFeetLabel(area.joistMemberLengthFeet!)
+      : "floor joists",
     canonicalClassification: `floor-joist-${normalizeToken(joistType)}-${normalizeToken(joistSize)}`,
     quantity: joistCount,
     unit: "each",
@@ -179,6 +190,8 @@ function emitJoistLinearFeetLine(
     quantityKey,
     category: "lumber",
     description: `${joistSize} ${joistType} floor joists`,
+    material: `${joistSize} ${joistType}`,
+    lengthOrType: `aggregate LF @ ${formatLengthFeetLabel(area.joistMemberLengthFeet!)}`,
     canonicalClassification: `floor-joist-${normalizeToken(joistType)}-${normalizeToken(joistSize)}`,
     quantity,
     unit: "linear-foot",

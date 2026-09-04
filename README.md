@@ -50,6 +50,8 @@ npm run proof:live-framing
 
 For OCR-heavy residential PDFs (e.g. Beckstead), enable compiler / learning flags as documented in `.env.example`.
 
+UI access: set `TAKEOFF_UI_ACCESS=developer` for the contractor takeoff **plus** taxonomy gap diagnostics (`npm run ui:dev`). Unset or `customer` returns the contractor takeoff only — diagnostics are omitted from the API response.
+
 ## Scripts
 
 | Command | Description |
@@ -58,7 +60,8 @@ For OCR-heavy residential PDFs (e.g. Beckstead), enable compiler / learning flag
 | `npm run build` | Compile TypeScript |
 | `npm run start` | Run compiled output (`npm run build` first) |
 | `npm run test` | Run tests |
-| `npm run ui:dev` | Local takeoff UI server |
+| `npm run ui:dev` | Local takeoff UI in **developer** mode (`TAKEOFF_UI_ACCESS=developer`) |
+| `npm run ui:customer` | Local takeoff UI in **customer** mode (contractor takeoff only) |
 | `npm run proof:live-framing` | Controlled PDF through live Claude extraction |
 
 ## Project structure

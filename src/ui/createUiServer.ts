@@ -4,7 +4,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { logger } from "../core/logging/logger.js";
-import { FramingTakeoffService } from "./framingTakeoffService.js";
+import {
+  DeveloperExportForbiddenError,
+  FramingTakeoffService,
+} from "./framingTakeoffService.js";
 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 const publicDirectory = path.resolve(moduleDirectory, "../../public");
@@ -95,6 +98,11 @@ export function createUiServer(service = new FramingTakeoffService()) {
         return;
       }
 
+      if (request.method === "GET" && pathname === "/api/access") {
+        sendJson(response, 200, { accessMode: service.getAccessMode() });
+        return;
+      }
+
       if (request.method === "POST" && pathname === "/api/sessions") {
         const body = await readJsonBody(request);
         const pdfPath =
@@ -113,6 +121,24 @@ export function createUiServer(service = new FramingTakeoffService()) {
           const state = service.getSession(sessionId);
           sendJson(response, 200, state);
         } catch {
+          sendJson(response, 404, { error: "Session not found." });
+        }
+        return;
+      }
+
+      const developerExportMatch = pathname.match(
+        /^\/api\/sessions\/([^/]+)\/developer-export$/,
+      );
+      if (request.method === "GET" && developerExportMatch) {
+        const sessionId = decodeURIComponent(developerExportMatch[1]!);
+        try {
+          const exported = service.getDeveloperRunExport(sessionId);
+          sendJson(response, 200, exported);
+        } catch (error) {
+          if (error instanceof DeveloperExportForbiddenError) {
+            sendJson(response, 403, { error: error.message });
+            return;
+          }
           sendJson(response, 404, { error: "Session not found." });
         }
         return;

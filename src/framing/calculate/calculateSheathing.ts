@@ -159,6 +159,10 @@ function calculateAreaCoverage(
     description: `${thickness} ${panelType} ${system.application} sheathing${
       optionalLabel.length > 0 ? ` ${optionalLabel}` : ""
     }`,
+    material: `${system.application} sheathing`,
+    lengthOrType: `${thickness} ${panelType}${
+      optionalLabel.length > 0 ? ` ${optionalLabel}` : ""
+    }`,
     canonicalClassification: `${system.application}-${panelType}-${thickness}`,
     quantity: area.areaSquareFeet,
     unit: "square-foot",
