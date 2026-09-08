@@ -48,6 +48,7 @@ describe("indexPlan", () => {
     assert.match(planIndex.pages[0]?.textContent ?? "", /16 in O\.C\./);
     assert.match(planIndex.pages[0]?.textContent ?? "", /8 ft wall height/);
     assert.match(planIndex.pages[0]?.textContent ?? "", /3 plates/);
+    assert.ok(planIndex.odlDocument != null);
   });
 
   it("indexes the 24-ft mutation fixture with only length changed", async () => {

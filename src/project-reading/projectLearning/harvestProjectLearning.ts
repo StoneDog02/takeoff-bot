@@ -32,6 +32,8 @@ export type HarvestProjectLearningInput = {
   ocrFallbackCandidates?: ProjectLearningCandidate[];
   /** Test seam: skip ensuring / calling Hybrid server. */
   skipHybridServerEnsure?: boolean;
+  /** Test seam: inject ODL convert (prove reuse skips a second convert). */
+  convertDocument?: typeof convert;
 };
 
 export type HarvestProjectLearningResult = {
@@ -85,6 +87,7 @@ function emptyTelemetry(
     forceOcrRequested: false,
     structuredElementsRecovered: 0,
     ocrFallbackUsed: false,
+    indexedOdlReused: false,
     ...partial,
   });
 }
@@ -307,6 +310,7 @@ async function tryOdlHarvest(input: {
   planIndex: PlanIndex;
   skipHybridServerEnsure?: boolean;
   ocrFallbackCandidates?: ProjectLearningCandidate[];
+  convertDocument?: typeof convert;
 }): Promise<{
   candidates: ProjectLearningCandidate[];
   telemetry: ProjectLearningHarvestTelemetry;
@@ -338,6 +342,7 @@ async function tryOdlHarvest(input: {
   let hybridActuallyUsed = false;
   let hybridFallbackOccurred = false;
   let sourceKind: ProjectLearningSourceKind = "odl-local";
+  const runConvert = input.convertDocument ?? convert;
 
   if (hybridRequested) {
     // Match audit Config C client: docling-fast. Use hybridMode=full on
@@ -355,7 +360,7 @@ async function tryOdlHarvest(input: {
     }
 
     try {
-      await convert(
+      await runConvert(
         input.pdfPath,
         hybridOptions as Parameters<typeof convert>[1],
       );
@@ -367,7 +372,7 @@ async function tryOdlHarvest(input: {
 
   if (!hybridConvertSucceeded) {
     try {
-      await convert(
+      await runConvert(
         input.pdfPath,
         baseOptions as Parameters<typeof convert>[1],
       );
@@ -470,6 +475,76 @@ async function tryOdlHarvest(input: {
   return { candidates, telemetry, rawPaths: loaded.rawPaths };
 }
 
+async function persistIndexedOdlDocument(
+  outputDir: string,
+  document: unknown,
+): Promise<string> {
+  await mkdir(outputDir, { recursive: true });
+  const artifactPath = path.join(outputDir, "indexed-odl.json");
+  await writeFile(artifactPath, `${JSON.stringify(document)}\n`, "utf8");
+  return artifactPath;
+}
+
+/**
+ * Reuse structured ODL captured at indexPlan time instead of converting again.
+ * Image-only indexed documents return null so Hybrid/OCR harvest can still run.
+ */
+async function tryReuseIndexedOdl(input: {
+  planIndex: PlanIndex;
+  pageNumbers: number[];
+  outputDir: string;
+}): Promise<Omit<HarvestProjectLearningResult, "timingMs"> | null> {
+  const document = input.planIndex.odlDocument;
+  if (document == null) {
+    return null;
+  }
+
+  const pageFilter = new Set(input.pageNumbers);
+  if (!odlDocumentHasStructuredContent(document, pageFilter)) {
+    return null;
+  }
+
+  const candidates: ProjectLearningCandidate[] = [];
+  const kids =
+    document &&
+    typeof document === "object" &&
+    Array.isArray((document as { kids?: unknown }).kids)
+      ? (document as { kids: unknown[] }).kids
+      : [];
+  walkOdlKids(kids, candidates, "odl-local", pageFilter);
+  const structuredElementsRecovered = countStructuredOdlElements(
+    kids,
+    pageFilter,
+  );
+  const rawPath = await persistIndexedOdlDocument(input.outputDir, document);
+  const telemetry = emptyTelemetry({
+    hybridRequested: false,
+    hybridActuallyUsed: false,
+    hybridFallbackOccurred: false,
+    structuredElementsRecovered,
+    indexedOdlReused: true,
+  });
+  await writeFile(
+    path.join(input.outputDir, "harvest-summary.json"),
+    JSON.stringify(
+      {
+        ...telemetry,
+        candidateCount: candidates.length,
+        pages: input.pageNumbers,
+      },
+      null,
+      2,
+    ),
+  );
+
+  return {
+    candidates,
+    hybridUsed: false,
+    telemetry,
+    rawArtifactPaths: [rawPath],
+  };
+}
+
 /**
  * Harvest Project Learning candidates. Persists ODL JSON when live convert runs.
  * Raw ODL text remains validationStatus=harvested (not context-eligible).
@@ -500,6 +575,18 @@ export async function harvestProjectLearning(
       telemetry: emptyTelemetry(),
       timingMs: Date.now() - started,
       rawArtifactPaths: [],
+    };
+  }
+
+  const reused = await tryReuseIndexedOdl({
+    planIndex: input.planIndex,
+    pageNumbers: input.pageNumbers,
+    outputDir: input.outputDir,
+  });
+  if (reused) {
+    return {
+      ...reused,
+      timingMs: Date.now() - started,
     };
   }
 
@@ -542,6 +629,7 @@ export async function harvestProjectLearning(
       planIndex: input.planIndex,
       skipHybridServerEnsure: input.skipHybridServerEnsure,
       ocrFallbackCandidates: input.ocrFallbackCandidates,
+      convertDocument: input.convertDocument,
     });
     return {
       candidates: result.candidates,

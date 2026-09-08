@@ -19,7 +19,8 @@ Authority for construction rules remains Construction Brain under `knowledge/fra
 
 - King stud count, rough sill size, and cripple layout may use **governed assumptions** when plan facts are missing.
 - Jack / trimmer counts require plan-stated (or explicitly supplied) facts — not invented from width alone.
-- **Known gap — header → cased-cripple:** extraction can emit `headerMemberTag`, but production `resolveOpenings` currently leaves `headerMemberId` null. `linkOpeningHeaderRelationships` preserves mapping intelligence and is **not wired** into `readFramingPlans`. Cased-opening cripple eligibility that requires `headerMemberId` therefore does not fire on the production path.
+- Production `buildFramingConstructionFromEvidence` calls `linkOpeningHeaderRelationships` when Evidence includes `headerMemberTag`. Live region reads may still omit those tags; `headerMemberId` then stays null and cased-opening cripple eligibility that requires it does not fire.
+- W4-C compiled PBG gaps exist, but frozen pages have no opening-mark text. Identified openings stay unparented; geometry does not invent quantity or attach from ambiguous gaps. Semantic-binding / opening-geometry bridges stay opt-in.
 
 ## Structural members
 
@@ -31,6 +32,7 @@ Authority for construction rules remains Construction Brain under `knowledge/fra
 
 - Baseline regularly spaced joist **count** and (when eligible) **LF** for authorized simple equal-length areas.
 - Beckstead crawl regression: **31 joists / 527 LF** when layout authority resolves (`ceil(40×12/16)+1` and `31×17`).
+- Live crawl `joistLayoutLengthFeet` is Evidence from the region read (notes + geometry observations). `associatedRunKey` locates a dim; it is not exclusive wall ownership. TypeScript does not copy unique compiler dims onto layout. Competing layout lengths stay unresolved.
 - No floor truss package takeoff; no generic rim formula; do not derive layout/member length from area SF.
 
 ## Roof framing
@@ -49,7 +51,9 @@ The engine does not claim automatic detection of every duplicate population when
 
 ## Operator / reader composition
 
-OCR-heavy residential PDFs (e.g. Beckstead) typically need env flags such as `TAKEOFF_COMPILER=1`, `TAKEOFF_COMPILER_OCR=1`, and `TAKEOFF_PROJECT_LEARNING=1`. See `.env.example`.
+Empty-text / OCR-heavy residential PDFs (e.g. Beckstead) auto-run the Drawing Compiler and Project Learning unless `TAKEOFF_COMPILER=0` / `TAKEOFF_PROJECT_LEARNING=0`. Force-on remains `=1`. Semantic-binding and opening-geometry bridges stay opt-in. See `.env.example`.
+
+READ writes `reader-claude-call-ledger.json` (illustrative token/cost estimates, not an invoice), `reader-read-complete.json` (calculator-required inputs for plan-identified conditions only), and `reader-project-dictionary.json` when a governed Plan Dictionary exists.
 
 ## Output
 

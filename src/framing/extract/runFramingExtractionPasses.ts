@@ -19,7 +19,17 @@ import {
   type FramingExtractionWorkPlan,
 } from "./buildFramingExtractionWorkPlan.js";
 import type { ExtractionBudgetAudit } from "./extractionBudgetAudit.schema.js";
+import { selectGeometryDimObservationsForPages } from "../geometry/buildGeometryDimObservations.js";
+import type { GeometryDimObservation } from "../geometry/geometryDimObservation.js";
+import type { ExtractionProjectContext } from "./extractionProjectContext.schema.js";
 import type { PlanReferenceTrace } from "./planReferenceTrace.schema.js";
+import type { ExtractionPageBundle } from "../../pdf/ExtractionPageBundle.js";
+import {
+  detectMissingRequiredInputsForIdentifiedSystems,
+  dropIdentityRestubsForKnownSubjects,
+  REQUIRED_INPUT_FOLLOWUP_LEDGER_PURPOSE,
+  shouldSkipSameBundleRequiredInputFollowUp,
+} from "./detectMissingRequiredInputs.js";
 
 /** Empty assemblies — Stage 4 stub removed from production (D4). */
 export const EMPTY_BUILDING_ASSEMBLIES: ExtractFramingEvidenceInput["buildingAssemblies"] =
@@ -27,6 +37,21 @@ export const EMPTY_BUILDING_ASSEMBLIES: ExtractFramingEvidenceInput["buildingAss
     assemblyNames: [],
     notes: [],
   };
+
+export type ExtractFramingEvidenceFn = (
+  input: ExtractFramingEvidenceInput,
+) => Promise<ExtractedFramingEvidencePayload>;
+
+export { REQUIRED_INPUT_FOLLOWUP_LEDGER_PURPOSE };
+
+/**
+ * Claude call purposes used by this runner:
+ * - `extract:{intent}` — primary region extract (one per work unit)
+ * - `extract:required-input-followup` — at most one same-bundle pass, skipped
+ *   when it cannot add calculator completeness (identity-only opening/member
+ *   stubs). Schema repair is skipped with the extract — it is not invoked.
+ * - `reference-followup` — PlanReference drain (unchanged)
+ */
 
 export interface RunFramingExtractionPassesInput {
   planIndex: PlanIndex;
@@ -37,6 +62,7 @@ export interface RunFramingExtractionPassesInput {
   buildingAssemblies?: ExtractFramingEvidenceInput["buildingAssemblies"];
   projectDictionary?: GovernedProjectDictionary | null;
   compiledPages?: readonly CompiledDrawingPage[];
+  geometryObservations?: GeometryDimObservation[];
   scopeName?: string;
   intents?: readonly FramingExtractionIntent[];
   pageVisuals?: ExtractFramingEvidenceInput["pageVisuals"];
@@ -50,10 +76,19 @@ export interface RunFramingExtractionPassesInput {
   tileOverlapFraction?: ExtractFramingEvidenceInput["tileOverlapFraction"];
   onApiCall?: ExtractFramingEvidenceInput["onApiCall"];
   onUsage?: ExtractFramingEvidenceInput["onUsage"];
+  bindClaudeCall?: (purpose: string) => {
+    onApiCall: () => void;
+    onUsage: ExtractFramingEvidenceInput["onUsage"];
+  };
   /** Skip PlanReference follow-up drain (tests / frozen probes). */
   skipPlanReferenceDrain?: boolean;
   /** Optional pre-built work plan (for tests / frozen probes). */
   workPlan?: FramingExtractionWorkPlan;
+  /**
+   * Test seam. Production uses Claude. Must invoke onApiCall when provided
+   * so ledger / apiCallCount stay accurate.
+   */
+  extractEvidence?: ExtractFramingEvidenceFn;
 }
 
 export interface RunFramingExtractionPassesResult {
@@ -61,6 +96,33 @@ export interface RunFramingExtractionPassesResult {
   audit: ExtractionBudgetAudit;
   apiCallCount: number;
   planReferenceTrace: PlanReferenceTrace | null;
+}
+
+export function collectKnownSubjects(
+  evidence: ExtractedFramingEvidencePayload["evidence"],
+): ExtractionProjectContext["knownSubjects"] {
+  const byKey = new Map<
+    string,
+    { subjectKind: string; subjectKey: string; propertyPaths: Set<string> }
+  >();
+  for (const record of evidence) {
+    const id = `${record.subjectKind}:${record.subjectKey}`;
+    const existing = byKey.get(id);
+    if (existing) {
+      existing.propertyPaths.add(record.propertyPath);
+      continue;
+    }
+    byKey.set(id, {
+      subjectKind: record.subjectKind,
+      subjectKey: record.subjectKey,
+      propertyPaths: new Set([record.propertyPath]),
+    });
+  }
+  return [...byKey.values()].map((entry) => ({
+    subjectKind: entry.subjectKind,
+    subjectKey: entry.subjectKey,
+    propertyPaths: [...entry.propertyPaths].sort(),
+  }));
 }
 
 /**
@@ -89,15 +151,25 @@ export async function runFramingExtractionPasses(
   }> = [];
   const compiledPages = input.compiledPages ?? [];
   const dictionary = input.projectDictionary ?? null;
+  const geometryObservations = input.geometryObservations ?? [];
   const enrichedWorkUnits = [...workPlan.audit.workUnits];
+  let knownSubjects: ExtractionProjectContext["knownSubjects"] = [];
+  const extractEvidence = input.extractEvidence ?? extractFramingEvidenceViaClaude;
 
   for (const [index, workUnit] of workPlan.workUnits.entries()) {
+    const bundlePages = workUnit.bundle.orderedPageNumbers;
     const extractionProjectContext = buildExtractionProjectContext({
       intent: workUnit.bundle.intent,
       bundle: workUnit.bundle,
       dictionary,
       compiledPages,
       buildingAssemblies,
+      knownSubjects,
+      geometryObservations: selectGeometryDimObservationsForPages(
+        geometryObservations,
+        bundlePages,
+      ),
+      requiredInputs: workUnit.requiredInputs ?? workUnit.bundle.requiredInputs,
     });
     const contextAudit = auditExtractionProjectContext(extractionProjectContext);
     enrichedWorkUnits[index] = {
@@ -105,7 +177,10 @@ export async function runFramingExtractionPasses(
       ...contextAudit,
     };
 
-    const passResult = await extractFramingEvidenceViaClaude({
+    const ledgerHooks = input.bindClaudeCall?.(
+      `extract:${workUnit.bundle.intent}`,
+    );
+    const passResult = await extractEvidence({
       planIndex: input.planIndex,
       pageClassification: input.pageClassification,
       planReadingOrder: input.planReadingOrder,
@@ -123,9 +198,10 @@ export async function runFramingExtractionPasses(
       tileOverlapFraction: input.tileOverlapFraction,
       onApiCall: () => {
         apiCallCount += 1;
+        ledgerHooks?.onApiCall();
         input.onApiCall?.();
       },
-      onUsage: input.onUsage,
+      onUsage: ledgerHooks?.onUsage ?? input.onUsage,
     });
 
     passes.push({
@@ -135,6 +211,88 @@ export async function runFramingExtractionPasses(
       },
       evidence: passResult.evidence,
     });
+
+    const missingRequired = detectMissingRequiredInputsForIdentifiedSystems({
+      evidence: passResult.evidence,
+      identifiedSystems: workUnit.identifiedSystems,
+    });
+    // Identity-only identified openings/members cannot gain parent/qty/rough
+    // or size/length from a same-bundle re-read. Do not pay for
+    // extract:required-input-followup or its schema repair.
+    if (
+      missingRequired &&
+      !shouldSkipSameBundleRequiredInputFollowUp({
+        evidence: passResult.evidence,
+        identifiedSystems: workUnit.identifiedSystems,
+      })
+    ) {
+      const followUpHooks = input.bindClaudeCall?.(
+        REQUIRED_INPUT_FOLLOWUP_LEDGER_PURPOSE,
+      );
+      const followUpBundle: ExtractionPageBundle = {
+        ...workUnit.bundle,
+        identifiedSystems: missingRequired.systems,
+        requiredInputs: missingRequired.missingPropertyPaths,
+        routingNotes: [
+          ...workUnit.bundle.routingNotes,
+          `Required-input follow-up for ${missingRequired.systems.join(", ")} on the same region sheet (not a new primary).`,
+        ],
+      };
+      const followUpContext = buildExtractionProjectContext({
+        intent: workUnit.bundle.intent,
+        bundle: followUpBundle,
+        dictionary,
+        compiledPages,
+        buildingAssemblies,
+        knownSubjects: collectKnownSubjects(
+          aggregateExtractionEvidencePasses({ passes }),
+        ),
+        geometryObservations: selectGeometryDimObservationsForPages(
+          geometryObservations,
+          bundlePages,
+        ),
+        requiredInputs: missingRequired.missingPropertyPaths,
+        identifiedSystems: missingRequired.systems,
+        requiredInputFollowUp: missingRequired,
+      });
+      const followUpResult = await extractEvidence({
+        planIndex: input.planIndex,
+        pageClassification: input.pageClassification,
+        planReadingOrder: input.planReadingOrder,
+        buildingAssemblies,
+        extractionProjectContext: followUpContext,
+        extractionBundle: followUpBundle,
+        pageVisuals: input.pageVisuals,
+        visualOutputDir: input.visualOutputDir,
+        visualScale: input.visualScale,
+        pageTiles: input.pageTiles,
+        tileOutputDir: input.tileOutputDir,
+        tileSourceScale: input.tileSourceScale,
+        tileColumns: input.tileColumns,
+        tileRows: input.tileRows,
+        tileOverlapFraction: input.tileOverlapFraction,
+        onApiCall: () => {
+          apiCallCount += 1;
+          followUpHooks?.onApiCall();
+          input.onApiCall?.();
+        },
+        onUsage: followUpHooks?.onUsage ?? input.onUsage,
+      });
+      passes.push({
+        stamp: {
+          extractionPassId: `${workUnit.extractionPassId}:required-input-followup`,
+          bundleId: workUnit.bundle.bundleId,
+        },
+        evidence: dropIdentityRestubsForKnownSubjects({
+          followUpEvidence: followUpResult.evidence,
+          primaryEvidence: passResult.evidence,
+        }),
+      });
+    }
+
+    knownSubjects = collectKnownSubjects(
+      aggregateExtractionEvidencePasses({ passes }),
+    );
   }
 
   const primaryEvidence = aggregateExtractionEvidencePasses({ passes });
@@ -147,6 +305,7 @@ export async function runFramingExtractionPasses(
 
   let planReferenceTrace: PlanReferenceTrace | null = null;
   if (!input.skipPlanReferenceDrain) {
+    const followUpHooks = input.bindClaudeCall?.("reference-followup");
     const drainResult = await drainPlanReferenceFollowUps({
       planIndex: input.planIndex,
       pages: input.pages,
@@ -156,6 +315,8 @@ export async function runFramingExtractionPasses(
       pageClassification: input.pageClassification,
       planReadingOrder: input.planReadingOrder,
       buildingAssemblies,
+      projectDictionary: dictionary,
+      compiledPages,
       pageVisuals: input.pageVisuals,
       visualOutputDir: input.visualOutputDir,
       visualScale: input.visualScale,
@@ -167,9 +328,10 @@ export async function runFramingExtractionPasses(
       tileOverlapFraction: input.tileOverlapFraction,
       onApiCall: () => {
         apiCallCount += 1;
+        followUpHooks?.onApiCall();
         input.onApiCall?.();
       },
-      onUsage: input.onUsage,
+      onUsage: followUpHooks?.onUsage ?? input.onUsage,
     });
     planReferenceTrace = drainResult.trace;
     apiCallCount += drainResult.apiCallCount;

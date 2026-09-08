@@ -39,6 +39,13 @@ async function createRegionMessage(input: {
     role: "user" | "assistant";
     content: string | ContentBlockParam[];
   }>;
+  onApiCall?: () => void;
+  onUsage?: (usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationInputTokens: number | null;
+    cacheReadInputTokens: number | null;
+  }) => void;
 }): Promise<string> {
   const client = getAnthropicClient();
   const useStream = REGION_MAX_TOKENS >= 8192;
@@ -49,10 +56,11 @@ async function createRegionMessage(input: {
     thinking: DEFAULT_STRUCTURED_JSON_THINKING,
     messages: input.messages,
   };
+  input.onApiCall?.();
   const message = useStream
     ? await client.messages.stream(params).finalMessage()
     : await client.messages.create({ ...params, stream: false });
-  void usageSnapshotFromMessage(message);
+  input.onUsage?.(usageSnapshotFromMessage(message));
   return extractTextFromClaudeMessage(message);
 }
 
@@ -130,6 +138,13 @@ async function interpretOneRegion(input: {
   candidate: ProjectLearningCandidate;
   userContent: ContentBlockParam[];
   telemetry: ProjectLearningInterpretTelemetry;
+  onApiCall?: () => void;
+  onUsage?: (usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationInputTokens: number | null;
+    cacheReadInputTokens: number | null;
+  }) => void;
 }): Promise<{
   proposals: InterpretedDefinitionProposal[];
   error?: string;
@@ -141,6 +156,8 @@ async function interpretOneRegion(input: {
   const firstText = await createRegionMessage({
     systemPrompt: CLAUDE_REGION_SYSTEM_PROMPT,
     messages: [{ role: "user", content: input.userContent }],
+    onApiCall: input.onApiCall,
+    onUsage: input.onUsage,
   });
 
   try {
@@ -184,6 +201,8 @@ ${firstText.slice(0, 12000)}`;
           { role: "assistant", content: firstText },
           { role: "user", content: repairPrompt },
         ],
+        onApiCall: input.onApiCall,
+        onUsage: input.onUsage,
       });
       const repaired = validateRegionText(repairText, `${label} (repaired)`);
       input.telemetry.repairSuccesses += 1;
@@ -221,6 +240,13 @@ export async function interpretProjectLearningRegionsWithClaude(input: {
   candidates: readonly ProjectLearningCandidate[];
   pageWidthPt?: number;
   pageHeightPt?: number;
+  onApiCall?: () => void;
+  onUsage?: (usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationInputTokens: number | null;
+    cacheReadInputTokens: number | null;
+  }) => void;
 }): Promise<{
   candidates: ProjectLearningCandidate[];
   proposals: InterpretedDefinitionProposal[];
@@ -317,6 +343,8 @@ export async function interpretProjectLearningRegionsWithClaude(input: {
         candidate,
         userContent,
         telemetry,
+        onApiCall: input.onApiCall,
+        onUsage: input.onUsage,
       });
       if (result.error) {
         failedInterpretNotes.set(candidate.id, result.error);

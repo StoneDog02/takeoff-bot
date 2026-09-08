@@ -1,15 +1,24 @@
-import { env } from "../../config/env.js";
-import { parseJson } from "../../core/utils/parseJson.js";
-import { validateWithSchema } from "../../core/validation/validateWithSchema.js";
-import { getAnthropicClient } from "./client.js";
+import type Anthropic from "@anthropic-ai/sdk";
 import type {
+  CacheControlEphemeral,
   ContentBlockParam,
   Message,
   MessageCreateParamsNonStreaming,
   MessageParam,
+  TextBlockParam,
   ThinkingConfigParam,
 } from "@anthropic-ai/sdk/resources/messages.js";
 import type { z } from "zod";
+
+import { env } from "../../config/env.js";
+import { parseJson } from "../../core/utils/parseJson.js";
+import { validateWithSchema } from "../../core/validation/validateWithSchema.js";
+import { getAnthropicClient } from "./client.js";
+
+/** Anthropic prompt-cache breakpoint on the stable prefix (system/brain, last image). */
+export const EPHEMERAL_PROMPT_CACHE_CONTROL: CacheControlEphemeral = {
+  type: "ephemeral",
+};
 
 /**
  * Stage-5 structured extraction must emit JSON text. Extended/adaptive thinking
@@ -57,6 +66,11 @@ export interface RunClaudeJsonInput<T extends z.ZodTypeAny> {
   onApiCall?: () => void;
   /** Invoked with usage after each Anthropic messages API call when available. */
   onUsage?: (usage: ClaudeUsageSnapshot) => void;
+  /**
+   * Test seam. Production omits this and uses `getAnthropicClient()`.
+   * Do not use to call live Anthropic from tests.
+   */
+  client?: Anthropic;
 }
 
 /**
@@ -104,6 +118,62 @@ export function usageSnapshotFromMessage(
   };
 }
 
+export function cachedSystemPromptBlocks(systemPrompt: string): TextBlockParam[] {
+  return [
+    {
+      type: "text",
+      text: systemPrompt,
+      cache_control: EPHEMERAL_PROMPT_CACHE_CONTROL,
+    },
+  ];
+}
+
+/**
+ * Marks the last image on the first user message so same-page visuals sit in
+ * the cached prefix (schema repair and same-sheet follow-up when images are
+ * identical through that breakpoint). Text-only user content is not marked —
+ * the system/brain block is the stable prefix.
+ */
+export function applyEphemeralCacheToStableUserPrefix(
+  content: MessageParam["content"],
+): MessageParam["content"] {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  let lastImageIndex = -1;
+  for (let index = 0; index < content.length; index += 1) {
+    if (content[index]?.type === "image") {
+      lastImageIndex = index;
+    }
+  }
+  if (lastImageIndex < 0) {
+    return content;
+  }
+
+  return content.map((block, index) => {
+    if (index !== lastImageIndex || block.type !== "image") {
+      return block;
+    }
+    return {
+      ...block,
+      cache_control: EPHEMERAL_PROMPT_CACHE_CONTROL,
+    };
+  });
+}
+
+function withPromptCacheOnMessages(messages: MessageParam[]): MessageParam[] {
+  return messages.map((message, index) => {
+    if (index !== 0 || message.role !== "user") {
+      return message;
+    }
+    return {
+      ...message,
+      content: applyEphemeralCacheToStableUserPrefix(message.content),
+    };
+  });
+}
+
 /**
  * Extracts assistant text suitable for JSON parsing. Thinking-only / empty
  * responses fail explicitly with stop_reason, content types, and usage.
@@ -133,8 +203,8 @@ export function buildClaudeJsonRequestParams(input: {
   return {
     model: env.anthropicModel,
     max_tokens: input.maxTokens,
-    system: input.systemPrompt,
-    messages: input.messages,
+    system: cachedSystemPromptBlocks(input.systemPrompt),
+    messages: withPromptCacheOnMessages(input.messages),
     thinking: input.thinking ?? DEFAULT_STRUCTURED_JSON_THINKING,
   };
 }
@@ -146,8 +216,9 @@ async function createClaudeMessage(input: {
   thinking?: ThinkingConfigParam;
   onApiCall?: () => void;
   onUsage?: (usage: ClaudeUsageSnapshot) => void;
+  client?: Anthropic;
 }): Promise<Message> {
-  const client = getAnthropicClient();
+  const client = input.client ?? getAnthropicClient();
   const params = buildClaudeJsonRequestParams(input);
   const useStream = input.maxTokens >= STREAM_WHEN_MAX_TOKENS_AT_LEAST;
   input.onApiCall?.();
@@ -173,6 +244,7 @@ export async function runClaudeJson<T extends z.ZodTypeAny>(
     thinking = DEFAULT_STRUCTURED_JSON_THINKING,
     onApiCall,
     onUsage,
+    client,
   } = input;
 
   const firstUserContent = resolveUserContent({ userPrompt, userContent });
@@ -183,6 +255,7 @@ export async function runClaudeJson<T extends z.ZodTypeAny>(
     thinking,
     onApiCall,
     onUsage,
+    client,
     messages: [{ role: "user", content: firstUserContent }],
   });
   const firstText = extractTextFromClaudeMessage(firstMessage);
@@ -207,6 +280,7 @@ ${firstText}`;
       thinking,
       onApiCall,
       onUsage,
+      client,
       messages: [
         { role: "user", content: firstUserContent },
         { role: "assistant", content: firstText },

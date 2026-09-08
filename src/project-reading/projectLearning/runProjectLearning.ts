@@ -35,6 +35,13 @@ export type RunProjectLearningInput = {
   crossCheckByKey?: ReadonlyMap<string, readonly string[]>;
   skipHybridServerEnsure?: boolean;
   ocrFallbackCandidates?: ProjectLearningCandidate[];
+  onApiCall?: () => void;
+  onUsage?: (usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationInputTokens: number | null;
+    cacheReadInputTokens: number | null;
+  }) => void;
 };
 
 export type RunProjectLearningResult = {
@@ -81,6 +88,8 @@ export async function runProjectLearning(
     const claude = await interpretProjectLearningRegionsWithClaude({
       pdfPath: input.planIndex.pdfPath,
       candidates: harvest.candidates,
+      onApiCall: input.onApiCall,
+      onUsage: input.onUsage,
     });
     interpretTelemetry = claude.telemetry;
     // Promote any remaining harvested candidates that already carry explicit

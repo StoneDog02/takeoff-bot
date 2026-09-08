@@ -300,6 +300,11 @@ describe("governOpeningMarkOwnership", () => {
     assert.match(category.description, /ESTABLISHED mark\/label ownership/);
     assert.equal(withDim.ownedMarks.length, 1);
     assert.equal(withDim.ownedMarks[0]?.markText, "DOOR");
+    assert.equal(
+      withDim.evidence.some((record) => record.propertyPath === "quantity"),
+      false,
+      "geometry must not invent opening.quantity",
+    );
   });
 
   it("marks AMBIGUOUS when two labels compete for one gap", () => {

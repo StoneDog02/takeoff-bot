@@ -282,4 +282,69 @@ describe("constructionSemanticFloorProof", () => {
       false,
     );
   });
+
+  it("does not parent covered porch or uncovered patio SF-only areas onto the crawl joist system", () => {
+    const base = becksteadCrawlSpaceEvidence();
+    const page = 3;
+    const porch: Evidence = {
+      id: "E-PORCH-SF",
+      type: "note",
+      relationship: "supports",
+      description: "Covered porch square footage",
+      source: {
+        page: {
+          documentId: null,
+          pageNumber: page,
+          sheetId: null,
+          sheetTitle: "CRAWL SPACE/FOUNDATION PLAN",
+          pageLabel: null,
+          revision: null,
+        },
+        region: { x: 0.6, y: 0.6, width: 0.15, height: 0.12 },
+        tileId: "t-r1-c1",
+        elementLabel: "COV. PORCH",
+        detailNumber: null,
+        sectionNumber: null,
+        scheduleName: null,
+        noteReference: null,
+      },
+      originalText: "COV. PORCH 120 SF",
+      references: [],
+      subjectKind: "floor-framing-area",
+      subjectKey: "COV. PORCH",
+      propertyPath: "areaSquareFeet",
+      candidateValue: 120,
+    };
+    const patio: Evidence = {
+      ...porch,
+      id: "E-PATIO-SF",
+      description: "Uncovered patio square footage",
+      source: {
+        ...porch.source!,
+        elementLabel: "UNCOV. PATIO",
+      },
+      originalText: "UNCOV. PATIO 80 SF",
+      subjectKey: "UNCOV. PATIO",
+      candidateValue: 80,
+    };
+    const evidence = [...base, porch, patio];
+    const index = buildPlanRelationshipSignalIndex({
+      evidence,
+      classifiedPages: becksteadCrawlPageClassification(),
+    });
+    const { areaClusters, systemClusters } = clustersFromEvidence(evidence);
+    const { results } = evaluateAllConstructionSemanticFloorProofs({
+      index,
+      evidence,
+      areaClusters,
+      systemClusters,
+    });
+
+    const acceptedAreas = results
+      .filter((entry) => entry.status === "accepted")
+      .map((entry) => (entry.status === "accepted" ? entry.areaSubjectKey : ""));
+    assert.ok(acceptedAreas.includes("FLOOR AREA CRAWL SPACE"));
+    assert.equal(acceptedAreas.includes("COV. PORCH"), false);
+    assert.equal(acceptedAreas.includes("UNCOV. PATIO"), false);
+  });
 });

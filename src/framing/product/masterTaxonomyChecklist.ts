@@ -13,6 +13,9 @@ export type MaterialMatchRule = {
   materialIncludes?: string[];
 };
 
+/** Opening-family role for header taxonomy rows. Does not invent wall location. */
+export type HeaderOpeningRole = "exterior" | "interior-door";
+
 /**
  * How to detect that THIS house has established relevant construction.
  * Empty domainSignals ⇒ never fires ⇒ unmatched stays applicability_unestablished.
@@ -27,6 +30,7 @@ export type DomainSignalRule =
   | { kind: "has_rim_board_signal" }
   | { kind: "has_roof_systems" }
   | { kind: "has_roof_stick" }
+  /** Identified truss package or truss members — not mixed "truss and rafter" notes. */
   | { kind: "has_roof_truss" }
   | { kind: "has_sheathing" }
   | { kind: "has_sheathing_application"; application: string }
@@ -37,11 +41,21 @@ export type DomainSignalRule =
   | {
       kind: "has_structural_material";
       materials: string[];
+    }
+  | {
+      kind: "has_structural_member";
+      categories: string[];
+      materials?: string[];
+    }
+  | {
+      kind: "has_header_opening_role";
+      role: HeaderOpeningRole;
     };
 
 /**
  * After domain presence: how to distinguish read_or_input_gap vs calculator_gap.
  * `no_emitter` = presence established but no wired calculator path for this signal.
+ * Structural / wall probes are scoped to the item's domainSignals (not the whole bag).
  */
 export type InputGapProbe =
   | "wall_studs"
@@ -141,9 +155,15 @@ export const MASTER_TAXONOMY_CHECKLIST: MasterTaxonomyChecklist = {
       {
         categories: ["engineered-wood"],
         materialIncludes: ["lvl"],
-        canonicalClassificationPrefixes: ["beam-lvl", "girder-lvl", "header-lvl"],
+        canonicalClassificationPrefixes: ["beam-lvl", "girder-lvl"],
       },
-      [{ kind: "has_structural_material", materials: ["lvl"] }],
+      [
+        {
+          kind: "has_structural_member",
+          categories: ["beam", "girder"],
+          materials: ["lvl"],
+        },
+      ],
       "structural_members",
     ),
     item(
@@ -337,7 +357,7 @@ export const MASTER_TAXONOMY_CHECKLIST: MasterTaxonomyChecklist = {
       "int-door-headers",
       "Door headers",
       { canonicalClassificationPrefixes: ["header-"] },
-      [{ kind: "has_structural_category", categories: ["header"] }],
+      [{ kind: "has_header_opening_role", role: "interior-door" }],
       "structural_members",
     ),
     item(

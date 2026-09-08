@@ -25,6 +25,8 @@ export type GeometryLengthAssignment =
  * Converts a geometry observation into lengthFeet Evidence for a physical run.
  * Fails closed for wall-type marks, chain segments, low confidence, and
  * ambiguous / unparsable dimensions.
+ * Wall-run lengthFeet only. Do not emit floor-area joistLayoutLengthFeet here;
+ * layout is a separate Evidence record from the region read.
  */
 export function assignLengthEvidenceFromGeometryObservation(
   observation: WallGeometryObservation,

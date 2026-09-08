@@ -11,6 +11,7 @@ import {
   buildReferencedPageExtractionBundles,
   selectResolvedReferencedPageTargets,
 } from "../../pdf/buildReferencedPageExtractionBundles.js";
+import type { CompiledDrawingPage } from "../../compiler/schemas/compiledDrawingPage.schema.js";
 import type { ExtractionPageBundle } from "../../pdf/ExtractionPageBundle.js";
 import { inventoryPlanReferencesFromEvidence } from "../../pdf/inventoryPlanReferencesFromEvidence.js";
 import { localizeDetailOnPage } from "../../pdf/localizeDetailOnPage.js";
@@ -35,7 +36,10 @@ import {
   resolvePageVisualsForExtraction,
   type ExtractFramingEvidenceInput,
 } from "../prompts/extractFramingEvidence.js";
+import type { GovernedProjectDictionary } from "../../project-reading/schemas/projectDictionary.schema.js";
+import { lookupProjectDictionaryDefinitionFromTexts } from "../../project-reading/lookupProjectDictionaryDefinition.js";
 import type { ExtractedFramingEvidencePayload } from "../schemas/framing-artifacts.schema.js";
+import { buildExtractionProjectContext } from "./buildExtractionProjectContext.js";
 import {
   planReferenceTraceSchema,
   type PlanReferenceFollowUpAudit,
@@ -51,6 +55,8 @@ export interface DrainPlanReferenceFollowUpsInput {
   pageClassification: ExtractFramingEvidenceInput["pageClassification"];
   planReadingOrder: ExtractFramingEvidenceInput["planReadingOrder"];
   buildingAssemblies: ExtractFramingEvidenceInput["buildingAssemblies"];
+  projectDictionary?: GovernedProjectDictionary | null;
+  compiledPages?: readonly CompiledDrawingPage[];
   pageVisuals?: ExtractFramingEvidenceInput["pageVisuals"];
   visualOutputDir?: ExtractFramingEvidenceInput["visualOutputDir"];
   visualScale?: ExtractFramingEvidenceInput["visualScale"];
@@ -232,6 +238,24 @@ export async function drainPlanReferenceFollowUps(
       continue;
     }
 
+    const dictionaryHit = lookupProjectDictionaryDefinitionFromTexts(
+      input.projectDictionary ?? null,
+      [
+        nextItem.detailNumber ?? "",
+        nextItem.originatingObservations[0]?.originatingSubjectKey ?? "",
+        nextItem.originatingObservations[0]?.originalText ?? "",
+      ],
+    );
+    if (dictionaryHit) {
+      queue = markQueueItemStatus(queue, nextItem.id, {
+        queueStatus: "processed",
+        statusReason: `Resolved from Plan Dictionary lookup (${dictionaryHit.semanticTypeKey}); skipped Claude follow-up.`,
+      });
+      referencesFollowed += 1;
+      processedNavigationKeys.add(nextItem.navigationKey);
+      continue;
+    }
+
     let bundle: ExtractionPageBundle | null = null;
     let localizationPassId: string | null = null;
 
@@ -373,11 +397,19 @@ export async function drainPlanReferenceFollowUps(
     apiCallCount += 1;
 
     try {
+      const extractionProjectContext = buildExtractionProjectContext({
+        intent: bundle.intent,
+        bundle,
+        dictionary: input.projectDictionary ?? null,
+        compiledPages: input.compiledPages ?? [],
+        buildingAssemblies: input.buildingAssemblies,
+      });
       const passResult = await extractFramingEvidenceViaClaude({
         planIndex: input.planIndex,
         pageClassification: input.pageClassification,
         planReadingOrder: input.planReadingOrder,
         buildingAssemblies: input.buildingAssemblies,
+        extractionProjectContext,
         extractionBundle: bundle,
         pageVisuals: input.pageVisuals,
         visualOutputDir: input.visualOutputDir,

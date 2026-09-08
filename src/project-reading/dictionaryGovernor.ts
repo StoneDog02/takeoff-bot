@@ -1,9 +1,11 @@
-import type {
-  ProjectConventionHypothesis,
-  ProjectDictionary,
-  ProjectReferenceBinding,
-  ProjectSemanticDefinition,
-  ProvenanceRef,
+import {
+  governedProjectDictionarySchema,
+  type GovernedProjectDictionary,
+  type ProjectConventionHypothesis,
+  type ProjectDictionary,
+  type ProjectReferenceBinding,
+  type ProjectSemanticDefinition,
+  type ProvenanceRef,
 } from "./schemas/projectDictionary.schema.js";
 import type { CompilerInvestigationFacade } from "./compilerInvestigationFacade.js";
 import { normalizeForScheduleMatch } from "../compiler/semantic-definitions/extractScheduleFromRowBands.js";
@@ -614,6 +616,27 @@ export class DictionaryGovernor {
 
     return { outcome: null, criterion: null };
   }
+}
+
+export function toGovernedProjectDictionary(
+  report: GovernanceReport,
+): GovernedProjectDictionary {
+  return governedProjectDictionarySchema.parse({
+    ...report.dictionary,
+    governance: {
+      evaluatedAt: report.evaluatedAt,
+      passRate: report.passRate,
+      acceptedHypothesisIds: report.acceptedHypothesisIds,
+      rejectedHypothesisIds: report.rejectedHypothesisIds,
+      acceptedBindingIds: report.acceptedBindingIds,
+      rejectedBindingIds: report.rejectedBindingIds,
+      acceptedDefinitionKeys: report.acceptedDefinitionKeys,
+      rejectedDefinitionKeys: report.rejectedDefinitionKeys,
+      validatorResults: report.validatorResults,
+      greenOutcome: report.greenOutcome,
+      greenCriterion: report.greenCriterion,
+    },
+  });
 }
 
 export function governDefinitions(

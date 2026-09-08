@@ -1,6 +1,14 @@
 import { isQuantityInputResolved } from "../calculate/isQuantityInputResolved.js";
+import {
+  isNonWoodFloorTakeoffAreaFromTraces,
+  layoutTextIndicatesExplicitConcreteSlab,
+} from "../resolve/floorAreaMaterialCompatibility.js";
+import type { FloorFramingArea } from "../schemas/floor-framing.schema.js";
 import type { FramingConstruction } from "../schemas/framingConstruction.schema.js";
 import type { FramingMaterialLineItem } from "../schemas/material.schema.js";
+import type { Opening } from "../schemas/opening.schema.js";
+import type { BuildingWall } from "../schemas/wall.schema.js";
+import type { StructuralMember } from "../schemas/structural-member.schema.js";
 import {
   productAccountingSchema,
   type ProductAccounting,
@@ -10,6 +18,7 @@ import {
 import {
   MASTER_TAXONOMY_CHECKLIST,
   type DomainSignalRule,
+  type HeaderOpeningRole,
   type InputGapProbe,
   type MasterTaxonomyChecklistItem,
   type MaterialMatchRule,
@@ -31,10 +40,7 @@ function wallLocationIsInterior(location: string | null): boolean {
   return token.includes("interior") || token === "int";
 }
 
-function isStickFramingType(framingType: string | null): boolean {
-  if (!framingType) return false;
-  const token = normalizeToken(framingType);
-  if (token.includes("truss")) return false;
+function framingTypeNamesStickOrRafter(token: string): boolean {
   return (
     token.includes("stick") ||
     token.includes("rafter") ||
@@ -43,9 +49,300 @@ function isStickFramingType(framingType: string | null): boolean {
   );
 }
 
-function isTrussFramingType(framingType: string | null): boolean {
+function isStickFramingType(framingType: string | null): boolean {
   if (!framingType) return false;
-  return normalizeToken(framingType).includes("truss");
+  const token = normalizeToken(framingType);
+  if (token.includes("truss")) return false;
+  return framingTypeNamesStickOrRafter(token);
+}
+
+/**
+ * Exclusive truss classification. Mixed notes such as "truss and rafter
+ * framing" do not identify a truss package.
+ */
+function isExclusiveTrussFramingType(framingType: string | null): boolean {
+  if (!framingType) return false;
+  const token = normalizeToken(framingType);
+  if (!token.includes("truss")) return false;
+  return !framingTypeNamesStickOrRafter(token);
+}
+
+function requiredWallLocationFromSignals(
+  signals: readonly DomainSignalRule[],
+): "exterior" | "interior" | null {
+  const wantsExterior = signals.some(
+    (signal) => signal.kind === "has_exterior_walls",
+  );
+  const wantsInterior = signals.some(
+    (signal) => signal.kind === "has_interior_walls",
+  );
+  if (wantsExterior && !wantsInterior) return "exterior";
+  if (wantsInterior && !wantsExterior) return "interior";
+  return null;
+}
+
+function wallMatchesLocationRequirement(
+  location: string | null,
+  required: "exterior" | "interior",
+): boolean {
+  return required === "exterior"
+    ? wallLocationIsExterior(location)
+    : wallLocationIsInterior(location);
+}
+
+function membersSourcedByLine(
+  line: FramingMaterialLineItem,
+  construction: FramingConstruction,
+): StructuralMember[] {
+  const membersById = new Map(
+    construction.structuralMembers.structuralMembers.map((member) => [
+      member.id,
+      member,
+    ]),
+  );
+  const found = new Map<string, StructuralMember>();
+  for (const id of line.sourceObjectIds) {
+    const member = membersById.get(id);
+    if (member) {
+      found.set(member.id, member);
+    }
+  }
+  return [...found.values()];
+}
+
+function openingsServedByMember(
+  member: StructuralMember,
+  construction: FramingConstruction,
+): Opening[] {
+  const found = new Map<string, Opening>();
+  for (const opening of construction.openings.openings) {
+    if (opening.headerMemberId === member.id) {
+      found.set(opening.id, opening);
+    }
+  }
+  const openingsById = new Map(
+    construction.openings.openings.map((opening) => [opening.id, opening]),
+  );
+  for (const id of member.supportedObjectIds) {
+    const opening = openingsById.get(id);
+    if (opening) {
+      found.set(opening.id, opening);
+    }
+  }
+  return [...found.values()];
+}
+
+function wallForOpening(
+  opening: Opening,
+  construction: FramingConstruction,
+): BuildingWall | null {
+  if (!opening.parentWallId) {
+    return null;
+  }
+  return (
+    construction.walls.walls.find((wall) => wall.id === opening.parentWallId) ??
+    null
+  );
+}
+
+/**
+ * Header construction role from linked openings. Unknown-location doors
+ * match neither side — wall location is never invented.
+ */
+function memberServesHeaderOpeningRole(
+  member: StructuralMember,
+  construction: FramingConstruction,
+  role: HeaderOpeningRole,
+): boolean {
+  if (member.category !== "header") {
+    return false;
+  }
+  for (const opening of openingsServedByMember(member, construction)) {
+    if (role === "interior-door") {
+      if (opening.category !== "door") {
+        continue;
+      }
+      const wall = wallForOpening(opening, construction);
+      if (wall && wallLocationIsInterior(wall.location)) {
+        return true;
+      }
+      continue;
+    }
+    if (opening.category === "garage-door" || opening.category === "window") {
+      return true;
+    }
+    if (opening.category === "door") {
+      const wall = wallForOpening(opening, construction);
+      if (wall && wallLocationIsExterior(wall.location)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function memberMatchesCompoundStructuralSignal(
+  member: StructuralMember,
+  signal: Extract<DomainSignalRule, { kind: "has_structural_member" }>,
+): boolean {
+  if (!signal.categories.includes(member.category)) {
+    return false;
+  }
+  if (!signal.materials?.length) {
+    return true;
+  }
+  const material = normalizeToken(member.materialType ?? "");
+  return signal.materials.some(
+    (candidate) => material === normalizeToken(candidate),
+  );
+}
+
+function lineMatchesDomainConstructionRole(
+  line: FramingMaterialLineItem,
+  construction: FramingConstruction,
+  signals: readonly DomainSignalRule[],
+): boolean {
+  const headerRoles = signals.filter(
+    (
+      signal,
+    ): signal is Extract<DomainSignalRule, { kind: "has_header_opening_role" }> =>
+      signal.kind === "has_header_opening_role",
+  );
+  const memberSignals = signals.filter(
+    (
+      signal,
+    ): signal is Extract<DomainSignalRule, { kind: "has_structural_member" }> =>
+      signal.kind === "has_structural_member",
+  );
+  if (headerRoles.length === 0 && memberSignals.length === 0) {
+    return true;
+  }
+  const members = membersSourcedByLine(line, construction);
+  if (headerRoles.length > 0) {
+    const servesRole = members.some((member) =>
+      headerRoles.some((signal) =>
+        memberServesHeaderOpeningRole(member, construction, signal.role),
+      ),
+    );
+    if (!servesRole) {
+      return false;
+    }
+  }
+  if (memberSignals.length > 0) {
+    const matchesMember = members.some((member) =>
+      memberSignals.some((signal) =>
+        memberMatchesCompoundStructuralSignal(member, signal),
+      ),
+    );
+    if (!matchesMember) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function wallsSourcedByLine(
+  line: FramingMaterialLineItem,
+  construction: FramingConstruction,
+): BuildingWall[] {
+  const wallsById = new Map(
+    construction.walls.walls.map((wall) => [wall.id, wall]),
+  );
+  const segmentsById = new Map(
+    construction.walls.segments.map((segment) => [segment.id, segment]),
+  );
+  const found = new Map<string, BuildingWall>();
+  for (const id of line.sourceObjectIds) {
+    const wall = wallsById.get(id);
+    if (wall) {
+      found.set(wall.id, wall);
+    }
+    const segment = segmentsById.get(id);
+    if (segment) {
+      const parent = wallsById.get(segment.parentWallId);
+      if (parent) {
+        found.set(parent.id, parent);
+      }
+    }
+  }
+  return [...found.values()];
+}
+
+function lineMatchesRequiredWallLocation(
+  line: FramingMaterialLineItem,
+  construction: FramingConstruction,
+  required: "exterior" | "interior",
+): boolean {
+  return wallsSourcedByLine(line, construction).some((wall) =>
+    wallMatchesLocationRequirement(wall.location, required),
+  );
+}
+
+function isFloorJoistTakeoffArea(
+  area: FloorFramingArea,
+  construction: FramingConstruction,
+): boolean {
+  if (isNonWoodFloorTakeoffAreaFromTraces(area)) {
+    return false;
+  }
+  if (layoutTextIndicatesExplicitConcreteSlab(area.layout ?? "")) {
+    return false;
+  }
+  if (area.joistLayoutLengthFeet != null || area.joistMemberLengthFeet != null) {
+    return true;
+  }
+  const layoutToken = normalizeToken(area.layout ?? "");
+  if (
+    layoutToken.includes("joist") ||
+    layoutToken.includes("crawl") ||
+    layoutToken.includes("tji") ||
+    layoutToken.includes("visqueen")
+  ) {
+    return true;
+  }
+  return construction.floorFraming.systems.some(
+    (system) => system.id === area.parentSystemId,
+  );
+}
+
+function memberMatchesStructuralSignals(
+  member: StructuralMember,
+  signals: readonly DomainSignalRule[],
+  construction: FramingConstruction,
+): boolean {
+  const structuralSignals = signals.filter(
+    (
+      signal,
+    ): signal is Extract<
+      DomainSignalRule,
+      | { kind: "has_structural_category" }
+      | { kind: "has_structural_material" }
+      | { kind: "has_structural_member" }
+      | { kind: "has_header_opening_role" }
+    > =>
+      signal.kind === "has_structural_category" ||
+      signal.kind === "has_structural_material" ||
+      signal.kind === "has_structural_member" ||
+      signal.kind === "has_header_opening_role",
+  );
+  if (structuralSignals.length === 0) {
+    return true;
+  }
+  return structuralSignals.some((signal) => {
+    if (signal.kind === "has_structural_category") {
+      return signal.categories.includes(member.category);
+    }
+    if (signal.kind === "has_structural_member") {
+      return memberMatchesCompoundStructuralSignal(member, signal);
+    }
+    if (signal.kind === "has_header_opening_role") {
+      return memberServesHeaderOpeningRole(member, construction, signal.role);
+    }
+    const material = normalizeToken(member.materialType ?? "");
+    return signal.materials.some(
+      (candidate) => material === normalizeToken(candidate),
+    );
+  });
 }
 
 export function evaluateDomainSignal(
@@ -68,7 +365,9 @@ export function evaluateDomainSignal(
     case "has_floor_systems":
       return construction.floorFraming.systems.length > 0;
     case "has_floor_joist_areas":
-      return construction.floorFraming.areas.length > 0;
+      return construction.floorFraming.areas.some((area) =>
+        isFloorJoistTakeoffArea(area, construction),
+      );
     case "has_rim_board_signal": {
       const rimNote = construction.floorFraming.systems.some(
         (system) =>
@@ -88,7 +387,7 @@ export function evaluateDomainSignal(
       );
     case "has_roof_truss": {
       const systemTruss = construction.roofFraming.systems.some((system) =>
-        isTrussFramingType(system.assembly.framingType),
+        isExclusiveTrussFramingType(system.assembly.framingType),
       );
       const memberTruss = construction.structuralMembers.structuralMembers.some(
         (member) => member.category === "truss",
@@ -117,6 +416,14 @@ export function evaluateDomainSignal(
           (candidate) => material === normalizeToken(candidate),
         );
       });
+    case "has_structural_member":
+      return construction.structuralMembers.structuralMembers.some((member) =>
+        memberMatchesCompoundStructuralSignal(member, signal),
+      );
+    case "has_header_opening_role":
+      return construction.structuralMembers.structuralMembers.some((member) =>
+        memberServesHeaderOpeningRole(member, construction, signal.role),
+      );
     default:
       return false;
   }
@@ -209,10 +516,24 @@ export function materialMatchesRule(
   return true;
 }
 
+function wallsForLocationProbe(
+  construction: FramingConstruction,
+  signals: readonly DomainSignalRule[],
+): BuildingWall[] {
+  const required = requiredWallLocationFromSignals(signals);
+  if (!required) {
+    return construction.walls.walls;
+  }
+  return construction.walls.walls.filter((wall) =>
+    wallMatchesLocationRequirement(wall.location, required),
+  );
+}
+
 function wallStudsHaveUnresolvedInputs(
   construction: FramingConstruction,
+  signals: readonly DomainSignalRule[],
 ): boolean {
-  for (const wall of construction.walls.walls) {
+  for (const wall of wallsForLocationProbe(construction, signals)) {
     for (const segment of construction.walls.segments.filter(
       (entry) => entry.parentWallId === wall.id,
     )) {
@@ -241,8 +562,9 @@ function wallStudsHaveUnresolvedInputs(
 
 function wallPlatesHaveUnresolvedInputs(
   construction: FramingConstruction,
+  signals: readonly DomainSignalRule[],
 ): boolean {
-  for (const wall of construction.walls.walls) {
+  for (const wall of wallsForLocationProbe(construction, signals)) {
     for (const segment of construction.walls.segments.filter(
       (entry) => entry.parentWallId === wall.id,
     )) {
@@ -302,6 +624,9 @@ function floorJoistsHaveUnresolvedInputs(
   construction: FramingConstruction,
 ): boolean {
   for (const area of construction.floorFraming.areas) {
+    if (!isFloorJoistTakeoffArea(area, construction)) {
+      continue;
+    }
     const system = construction.floorFraming.systems.find(
       (entry) => entry.id === area.parentSystemId,
     );
@@ -408,8 +733,12 @@ function sheathingHasUnresolvedInputs(
 
 function structuralMembersHaveUnresolvedInputs(
   construction: FramingConstruction,
+  signals: readonly DomainSignalRule[],
 ): boolean {
   for (const member of construction.structuralMembers.structuralMembers) {
+    if (!memberMatchesStructuralSignals(member, signals, construction)) {
+      continue;
+    }
     if (member.category === "unknown") {
       return true;
     }
@@ -442,6 +771,7 @@ function structuralMembersHaveUnresolvedInputs(
 export function diagnoseInputGap(
   construction: FramingConstruction,
   probe: InputGapProbe | undefined,
+  signals: readonly DomainSignalRule[] = [],
 ): ProductAccountingGapClass {
   if (!probe || probe === "no_emitter") {
     return "calculator_gap";
@@ -450,10 +780,10 @@ export function diagnoseInputGap(
   let unresolved = false;
   switch (probe) {
     case "wall_studs":
-      unresolved = wallStudsHaveUnresolvedInputs(construction);
+      unresolved = wallStudsHaveUnresolvedInputs(construction, signals);
       break;
     case "wall_plates":
-      unresolved = wallPlatesHaveUnresolvedInputs(construction);
+      unresolved = wallPlatesHaveUnresolvedInputs(construction, signals);
       break;
     case "opening_framing":
       unresolved = openingsHaveUnresolvedInputs(construction);
@@ -468,7 +798,7 @@ export function diagnoseInputGap(
       unresolved = sheathingHasUnresolvedInputs(construction);
       break;
     case "structural_members":
-      unresolved = structuralMembersHaveUnresolvedInputs(construction);
+      unresolved = structuralMembersHaveUnresolvedInputs(construction, signals);
       break;
     default:
       unresolved = false;
@@ -485,12 +815,35 @@ function accountForItem(
   const matchedIndexes: number[] = [];
   const matchedKeys = new Set<string>();
 
+  const requiredWallLocation = requiredWallLocationFromSignals(
+    checklistItem.domainSignals,
+  );
   materials.forEach((line, index) => {
-    if (materialMatchesRule(line, checklistItem.materialMatch)) {
-      matchedIndexes.push(index);
-      if (line.quantityKey) {
-        matchedKeys.add(line.quantityKey);
-      }
+    if (!materialMatchesRule(line, checklistItem.materialMatch)) {
+      return;
+    }
+    if (
+      requiredWallLocation &&
+      !lineMatchesRequiredWallLocation(
+        line,
+        construction,
+        requiredWallLocation,
+      )
+    ) {
+      return;
+    }
+    if (
+      !lineMatchesDomainConstructionRole(
+        line,
+        construction,
+        checklistItem.domainSignals,
+      )
+    ) {
+      return;
+    }
+    matchedIndexes.push(index);
+    if (line.quantityKey) {
+      matchedKeys.add(line.quantityKey);
     }
   });
 
@@ -521,7 +874,11 @@ function accountForItem(
     };
   }
 
-  const gapClass = diagnoseInputGap(construction, checklistItem.inputGapProbe);
+  const gapClass = diagnoseInputGap(
+    construction,
+    checklistItem.inputGapProbe,
+    checklistItem.domainSignals,
+  );
   return {
     taxonomySection: checklistItem.sectionId,
     taxonomySectionTitle: checklistItem.sectionTitle,

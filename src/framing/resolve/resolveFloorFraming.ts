@@ -31,6 +31,7 @@ import {
 import {
   FLOOR_AREA_PROPERTY_PATHS,
   FLOOR_SYSTEM_PROPERTY_PATHS,
+  isJoistSizePlanPointerValue,
   normalizeFloorAreaCandidate,
   normalizeFloorAreaRelationshipCandidate,
   normalizeFloorSystemCandidate,
@@ -42,7 +43,12 @@ import {
   applySiblingFloorSystemAssemblyMerge,
   mergeBayFragmentEvidenceOntoLinkedAreas,
 } from "./floorFragmentConsolidation.js";
-import { isSlabOrNonWoodFloorArea } from "./floorAreaMaterialCompatibility.js";
+import {
+  isSlabOrNonWoodFloorArea,
+  isWoodJoistFloorSystemCompatibleWithArea,
+  layoutTextIndicatesExplicitConcreteSlab,
+  NON_JOIST_CONDITION_PARENT_REJECTION_MARKER,
+} from "./floorAreaMaterialCompatibility.js";
 import { evaluateFloorScalarFeetCandidate } from "./normalizeFloorScalarFeet.js";
 import {
   inferJoistSizeFromJoistType,
@@ -57,7 +63,12 @@ import {
 
 type CandidateDecision =
   | { kind: "missing" }
-  | { kind: "resolved"; value: string | number; evidenceIds: EvidenceId[] }
+  | {
+      kind: "resolved";
+      value: string | number;
+      evidenceIds: EvidenceId[];
+      ignoredPointerEvidenceIds?: EvidenceId[];
+    }
   | { kind: "conflict"; evidenceIds: EvidenceId[] };
 
 function compareIds(left: string, right: string): number {
@@ -112,6 +123,72 @@ function selectCandidate(
       kind: "resolved",
       value: only.value,
       evidenceIds: uniqueSortedIds(only.ids),
+    };
+  }
+
+  return {
+    kind: "conflict",
+    evidenceIds: uniqueSortedIds(usable.map((entry) => entry.id)),
+  };
+}
+
+/**
+ * assembly.joistSize: a later "see plans" pointer is not a competing dimensional size.
+ * Competing true dimensional values still fail closed as conflict.
+ */
+function selectJoistSizeCandidate(
+  records: readonly Evidence[],
+  normalize: (
+    path: string,
+    candidateValue: Evidence["candidateValue"],
+  ) => string | number | undefined,
+): CandidateDecision {
+  const usable: Array<{ value: string | number; id: EvidenceId }> = [];
+  const pointerIds: EvidenceId[] = [];
+
+  for (const record of records) {
+    if (record.propertyPath !== "assembly.joistSize") {
+      continue;
+    }
+
+    if (isJoistSizePlanPointerValue(record.candidateValue)) {
+      pointerIds.push(record.id);
+      continue;
+    }
+
+    const value = normalize("assembly.joistSize", record.candidateValue);
+    if (value === undefined) {
+      continue;
+    }
+
+    usable.push({ value, id: record.id });
+  }
+
+  const ignoredPointerEvidenceIds =
+    pointerIds.length > 0 ? uniqueSortedIds(pointerIds) : undefined;
+
+  if (usable.length === 0) {
+    return { kind: "missing" };
+  }
+
+  const grouped = new Map<string, { value: string | number; ids: EvidenceId[] }>();
+  for (const entry of usable) {
+    const key = `${typeof entry.value}:${String(entry.value)}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.ids.push(entry.id);
+    } else {
+      grouped.set(key, { value: entry.value, ids: [entry.id] });
+    }
+  }
+
+  if (grouped.size === 1) {
+    const only = [...grouped.values()][0]!;
+    return {
+      kind: "resolved",
+      value: only.value,
+      evidenceIds: uniqueSortedIds(only.ids),
+      ignoredPointerEvidenceIds,
     };
   }
 
@@ -232,10 +309,17 @@ function tracesForDecision(
   records: readonly Evidence[],
 ): PropertyResolutionTrace[] {
   if (decision.kind === "resolved") {
-    const explanation =
+    let explanation =
       decision.evidenceIds.length === 1
         ? `Resolved from explicit project evidence ${decision.evidenceIds[0]}.`
         : `Resolved from corroborating project evidence ${decision.evidenceIds.join(", ")}.`;
+
+    if (
+      decision.ignoredPointerEvidenceIds &&
+      decision.ignoredPointerEvidenceIds.length > 0
+    ) {
+      explanation += ` Ignored plan pointer/deferral candidate(s) ${decision.ignoredPointerEvidenceIds.join(", ")}; a pointer is not a competing dimensional size.`;
+    }
 
     return [
       createTrace(propertyPath, "explicit-project-value", explanation),
@@ -263,7 +347,10 @@ function resolvePropertyAuthority(
     candidateValue: Evidence["candidateValue"],
   ) => string | number | undefined,
 ): { decision: CandidateDecision; traces: PropertyResolutionTrace[] } {
-  const decision = selectCandidate(records, propertyPath, normalize);
+  const decision =
+    propertyPath === "assembly.joistSize"
+      ? selectJoistSizeCandidate(records, normalize)
+      : selectCandidate(records, propertyPath, normalize);
   return {
     decision,
     traces: tracesForDecision(propertyPath, decision, records),
@@ -666,15 +753,50 @@ function applyInferredParentSystemLink(
   };
 }
 
-function rejectSlabAreaWoodFloorParentLink(
+function rejectIncompatibleWoodJoistParentLink(
   area: FloorFramingArea,
   areaRecords: readonly Evidence[],
+  linkedSystemRecords: readonly Evidence[],
 ): FloorFramingArea {
-  if (!isSlabOrNonWoodFloorArea(areaRecords)) {
-    return area;
+  const slabFromRecords = isSlabOrNonWoodFloorArea(areaRecords);
+  const slabFromLayout = layoutTextIndicatesExplicitConcreteSlab(
+    area.layout ?? "",
+  );
+  if (slabFromRecords || slabFromLayout) {
+    if (area.parentSystemId.endsWith("UNRESOLVED")) {
+      return area;
+    }
+
+    return {
+      ...area,
+      parentSystemId: createFloorFramingSystemObjectId("UNRESOLVED"),
+      resolutionTraces: [
+        ...area.resolutionTraces.filter(
+          (trace) => trace.propertyPath !== "parentSystemTag",
+        ),
+        createTrace(
+          "parentSystemTag",
+          "unresolved",
+          "Slab or non-wood floor surface cannot inherit a wood-joist floor system parent.",
+        ),
+      ],
+    };
   }
 
   if (area.parentSystemId.endsWith("UNRESOLVED")) {
+    return area;
+  }
+
+  if (linkedSystemRecords.length === 0) {
+    return area;
+  }
+
+  if (
+    isWoodJoistFloorSystemCompatibleWithArea({
+      systemRecords: linkedSystemRecords,
+      areaRecords,
+    })
+  ) {
     return area;
   }
 
@@ -688,7 +810,7 @@ function rejectSlabAreaWoodFloorParentLink(
       createTrace(
         "parentSystemTag",
         "unresolved",
-        "Slab or non-wood floor surface cannot inherit a wood-joist floor system parent.",
+        NON_JOIST_CONDITION_PARENT_REJECTION_MARKER,
       ),
     ],
   };
@@ -835,9 +957,21 @@ export function resolveFloorFraming(
       explicitParentSystemTag,
       systemCandidates,
     );
-    area = rejectSlabAreaWoodFloorParentLink(area, areaRecords);
 
     const linkedSystemRecords =
+      systemCandidates.find(
+        (candidate) =>
+          createFloorFramingSystemObjectId(candidate.subjectKey) ===
+          area.parentSystemId,
+      )?.records ?? [];
+
+    area = rejectIncompatibleWoodJoistParentLink(
+      area,
+      areaRecords,
+      linkedSystemRecords,
+    );
+
+    const spacingAxisSystemRecords =
       systemCandidates.find(
         (candidate) =>
           createFloorFramingSystemObjectId(candidate.subjectKey) ===
@@ -847,7 +981,7 @@ export function resolveFloorFraming(
     area = applySpacingAxisLayoutAuthority(
       area,
       areaRecords,
-      linkedSystemRecords,
+      spacingAxisSystemRecords,
     );
 
     return area;

@@ -1,5 +1,5 @@
-// Preserved framing intelligence, not currently wired into readFramingPlans:
-// production openings keep headerMemberId null (a known product gap).
+// Production openings keep headerMemberId null until Evidence includes
+// headerMemberTag (or supportedOpeningTag). This module maps those tags.
 import type { Evidence } from "../../core/schemas/evidence.schema.js";
 import type { EvidenceId, ObjectId } from "../../core/schemas/identity.schema.js";
 import type { PropertyResolutionTrace } from "../../core/schemas/resolved-object.schema.js";
@@ -11,7 +11,11 @@ import {
 } from "../schemas/framing-artifacts.schema.js";
 import type { Opening } from "../schemas/opening.schema.js";
 import type { StructuralMember } from "../schemas/structural-member.schema.js";
-import { createOpeningObjectId, createStructuralMemberObjectId } from "./ids.js";
+import {
+  createOpeningObjectId,
+  createStructuralMemberObjectId,
+  sanitizeSubjectKey,
+} from "./ids.js";
 import {
   normalizeOpeningRelationshipCandidate,
   type OpeningRelationshipPropertyPath,
@@ -238,17 +242,48 @@ function resolveHeaderMemberId(
         `Mapped explicit header tag ${decision.value} to resolved structural member ${headerMemberId}.`,
       ),
     );
-  } else {
-    relationshipTraces.push(
-      createTrace(
-        "headerMemberId",
-        "deterministic-calculation",
-        `Mapped explicit header tag ${decision.value} to ObjectId ${headerMemberId}, but no matching resolved structural member exists.`,
-      ),
-    );
+    return { headerMemberId, traces: relationshipTraces };
   }
 
-  return { headerMemberId, traces: relationshipTraces };
+  relationshipTraces.push(
+    createTrace(
+      "headerMemberId",
+      "unresolved",
+      `Mapped explicit header tag ${decision.value} to ObjectId ${headerMemberId}, but no matching resolved structural member exists.`,
+    ),
+  );
+  return { headerMemberId: null, traces: relationshipTraces };
+}
+
+function openingEvidenceLookupKeys(opening: Opening): string[] {
+  const keys = new Set<string>([opening.id]);
+  const unprefixed = opening.id.startsWith("O-") ? opening.id.slice(2) : opening.id;
+  const sanitized = sanitizeSubjectKey(unprefixed);
+  if (sanitized.length > 0) {
+    keys.add(sanitized);
+    keys.add(createOpeningObjectId(sanitized));
+  }
+  return [...keys];
+}
+
+function collectOpeningEvidence(
+  opening: Opening,
+  openingEvidenceBySubjectKey: ReadonlyMap<string, Evidence[]>,
+): Evidence[] {
+  const seen = new Set<string>();
+  const records: Evidence[] = [];
+
+  for (const key of openingEvidenceLookupKeys(opening)) {
+    for (const record of openingEvidenceBySubjectKey.get(key) ?? []) {
+      if (seen.has(record.id)) {
+        continue;
+      }
+      seen.add(record.id);
+      records.push(record);
+    }
+  }
+
+  return records;
 }
 
 function applyOpeningHeaderMemberTags(
@@ -257,8 +292,7 @@ function applyOpeningHeaderMemberTags(
   structuralMembers: StructuralMembersPayload,
 ): Opening[] {
   return openings.map((opening) => {
-    const subjectKey = opening.id;
-    const records = openingEvidenceBySubjectKey.get(subjectKey) ?? [];
+    const records = collectOpeningEvidence(opening, openingEvidenceBySubjectKey);
     const relationship = resolveHeaderMemberId(records, structuralMembers);
 
     if (relationship.traces.length === 0 && opening.headerMemberId === null) {

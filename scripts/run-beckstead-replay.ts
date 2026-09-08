@@ -7,6 +7,7 @@
  * Usage:
  *   npx tsx scripts/run-beckstead-replay.ts \
  *     [--evidence artifacts/b2.3-wave5/runs/beckstead-wave5-after/framing/06-extractedEvidence.json] \
+ *     [--dictionary tests/fixtures/beckstead-w4c-char-replay/governed-project-dictionary.json] \
  *     [--project beckstead-replay]
  */
 import { readFile, writeFile, mkdir } from "node:fs/promises";
@@ -16,6 +17,10 @@ import { indexPlan } from "../src/pdf/indexPlan.js";
 import { extractedFramingEvidencePayloadSchema } from "../src/framing/schemas/framing-artifacts.schema.js";
 import { runFramingTakeoff } from "../src/framing/output/runFramingTakeoff.js";
 import { FRAMING_TAKEOFF_FILENAME } from "../src/framing/output/writeFramingTakeoff.js";
+import {
+  governedProjectDictionarySchema,
+  type GovernedProjectDictionary,
+} from "../src/project-reading/schemas/projectDictionary.schema.js";
 
 const DEFAULT_EVIDENCE =
   "artifacts/b2.3-wave5/runs/beckstead-wave5-after/framing/06-extractedEvidence.json";
@@ -29,16 +34,33 @@ function argValue(argv: string[], flag: string, fallback: string): string {
   return fallback;
 }
 
+function optionalArgValue(argv: string[], flag: string): string | null {
+  const index = argv.indexOf(flag);
+  if (index >= 0 && argv[index + 1]) {
+    return argv[index + 1]!;
+  }
+  return null;
+}
+
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const evidencePath = path.resolve(argValue(argv, "--evidence", DEFAULT_EVIDENCE));
   const pdfPath = path.resolve(argValue(argv, "--pdf", DEFAULT_PDF));
   const projectId = argValue(argv, "--project", "beckstead-replay");
+  const dictionaryArg = optionalArgValue(argv, "--dictionary");
 
   const envelope = JSON.parse(await readFile(evidencePath, "utf8"));
   const payload = extractedFramingEvidencePayloadSchema.parse(
     envelope.payload ?? envelope,
   );
+
+  let projectDictionary: GovernedProjectDictionary | undefined;
+  if (dictionaryArg) {
+    const dictionaryPath = path.resolve(dictionaryArg);
+    projectDictionary = governedProjectDictionarySchema.parse(
+      JSON.parse(await readFile(dictionaryPath, "utf8")),
+    );
+  }
 
   const planIndex = await indexPlan(pdfPath);
   const result = await runFramingTakeoff({
@@ -47,6 +69,7 @@ async function main(): Promise<void> {
     planIndex,
     useMockAi: true,
     evidenceReplay: payload.evidence,
+    projectDictionary,
     writeDebugArtifacts: true,
   });
 

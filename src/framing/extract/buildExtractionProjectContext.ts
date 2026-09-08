@@ -14,6 +14,14 @@ import { selectKnownDefinitionsForWorkUnit } from "./selectKnownDefinitionsForWo
 
 const CONTEXT_DISCLAIMER = "CONTEXT ONLY — not plan evidence" as const;
 
+/**
+ * Serialized next to geometryObservations. associatedRunKey locates a dim on
+ * the sheet; it is not exclusive wall ownership. TypeScript still must not
+ * copy observation.parsedFeet onto joistLayoutLengthFeet.
+ */
+export const GEOMETRY_OBSERVATION_USAGE =
+  "associatedRunKey is a location hint (nearby physical run), not exclusive wall ownership of the dim. Floor-area joistLayoutLengthFeet may be emitted for that bay when plan notes establish the spacing axis. The same dim may also appear as wall lengthFeet; layout is a separate floor-area Evidence record. Observations are not Evidence. If two layout lengths compete, omit.";
+
 const WALL_SUBTYPE_BINDING_PATTERN = /^SW\d/i;
 
 const OWNERSHIP_MECHANISM_PATTERN =
@@ -32,6 +40,7 @@ const PHYSICAL_DEFINITION_INTENTS = new Set<string>([
   "sheathing",
   "roof-framing",
   "openings",
+  "framing-general",
 ]);
 
 type DomainPatterns = {
@@ -304,6 +313,12 @@ function emptyContext(intent: string, bundlePageNumbers: number[]): ExtractionPr
     dictionaryBindings: [],
     crossPageNotes: [],
     knownDefinitions: [],
+    knownSubjects: [],
+    geometryObservations: [],
+    geometryObservationUsage: null,
+    requiredInputs: [],
+    identifiedSystems: [],
+    requiredInputFollowUp: null,
     contextDisclaimer: CONTEXT_DISCLAIMER,
   });
 }
@@ -325,7 +340,12 @@ export function auditExtractionProjectContext(
     context.knownAreaTags.length > 0 ||
     context.dictionaryBindings.length > 0 ||
     context.crossPageNotes.length > 0 ||
-    (context.knownDefinitions?.length ?? 0) > 0;
+    (context.knownDefinitions?.length ?? 0) > 0 ||
+    (context.knownSubjects?.length ?? 0) > 0 ||
+    (context.geometryObservations?.length ?? 0) > 0 ||
+    (context.requiredInputs?.length ?? 0) > 0 ||
+    (context.identifiedSystems?.length ?? 0) > 0 ||
+    context.requiredInputFollowUp != null;
 
   return extractionProjectContextAuditSchema.parse({
     contextSliceHash: hashExtractionProjectContext(context),
@@ -347,6 +367,11 @@ export type BuildExtractionProjectContextInput = {
   /** Test / retrieval seam for semantic-key override. */
   candidateKeysOverride?: readonly string[];
   schedulePrimary?: boolean;
+  knownSubjects?: ExtractionProjectContext["knownSubjects"];
+  geometryObservations?: ExtractionProjectContext["geometryObservations"];
+  requiredInputs?: string[];
+  identifiedSystems?: string[];
+  requiredInputFollowUp?: ExtractionProjectContext["requiredInputFollowUp"];
 };
 
 /**
@@ -372,10 +397,24 @@ export function buildExtractionProjectContext(
       })
     : [];
 
+  const geometryObservations = input.geometryObservations ?? [];
+  const regionExtras = {
+    knownSubjects: input.knownSubjects ?? [],
+    geometryObservations,
+    geometryObservationUsage:
+      geometryObservations.length > 0 ? GEOMETRY_OBSERVATION_USAGE : null,
+    requiredInputs:
+      input.requiredInputs ?? input.bundle.requiredInputs ?? [],
+    identifiedSystems:
+      input.identifiedSystems ?? input.bundle.identifiedSystems ?? [],
+    requiredInputFollowUp: input.requiredInputFollowUp ?? null,
+  };
+
   if (!RELATIONSHIP_INTENTS.has(input.intent as FramingExtractionIntent)) {
     return extractionProjectContextSchema.parse({
       ...emptyContext(input.intent, bundlePageNumbers),
       knownDefinitions,
+      ...regionExtras,
     });
   }
 
@@ -384,6 +423,7 @@ export function buildExtractionProjectContext(
     return extractionProjectContextSchema.parse({
       ...emptyContext(input.intent, bundlePageNumbers),
       knownDefinitions,
+      ...regionExtras,
     });
   }
 
@@ -407,6 +447,7 @@ export function buildExtractionProjectContext(
     dictionaryBindings,
     crossPageNotes,
     knownDefinitions,
+    ...regionExtras,
     contextDisclaimer: CONTEXT_DISCLAIMER,
   });
 }

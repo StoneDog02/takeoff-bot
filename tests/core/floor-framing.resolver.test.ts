@@ -112,6 +112,39 @@ describe("resolveFloorFraming", () => {
     assert.equal(area.joistMemberLengthFeet, 12);
   });
 
+  it("omits joistLayoutLengthFeet when 40 and 50.67 compete", () => {
+    const payload = resolveFloorFraming([
+      ...buildFloorFramingJoistCountEvidence().filter(
+        (record) => record.propertyPath !== "joistLayoutLengthFeet",
+      ),
+      floorEvidence(
+        "floor-framing-area",
+        "FFA-001",
+        "E-FFA-LAYOUT-40",
+        "joistLayoutLengthFeet",
+        40,
+      ),
+      floorEvidence(
+        "floor-framing-area",
+        "FFA-001",
+        "E-FFA-LAYOUT-50",
+        "joistLayoutLengthFeet",
+        50.67,
+      ),
+    ]);
+
+    const area = payload.areas.find((entry) => entry.id === "FFA-001");
+    assert.ok(area);
+    assert.equal(area.joistLayoutLengthFeet, null);
+    assert.ok(
+      area.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "joistLayoutLengthFeet" &&
+          trace.method === "unresolved",
+      ),
+    );
+  });
+
   it("converges subjectKeys that mint the same ObjectId into one area", () => {
     const payload = resolveFloorFraming([
       floorEvidence(

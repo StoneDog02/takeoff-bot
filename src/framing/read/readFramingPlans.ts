@@ -11,9 +11,8 @@ import type { PlanIndex } from "../../pdf/PlanIndex.js";
 import { resolvePageClassificationForPipeline } from "../../pdf/resolvePageClassificationForPipeline.js";
 import { buildOrientationDictionary } from "../../project-reading/buildOrientationDictionary.js";
 import { CompilerInvestigationFacade } from "../../project-reading/compilerInvestigationFacade.js";
-import { DictionaryGovernor } from "../../project-reading/dictionaryGovernor.js";
+import { DictionaryGovernor, toGovernedProjectDictionary } from "../../project-reading/dictionaryGovernor.js";
 import type { ProjectOrientationContext } from "../../project-reading/projectOrientationContext.js";
-import { isProjectLearningEnabled } from "../../project-reading/projectLearning/isProjectLearningEnabled.js";
 import {
   mapProjectLearningToSemanticDefinitions,
   mergeProjectSemanticDefinitions,
@@ -26,10 +25,15 @@ import type {
 } from "../../project-reading/schemas/projectDictionary.schema.js";
 import { isDrawingSemanticBindingEnabled } from "./isDrawingSemanticBindingEnabled.js";
 import { isProjectOrientationEnabled } from "./isProjectOrientationEnabled.js";
+import { ClaudeCallLedgerRecorder } from "./claudeCallLedger.js";
+import { buildReadCompleteReport } from "./buildReadCompleteReport.js";
 import {
-  isDrawingCompilerEnabled,
-  selectPagesForDrawingCompiler,
-} from "./selectPagesForDrawingCompiler.js";
+  shouldRunCompilerOcr,
+  shouldRunDrawingCompiler,
+  shouldRunProjectLearning,
+} from "./readComposition.js";
+import { selectWallAssemblyNotePages } from "./selectWallAssemblyNotePages.js";
+import { selectPagesForDrawingCompiler } from "./selectPagesForDrawingCompiler.js";
 import { runFramingExtractionPasses } from "../extract/runFramingExtractionPasses.js";
 import { adoptOpeningSemanticEvidenceOntoGeometry } from "../geometry/adoptOpeningSemanticEvidenceOntoGeometry.js";
 import { buildAreaSystemRelationshipEvidence } from "../geometry/buildAreaSystemRelationshipEvidence.js";
@@ -37,6 +41,7 @@ import { buildConstructionSemanticRelationshipEvidence } from "../geometry/build
 import { buildGeometryEvidenceFromCompiledPages } from "../geometry/buildGeometryEvidenceFromCompiledPages.js";
 import { buildGovernedSemanticCompilerEvidenceWithOwnership } from "../geometry/buildGovernedSemanticCompilerEvidence.js";
 import { buildSemanticBindingEvidenceFromCompiledPages } from "../geometry/buildSemanticBindingEvidenceFromCompiledPages.js";
+import { buildGeometryDimObservationsFromCompiledPages } from "../geometry/buildGeometryDimObservations.js";
 import { collectWallAssemblyNoteTexts } from "../geometry/collectWallAssemblyNoteTexts.js";
 import { mergeExtractedAndGeometryEvidence } from "../geometry/mergeExtractedAndGeometryEvidence.js";
 import {
@@ -51,6 +56,7 @@ import { resolveRoofFraming } from "../resolve/resolveRoofFraming.js";
 import { resolveSheathing } from "../resolve/resolveSheathing.js";
 import { resolveStructuralMembers } from "../resolve/resolveStructuralMembers.js";
 import { resolveWallFraming } from "../resolve/resolveWallFraming.js";
+import { linkOpeningHeaderRelationships } from "../resolve/linkOpeningHeaderRelationships.js";
 import {
   framingConstructionSchema,
   type FramingConstruction,
@@ -62,6 +68,12 @@ export type ReadFramingPlansInput = {
   useMockAi: boolean;
   /** When set, skip live extraction and resolve this Evidence directly. */
   evidenceReplay?: readonly Evidence[];
+  /**
+   * Inject a governed Plan Dictionary on the Evidence replay path.
+   * Replay skips Project Learning, so schedule sizes are otherwise dropped.
+   * Does not re-enable compiler / learning / Claude.
+   */
+  projectDictionary?: GovernedProjectDictionary | null;
   writeDebugArtifacts?: boolean;
   artifactsRoot?: string;
 };
@@ -207,15 +219,28 @@ async function writeDebugJson(
   return artifactPath;
 }
 
-function buildFramingConstructionFromEvidence(
+export type BuildFramingConstructionOptions = {
+  projectDictionary?: GovernedProjectDictionary | null;
+};
+
+export function buildFramingConstructionFromEvidence(
   evidence: readonly Evidence[],
+  options: BuildFramingConstructionOptions = {},
 ): FramingConstruction {
   const walls = resolveWallFraming([...evidence]);
   const openings = resolveOpenings([...evidence], { wallFraming: walls });
+  const structuralMembers = resolveStructuralMembers([...evidence], {
+    projectDictionary: options.projectDictionary,
+  });
+  const linked = linkOpeningHeaderRelationships(
+    evidence,
+    openings,
+    structuralMembers,
+  );
   return framingConstructionSchema.parse({
     walls,
-    openings,
-    structuralMembers: resolveStructuralMembers([...evidence]),
+    openings: linked.openings,
+    structuralMembers: linked.structuralMembers,
     floorFraming: resolveFloorFraming([...evidence]),
     roofFraming: resolveRoofFraming([...evidence]),
     sheathing: resolveSheathing([...evidence]),
@@ -235,11 +260,22 @@ export async function readFramingPlans(
 ): Promise<ReadFramingPlansResult> {
   const debugPaths: string[] = [];
   const artifactsRoot = input.artifactsRoot ?? "artifacts";
+  const ledger = new ClaudeCallLedgerRecorder();
+  let extractionAudit: unknown = null;
 
-  const classified = await resolvePageClassificationForPipeline({
-    planIndex: input.planIndex,
-    useMockAi: input.useMockAi,
-  });
+  const classifyHooks = ledger.bind("visual-classification");
+  let classified;
+  try {
+    classified = await resolvePageClassificationForPipeline({
+      planIndex: input.planIndex,
+      useMockAi: input.useMockAi,
+      onApiCall: classifyHooks.onApiCall,
+      onUsage: classifyHooks.onUsage,
+    });
+  } catch (error) {
+    ledger.recordFailure("visual-classification", error);
+    throw error;
+  }
   const pageClassification: PageClassificationPayload = {
     pages: classified.pages,
   };
@@ -269,43 +305,56 @@ export async function readFramingPlans(
   let orientationContext: ProjectOrientationContext | undefined;
   let crossPageDefinitions: readonly SemanticDefinition[] = [];
   let projectDictionary: GovernedProjectDictionary | null = null;
+  const skipDocumentIntelligence = Boolean(input.evidenceReplay);
+  if (skipDocumentIntelligence && input.projectDictionary) {
+    projectDictionary = input.projectDictionary;
+  }
+  const runCompiler =
+    !skipDocumentIntelligence && shouldRunDrawingCompiler(input.planIndex);
+  const runLearning =
+    !skipDocumentIntelligence && shouldRunProjectLearning(input.planIndex);
+  const runCompilerOcr =
+    !skipDocumentIntelligence && shouldRunCompilerOcr(input.planIndex);
 
-  if (isDrawingCompilerEnabled()) {
+  if (runCompiler || runLearning) {
     const emptyTextPageNumbers = input.planIndex.pages
       .filter((page) => page.textContent.trim().length === 0)
       .map((page) => page.pageNumber);
-    const selected = selectPagesForDrawingCompiler({
-      classifiedPages: pageClassification.pages,
-      orderedPageNumbers: planReadingOrder.orderedPageNumbers,
-      emptyTextPageNumbers,
-    });
 
     let learningValidatedDefs: DictSemanticDefinition[] = [];
 
-    if (isProjectLearningEnabled()) {
-      const learning = await runProjectLearning({
-        projectId: input.projectId,
-        planIndex: input.planIndex,
-        classifiedPages: pageClassification.pages,
-        artifactOutputDir: path.join(
-          artifactsRoot,
-          "project-learning",
-          input.projectId,
-          "reader",
-        ),
-        allowLiveOdl: !input.useMockAi,
-        allowLiveClaudeInterpret: !input.useMockAi,
-      });
-      learningValidatedDefs = learning.validatedDefinitions;
-      if (input.writeDebugArtifacts) {
-        debugPaths.push(
-          await writeDebugJson(
+    if (runLearning) {
+      const learningHooks = ledger.bind("project-learning-interpret");
+      try {
+        const learning = await runProjectLearning({
+          projectId: input.projectId,
+          planIndex: input.planIndex,
+          classifiedPages: pageClassification.pages,
+          artifactOutputDir: path.join(
             artifactsRoot,
+            "project-learning",
             input.projectId,
-            "reader-project-learning.json",
-            learning.payload,
+            "reader",
           ),
-        );
+          allowLiveOdl: !input.useMockAi,
+          allowLiveClaudeInterpret: !input.useMockAi,
+          onApiCall: learningHooks.onApiCall,
+          onUsage: learningHooks.onUsage,
+        });
+        learningValidatedDefs = learning.validatedDefinitions;
+        if (input.writeDebugArtifacts) {
+          debugPaths.push(
+            await writeDebugJson(
+              artifactsRoot,
+              input.projectId,
+              "reader-project-learning.json",
+              learning.payload,
+            ),
+          );
+        }
+      } catch (error) {
+        ledger.recordFailure("project-learning-interpret", error);
+        throw error;
       }
     }
 
@@ -314,7 +363,7 @@ export async function readFramingPlans(
         page.pageKind === "schedule" || page.contentRoles.includes("schedule"),
     )?.pageNumber;
 
-    if (isProjectOrientationEnabled()) {
+    if (runCompiler && isProjectOrientationEnabled()) {
       const facade = await CompilerInvestigationFacade.create(
         input.planIndex.pdfPath,
       );
@@ -348,7 +397,7 @@ export async function readFramingPlans(
         dictionaryDefinitions: govReport.dictionary.definitions,
       };
       crossPageDefinitions = orientationContext.definitions;
-      projectDictionary = govReport.dictionary as GovernedProjectDictionary;
+      projectDictionary = toGovernedProjectDictionary(govReport);
     } else if (learningValidatedDefs.length > 0) {
       const facade = await CompilerInvestigationFacade.create(
         input.planIndex.pdfPath,
@@ -376,22 +425,30 @@ export async function readFramingPlans(
       );
       crossPageDefinitions =
         mapProjectLearningToSemanticDefinitions(acceptedLearning);
-      projectDictionary = govReport.dictionary as GovernedProjectDictionary;
+      projectDictionary = toGovernedProjectDictionary(govReport);
     }
 
-    for (const pageNumber of selected) {
-      const compiled = await compileDrawingPage({
-        pdfPath: input.planIndex.pdfPath,
-        pageNumber,
-        options: {
-          crossPageDefinitions:
-            crossPageDefinitions.length > 0 ? crossPageDefinitions : undefined,
-          orientationContext,
-          referenceMechanism:
-            orientationContext?.referenceMechanismHint ?? undefined,
-        },
+    if (runCompiler) {
+      const selected = selectPagesForDrawingCompiler({
+        classifiedPages: pageClassification.pages,
+        orderedPageNumbers: planReadingOrder.orderedPageNumbers,
+        emptyTextPageNumbers,
+        compilerOcrEnabled: runCompilerOcr,
       });
-      compiledPages.push(compiled);
+      for (const pageNumber of selected) {
+        const compiled = await compileDrawingPage({
+          pdfPath: input.planIndex.pdfPath,
+          pageNumber,
+          options: {
+            crossPageDefinitions:
+              crossPageDefinitions.length > 0 ? crossPageDefinitions : undefined,
+            orientationContext,
+            referenceMechanism:
+              orientationContext?.referenceMechanismHint ?? undefined,
+          },
+        });
+        compiledPages.push(compiled);
+      }
     }
   }
 
@@ -406,6 +463,20 @@ export async function readFramingPlans(
     );
   }
 
+  const geometryObservations =
+    buildGeometryDimObservationsFromCompiledPages(compiledPages);
+
+  if (input.writeDebugArtifacts) {
+    debugPaths.push(
+      await writeDebugJson(
+        artifactsRoot,
+        input.projectId,
+        "reader-geometry-dim-observations.json",
+        { observations: geometryObservations },
+      ),
+    );
+  }
+
   let evidence: Evidence[];
 
   if (input.evidenceReplay) {
@@ -413,16 +484,24 @@ export async function readFramingPlans(
   } else if (input.useMockAi) {
     evidence = buildMockExtractedEvidence(input.planIndex).evidence;
   } else {
-    const extractionResult = await runFramingExtractionPasses({
-      planIndex: input.planIndex,
-      pages: pageClassification.pages,
-      pageClassification,
-      planReadingOrder,
-      // D4: no stub buildingAssemblies
-      projectDictionary,
-      compiledPages,
-      scopeName: "framing",
-    });
+    let extractionResult;
+    try {
+      extractionResult = await runFramingExtractionPasses({
+        planIndex: input.planIndex,
+        pages: pageClassification.pages,
+        pageClassification,
+        planReadingOrder,
+        projectDictionary,
+        compiledPages,
+        geometryObservations,
+        scopeName: "framing",
+        bindClaudeCall: (purpose) => ledger.bind(purpose),
+      });
+    } catch (error) {
+      ledger.recordFailure("extract:framing", error);
+      throw error;
+    }
+    extractionAudit = extractionResult.audit;
 
     let mergedEvidence = mergeExtractedAndGeometryEvidence({
       claudeEvidence: extractionResult.payload.evidence,
@@ -451,9 +530,10 @@ export async function readFramingPlans(
 
     const wallAssemblyNoteTexts = await collectWallAssemblyNoteTexts({
       pdfPath: input.planIndex.pdfPath,
-      pageNumbers: [1, 3, 4].filter(
-        (pageNumber) => pageNumber <= input.planIndex.totalPages,
-      ),
+      pageNumbers: selectWallAssemblyNotePages({
+        classifiedPages: pageClassification.pages,
+        totalPages: input.planIndex.totalPages,
+      }),
       ocrCacheDir: process.env.TAKEOFF_WALL_ASSEMBLY_OCR_CACHE_DIR ?? null,
     });
     const semanticCompilerBuild =
@@ -479,7 +559,6 @@ export async function readFramingPlans(
       ];
     }
 
-    // Intentionally omit wall-existence Evidence mint (D10).
     evidence = mergedEvidence;
   }
 
@@ -494,7 +573,10 @@ export async function readFramingPlans(
     );
   }
 
-  const construction = buildFramingConstructionFromEvidence(evidence);
+  const construction = buildFramingConstructionFromEvidence(evidence, {
+    projectDictionary,
+  });
+  const readComplete = buildReadCompleteReport(construction);
 
   if (input.writeDebugArtifacts) {
     debugPaths.push(
@@ -505,6 +587,42 @@ export async function readFramingPlans(
         construction,
       ),
     );
+    debugPaths.push(
+      await writeDebugJson(
+        artifactsRoot,
+        input.projectId,
+        "reader-read-complete.json",
+        readComplete,
+      ),
+    );
+    debugPaths.push(
+      await writeDebugJson(
+        artifactsRoot,
+        input.projectId,
+        "reader-claude-call-ledger.json",
+        ledger.snapshot(),
+      ),
+    );
+    if (projectDictionary) {
+      debugPaths.push(
+        await writeDebugJson(
+          artifactsRoot,
+          input.projectId,
+          "reader-project-dictionary.json",
+          projectDictionary,
+        ),
+      );
+    }
+    if (extractionAudit) {
+      debugPaths.push(
+        await writeDebugJson(
+          artifactsRoot,
+          input.projectId,
+          "reader-extraction-budget-audit.json",
+          extractionAudit,
+        ),
+      );
+    }
   }
 
   return {

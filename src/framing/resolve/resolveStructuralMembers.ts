@@ -4,6 +4,10 @@ import type {
   PropertyResolutionTrace,
   ResolutionMethod,
 } from "../../core/schemas/resolved-object.schema.js";
+import type {
+  GovernedProjectDictionary,
+  ProjectDictionary,
+} from "../../project-reading/schemas/projectDictionary.schema.js";
 import {
   structuralMembersPayloadSchema,
   type StructuralMembersPayload,
@@ -20,7 +24,10 @@ import {
   STRUCTURAL_MEMBER_PROPERTY_PATHS,
   type StructuralMemberPropertyPath,
 } from "./structuralMemberPropertyPaths.js";
-import { applyStructuralMemberAuthority } from "./structuralMemberAuthority.js";
+import {
+  applyStructuralMemberAuthority,
+  isConnectorOrHoldownSkuIdentity,
+} from "./structuralMemberAuthority.js";
 
 type CandidateDecision =
   | { kind: "missing" }
@@ -203,6 +210,10 @@ function convergenceTraces(
   ];
 }
 
+export type ResolveStructuralMembersOptions = {
+  projectDictionary?: ProjectDictionary | GovernedProjectDictionary | null;
+};
+
 function resolveOneMember(
   cluster: CanonicalEvidenceCluster,
 ): StructuralMember {
@@ -264,6 +275,17 @@ function resolveOneMember(
   };
 }
 
+function clusterIsConnectorOrHoldownSku(
+  cluster: CanonicalEvidenceCluster,
+): boolean {
+  if (isConnectorOrHoldownSkuIdentity(cluster.objectId)) {
+    return true;
+  }
+  return cluster.rawSubjectKeys.some((key) =>
+    isConnectorOrHoldownSkuIdentity(key),
+  );
+}
+
 /**
  * Deterministic Structural Members resolver.
  *
@@ -273,10 +295,16 @@ function resolveOneMember(
  * Missing or conflicted properties are represented as null with traces only
  * when evidenced conflicts exist.
  * Validation owns downstream calculation blocking; partially unresolved
- * members are always preserved.
+ * members are always preserved, except connector/holdown SKU identities
+ * (MST*, MTS*, STHD*, HDU*, …) which are not minted. Hardware takeoff is
+ * not emitted.
+ * Optional governed Plan Dictionary may copy missing size onto identified
+ * marks; definitions never mint occurrences. Missing materialType may be
+ * filled from explicit schedule size / dictionary tokens (LVL, DF, …).
  */
 export function resolveStructuralMembers(
   evidence: readonly Evidence[],
+  options: ResolveStructuralMembersOptions = {},
 ): StructuralMembersPayload {
   const groups = groupBySubjectKey(evidence);
 
@@ -289,14 +317,17 @@ export function resolveStructuralMembers(
     createObjectId: createStructuralMemberObjectId,
   });
 
-  const structuralMembers = clusters.map((cluster) => {
-    const resolved = resolveOneMember(cluster);
-    return applyStructuralMemberAuthority(
-      cluster.canonicalSubjectKey,
-      resolved,
-      cluster.records,
-    );
-  });
+  const structuralMembers = clusters
+    .filter((cluster) => !clusterIsConnectorOrHoldownSku(cluster))
+    .map((cluster) => {
+      const resolved = resolveOneMember(cluster);
+      return applyStructuralMemberAuthority(
+        cluster.canonicalSubjectKey,
+        resolved,
+        cluster.records,
+        { projectDictionary: options.projectDictionary },
+      );
+    });
 
   return structuralMembersPayloadSchema.parse({ structuralMembers });
 }

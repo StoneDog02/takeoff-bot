@@ -9,6 +9,7 @@ import {
 import type { PlanIndex } from "../../pdf/PlanIndex.js";
 import {
   buildSequentialExtractionPageBundles,
+  pageHasPlanLayoutContent,
   planIntentExtractionRouting,
   type FramingExtractionIntent,
   type IntentExtractionRoutingPlan,
@@ -16,11 +17,12 @@ import {
 import { MAX_VISUAL_IMAGES_PER_EXTRACTION_REQUEST } from "../../pdf/visualImageBudget.js";
 import type { ClassifiedPlanPage } from "../../pdf/pageClassification.js";
 import { inferContentRolesFromVisualEvidence } from "../../pdf/pageClassification.js";
+import { requiredInputPathsForIntents } from "../read/calculatorRequiredInputs.js";
 import type {
   ExtractionBudgetAudit,
   ExtractionWorkUnitAudit,
 } from "./extractionBudgetAudit.schema.js";
-import { resolveExtractionBrainPackPaths } from "./framingExtractionBrainPacks.js";
+import { resolveExtractionBrainPackPathsForIntents } from "./framingExtractionBrainPacks.js";
 
 export const DEFAULT_FRAMING_EXTRACTION_INTENTS: readonly FramingExtractionIntent[] =
   [
@@ -36,6 +38,9 @@ export interface FramingExtractionWorkUnit {
   extractionPassId: string;
   bundle: ExtractionPageBundle;
   routingPlan: IntentExtractionRoutingPlan;
+  regionId: string;
+  requiredInputs: string[];
+  identifiedSystems: FramingExtractionIntent[];
 }
 
 export interface BuildFramingExtractionWorkPlanInput {
@@ -119,7 +124,16 @@ function workUnitAudit(
     tileCount,
     pageCount: workUnit.bundle.orderedPageNumbers.length,
     routingNotes: [...workUnit.bundle.routingNotes],
-    brainPackPaths: [...resolveExtractionBrainPackPaths(workUnit.bundle.intent)],
+    brainPackPaths: [
+      ...resolveExtractionBrainPackPathsForIntents(
+        workUnit.identifiedSystems.length > 0
+          ? workUnit.identifiedSystems
+          : [workUnit.bundle.intent],
+      ),
+    ],
+    regionId: workUnit.regionId,
+    requiredInputs: [...workUnit.requiredInputs],
+    identifiedSystems: [...workUnit.identifiedSystems],
   };
 }
 
@@ -143,9 +157,155 @@ function normalizePagesForExtractionRouting(
   });
 }
 
+function isPlanLikeSheet(page: ClassifiedPlanPage): boolean {
+  return (
+    page.pageKind === "plan" ||
+    page.pageKind === "framing-plan" ||
+    (page.pageKind === "mixed" && pageHasPlanLayoutContent(page))
+  );
+}
+
+/**
+ * Fail-closed floor-framing sheet identity from title/label or plan-layout
+ * pageKind — not from visual scopeHints. Crawl / foundation / floor-plan
+ * sheets must still request floor-framing when the classifier omits "floor".
+ * Elevations and details are excluded by pageHasPlanLayoutContent / pageKind.
+ */
+function sheetIdentityIndicatesFloorFraming(page: ClassifiedPlanPage): boolean {
+  if (!pageHasPlanLayoutContent(page)) {
+    return false;
+  }
+
+  const titleBits = [page.titleOrLabel, page.label]
+    .filter(
+      (value): value is string =>
+        typeof value === "string" && value.trim().length > 0,
+    )
+    .join("\n")
+    .toLowerCase();
+  if (
+    /\bcrawl\b/.test(titleBits) ||
+    /\bfoundation\b/.test(titleBits) ||
+    /\bfloor\s+plan\b/.test(titleBits)
+  ) {
+    return true;
+  }
+
+  return page.pageKind === "plan" && !page.scopeHints.includes("roof");
+}
+
+function identifiedSystemsForSheet(
+  page: ClassifiedPlanPage,
+  requested: ReadonlySet<FramingExtractionIntent>,
+): FramingExtractionIntent[] {
+  if (!page.relevantToFraming) {
+    return [];
+  }
+  if (page.needsVisualClassification || page.pageKind === "unknown") {
+    return [];
+  }
+  if (page.pageKind === "detail" || page.pageKind === "section") {
+    return [];
+  }
+  if (!pageHasPlanLayoutContent(page)) {
+    return [];
+  }
+
+  const roofOnly =
+    page.scopeHints.includes("roof") &&
+    !page.scopeHints.includes("floor") &&
+    !page.scopeHints.includes("wall");
+  const systems: FramingExtractionIntent[] = [];
+
+  if (page.scopeHints.includes("roof")) {
+    systems.push("roof-framing");
+  }
+  if (
+    page.scopeHints.includes("floor") ||
+    sheetIdentityIndicatesFloorFraming(page)
+  ) {
+    systems.push("floor-framing");
+  }
+  if (page.scopeHints.includes("wall") || (!roofOnly && isPlanLikeSheet(page))) {
+    systems.push("wall-framing");
+  }
+  if (
+    page.scopeHints.includes("openings") ||
+    (!roofOnly && isPlanLikeSheet(page))
+  ) {
+    systems.push("openings");
+  }
+  if (page.scopeHints.includes("structural")) {
+    systems.push("structural-members");
+  }
+  if (
+    page.scopeHints.includes("framing") ||
+    page.scopeHints.includes("wall") ||
+    page.scopeHints.includes("floor") ||
+    page.scopeHints.includes("roof")
+  ) {
+    systems.push("sheathing");
+  }
+
+  return systems.filter((intent) => requested.has(intent));
+}
+
+const REGION_INTENT_PRIORITY: readonly FramingExtractionIntent[] = [
+  "roof-framing",
+  "floor-framing",
+  "wall-framing",
+  "openings",
+  "structural-members",
+  "sheathing",
+  "framing-general",
+];
+
+function primaryIntentForRegion(
+  systems: readonly FramingExtractionIntent[],
+): FramingExtractionIntent {
+  for (const intent of REGION_INTENT_PRIORITY) {
+    if (systems.includes(intent)) {
+      return intent;
+    }
+  }
+  return "framing-general";
+}
+
+function restrictRoutingToPrimaryPage(
+  routingPlan: IntentExtractionRoutingPlan,
+  primaryPageNumber: number,
+): IntentExtractionRoutingPlan {
+  const primaryAssignments = (routingPlan.allAssignments ?? []).filter(
+    (assignment) =>
+      assignment.role === "primary" &&
+      assignment.pageNumber === primaryPageNumber,
+  );
+  const primaries =
+    primaryAssignments.length > 0
+      ? primaryAssignments
+      : [
+          {
+            pageNumber: primaryPageNumber,
+            role: "primary" as const,
+            reason: `Construction-region primary page ${primaryPageNumber} for intent '${routingPlan.intent}'.`,
+          },
+        ];
+
+  return {
+    ...routingPlan,
+    routingSafe: true,
+    primaryPageNumbers: [primaryPageNumber],
+    allAssignments: [...primaries, ...routingPlan.sharedSupportAssignments],
+    routingNotes: [
+      `Construction region: whole framing sheet page ${primaryPageNumber} (one primary, not 6-intent fan-out).`,
+      ...routingPlan.routingNotes,
+    ],
+  };
+}
+
 /**
  * Builds a deterministic, budget-safe extraction work plan from classified pages.
- * Each work unit maps to one Claude multimodal call scoped by intent + page bundle.
+ * Work units are construction regions (whole relevant framing sheets first).
  */
 export function buildFramingExtractionWorkPlan(
   input: BuildFramingExtractionWorkPlanInput,
@@ -156,15 +316,25 @@ export function buildFramingExtractionWorkPlan(
     input.tilesPerDetailedPage ??
     DEFAULT_PAGE_TILE_GRID.columns * DEFAULT_PAGE_TILE_GRID.rows;
   const intents = input.intents ?? DEFAULT_FRAMING_EXTRACTION_INTENTS;
+  const requested = new Set(intents);
   const pages = normalizePagesForExtractionRouting(input.pages);
+
+  const regionPages = pages
+    .map((page) => ({
+      page,
+      identifiedSystems: identifiedSystemsForSheet(page, requested),
+    }))
+    .filter((entry) => entry.identifiedSystems.length > 0)
+    .sort((left, right) => left.page.pageNumber - right.page.pageNumber);
 
   const workUnits: FramingExtractionWorkUnit[] = [];
 
-  for (const intent of intents) {
-    const routingPlan = planIntentExtractionRouting({
-      pages,
-      intent,
-    });
+  for (const region of regionPages) {
+    const intent = primaryIntentForRegion(region.identifiedSystems);
+    const routingPlan = restrictRoutingToPrimaryPage(
+      planIntentExtractionRouting({ pages, intent }),
+      region.page.pageNumber,
+    );
     if (!routingPlan.routingSafe || !routingPlan.allAssignments) {
       continue;
     }
@@ -177,6 +347,9 @@ export function buildFramingExtractionWorkPlan(
       tilesPerDetailedPage,
     });
 
+    const requiredInputs = requiredInputPathsForIntents(region.identifiedSystems);
+    const regionId = `region:sheet:p${region.page.pageNumber}`;
+
     for (const bundle of bundles) {
       const estimatedImages = estimateBundleImageCount(
         bundle.members,
@@ -188,10 +361,20 @@ export function buildFramingExtractionWorkPlan(
         );
       }
 
+      const stamped: ExtractionPageBundle = {
+        ...bundle,
+        regionId,
+        identifiedSystems: [...region.identifiedSystems],
+        requiredInputs,
+      };
+
       workUnits.push({
-        extractionPassId: extractionPassIdForBundle(bundle),
-        bundle,
+        extractionPassId: extractionPassIdForBundle(stamped),
+        bundle: stamped,
         routingPlan,
+        regionId,
+        requiredInputs,
+        identifiedSystems: region.identifiedSystems,
       });
     }
   }
@@ -221,3 +404,4 @@ export function buildFramingExtractionWorkPlan(
     },
   };
 }
+

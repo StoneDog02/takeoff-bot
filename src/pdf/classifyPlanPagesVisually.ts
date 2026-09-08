@@ -154,6 +154,12 @@ export interface ClassifyPlanPagesVisuallyInput {
   pageVisuals: readonly PlanPageVisual[];
   pagesPerRequest?: number;
   onApiCall?: () => void;
+  onUsage?: (usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationInputTokens: number | null;
+    cacheReadInputTokens: number | null;
+  }) => void;
   onBatchComplete?: (info: {
     batchIndex: number;
     pageNumbers: number[];
@@ -233,6 +239,7 @@ export async function classifyPlanPagesVisuallyViaClaude(
       label: `visual page classification batch ${batchIndex + 1}`,
       maxTokens: 4096,
       onApiCall: input.onApiCall,
+      onUsage: input.onUsage,
     });
 
     assertBatchPayloadCoversPages(payload, pageNumbers);

@@ -33,6 +33,12 @@ export async function resolvePageClassificationForPipeline(input: {
   useMockAi: boolean;
   /** Optional Claude call hook (audit token accounting). */
   onApiCall?: () => void;
+  onUsage?: (usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationInputTokens: number | null;
+    cacheReadInputTokens: number | null;
+  }) => void;
 }): Promise<ResolvePageClassificationResult> {
   const deterministic = classifyPlanPagesDeterministically(input.planIndex);
   const pendingBefore = deterministic.filter((p) => p.needsVisualClassification)
@@ -84,6 +90,7 @@ export async function resolvePageClassificationForPipeline(input: {
     existingClassification: deterministic,
     pageVisuals: visualSet.pages,
     onApiCall: input.onApiCall,
+    onUsage: input.onUsage,
   });
 
   const pages = visualResult.classifiedPages;

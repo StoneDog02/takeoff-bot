@@ -1,7 +1,17 @@
 import type { Evidence } from "../../core/schemas/evidence.schema.js";
 import type { EvidenceId } from "../../core/schemas/identity.schema.js";
 import type { PropertyResolutionTrace } from "../../core/schemas/resolved-object.schema.js";
-import type { StructuralMember } from "../schemas/structural-member.schema.js";
+import { lookupProjectDictionaryDefinition } from "../../project-reading/lookupProjectDictionaryDefinition.js";
+import type {
+  GovernedProjectDictionary,
+  ProjectDictionary,
+  ProjectSemanticDefinition,
+} from "../../project-reading/schemas/projectDictionary.schema.js";
+import {
+  structuralMemberCategorySchema,
+  type StructuralMember,
+  type StructuralMemberCategory,
+} from "../schemas/structural-member.schema.js";
 
 export const SCHEDULE_MARK_SIZE_PREFERENCE_MARKER =
   "Prefer schedule dimensional size over schedule-mark-as-size";
@@ -14,6 +24,55 @@ export const SINGLE_OCCURRENCE_QUANTITY_MARKER =
 
 export const BEAM_HEADER_CATEGORY_SYNONYM_MARKER =
   "Wood-beam schedule category beam|header synonyms converged";
+
+export const DICTIONARY_SCHEDULE_SIZE_MARKER =
+  "Plan Dictionary schedule size applied to identified mark";
+
+export const DICTIONARY_SCHEDULE_CATEGORY_MARKER =
+  "Plan Dictionary schedule category applied to identified mark";
+
+export const DICTIONARY_SIZE_CONFLICT_MARKER =
+  "Plan Dictionary size conflicts with evidenced size";
+
+export const SCHEDULE_MATERIAL_TYPE_MARKER =
+  "Schedule material token applied to identified mark";
+
+export const MATERIAL_TYPE_CONFLICT_MARKER =
+  "Schedule/dictionary materialType conflict; no pick";
+
+/**
+ * Holdown / connector mark patterns from `dictionaryGovernor.verifyDefinitionKey`.
+ * Identity-only Simpson SKUs are not structural members (no hardware takeoff).
+ */
+const HOLDOWN_SKU_KEY_PATTERN = /^(?:LSTHD|STHD|HDU|HTT)\w*$/i;
+const CONNECTOR_SKU_KEY_PATTERN = /^(?:MTS|CS|HSTA|MST)\w*$/i;
+
+function connectorHoldownSkuToken(subjectKey: string): string {
+  const trimmed = subjectKey.trim();
+  if (trimmed.length === 0) {
+    return "";
+  }
+  return /^SM-/i.test(trimmed) ? trimmed.slice(3) : trimmed;
+}
+
+/**
+ * True when the subject's only identity is a connector/holdown SKU
+ * (MST*, MTS*, CS*, STHD*, HDU*, …). WB* headers and dimensional posts
+ * do not match.
+ */
+export function isConnectorOrHoldownSkuIdentity(subjectKey: string): boolean {
+  const token = connectorHoldownSkuToken(subjectKey);
+  if (token.length === 0) {
+    return false;
+  }
+  return (
+    HOLDOWN_SKU_KEY_PATTERN.test(token) || CONNECTOR_SKU_KEY_PATTERN.test(token)
+  );
+}
+
+export type StructuralMemberAuthorityOptions = {
+  projectDictionary?: ProjectDictionary | GovernedProjectDictionary | null;
+};
 
 /** Exact thousandths of an inch — avoids float drift in equivalence. */
 export type MilliInches = number;
@@ -80,6 +139,107 @@ export function looksLikeDimensionalMemberSize(sizeValue: string): boolean {
 
 const MATERIAL_SUFFIX_PATTERN =
   /(?:\s+|\b)(?:LVL|PSL|LSL|GLULAM|GLU-LAM|DF|DF#2|DOUGLAS\s*FIR(?:-LARCH)?|SYP|SPF|HEM-?FIR|I-?JOIST|OSB|PLYWOOD)\s*$/i;
+
+/**
+ * Abbreviations and species grades that already appear on schedule size /
+ * definition text. Canonical values are tokens `calculateStructuralMembers`
+ * already classifies — no calculator-contract change.
+ */
+const MATERIAL_ABBREVIATION_PATTERN =
+  /\b(GLU-LAM|GLULAM|I-JOIST|IJOIST|RIM-BOARD|RIMBOARD|DOUGLAS\s*FIR(?:-LARCH)?|DF#2|HEM-FIR|HEMFIR|LVL|PSL|LSL|SYP|SPF|STEEL|DF(?![#A-Z]))\b/gi;
+
+const CALCULATOR_MATERIAL_TYPES = new Set([
+  "engineered-wood",
+  "glulam",
+  "i-joist",
+  "lsl",
+  "lvl",
+  "psl",
+  "rim-board",
+  "dimensional-lumber",
+  "lumber",
+  "solid-sawn",
+  "solid-sawn-lumber",
+  "steel",
+]);
+
+function normalizeMaterialToken(value: string): string {
+  return value.trim().toLowerCase().replaceAll(/\s+/g, "-");
+}
+
+function canonicalFromAbbreviation(raw: string): string | null {
+  const key = normalizeMaterialToken(raw);
+  switch (key) {
+    case "lvl":
+      return "lvl";
+    case "psl":
+      return "psl";
+    case "lsl":
+      return "lsl";
+    case "glulam":
+    case "glu-lam":
+      return "glulam";
+    case "i-joist":
+    case "ijoist":
+      return "i-joist";
+    case "rim-board":
+    case "rimboard":
+      return "rim-board";
+    case "df":
+    case "df#2":
+    case "douglas-fir":
+    case "douglasfir":
+    case "douglas-fir-larch":
+    case "syp":
+    case "spf":
+    case "hem-fir":
+    case "hemfir":
+      return "dimensional-lumber";
+    case "steel":
+      return "steel";
+    default:
+      return null;
+  }
+}
+
+/**
+ * Parse explicit material tokens from schedule size or definition text.
+ * Returns unique canonical calculator tokens; empty when none are present.
+ * Does not infer engineered type from dimensions alone.
+ */
+export function parseMaterialTokensFromScheduleText(
+  text: string,
+): string[] {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) {
+    return [];
+  }
+
+  const found = new Set<string>();
+  const abbreviation = new RegExp(MATERIAL_ABBREVIATION_PATTERN.source, "gi");
+  for (const match of trimmed.matchAll(abbreviation)) {
+    const canonical = canonicalFromAbbreviation(match[1] ?? match[0] ?? "");
+    if (canonical) {
+      found.add(canonical);
+    }
+  }
+
+  if (found.size === 0) {
+    const whole = normalizeMaterialToken(trimmed);
+    if (CALCULATOR_MATERIAL_TYPES.has(whole)) {
+      found.add(whole);
+    }
+  }
+
+  return [...found].sort(compareIds);
+}
+
+export function parseMaterialTypeFromScheduleText(
+  text: string,
+): string | null {
+  const tokens = parseMaterialTokensFromScheduleText(text);
+  return tokens.length === 1 ? tokens[0]! : null;
+}
 
 /**
  * Parse a single length token into exact milli-inches.
@@ -541,10 +701,369 @@ export function resolveBeamHeaderCategorySynonym(
   };
 }
 
+function uniqueDefinitionProperty(
+  definition: ProjectSemanticDefinition,
+  propertyPath: string,
+): string | null {
+  const values = [
+    ...new Set(
+      definition.properties
+        .filter((property) => property.propertyPath === propertyPath)
+        .map((property) => property.rawText.trim())
+        .filter((text) => text.length > 0),
+    ),
+  ].sort(compareIds);
+  return values.length === 1 ? values[0]! : null;
+}
+
+function parseDictionaryCategory(
+  rawText: string,
+): StructuralMemberCategory | null {
+  const parsed = structuralMemberCategorySchema.safeParse(rawText.trim());
+  if (!parsed.success || parsed.data === "unknown") {
+    return null;
+  }
+  return parsed.data;
+}
+
+function canonicalSizeIdentity(
+  sizeValue: string,
+  subjectKey: string,
+): string | null {
+  if (isScheduleMarkAsSize(sizeValue, subjectKey)) {
+    return null;
+  }
+  const parsed = parseCanonicalDimensionalMemberSize(sizeValue);
+  if (parsed) {
+    return canonicalDimensionalSizeKey(parsed);
+  }
+  const trimmed = sizeValue.trim().toLowerCase();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function evidencedDimensionalSizesConflict(
+  subjectKey: string,
+  records: readonly Evidence[],
+): boolean {
+  const identities = new Set<string>();
+  for (const record of records) {
+    if (record.propertyPath !== "size") {
+      continue;
+    }
+    if (typeof record.candidateValue !== "string") {
+      continue;
+    }
+    const identity = canonicalSizeIdentity(record.candidateValue, subjectKey);
+    if (identity) {
+      identities.add(identity);
+    }
+  }
+  return identities.size > 1;
+}
+
+function dictionarySizeConflictsWithEvidenced(
+  subjectKey: string,
+  evidencedSize: string,
+  dictionarySize: string,
+): boolean {
+  const evidencedIdentity = canonicalSizeIdentity(evidencedSize, subjectKey);
+  const dictionaryIdentity = canonicalSizeIdentity(dictionarySize, subjectKey);
+  if (evidencedIdentity === null || dictionaryIdentity === null) {
+    return false;
+  }
+  return evidencedIdentity !== dictionaryIdentity;
+}
+
+function replacePropertyTrace(
+  traces: readonly PropertyResolutionTrace[],
+  propertyPath: string,
+  nextTrace: PropertyResolutionTrace,
+): PropertyResolutionTrace[] {
+  return [
+    ...traces.filter((trace) => trace.propertyPath !== propertyPath),
+    nextTrace,
+  ];
+}
+
+const DICTIONARY_MATERIAL_PROPERTY_PATHS = new Set([
+  "size",
+  "materialType",
+  "material",
+]);
+
+function sizeTextIsUsable(sizeValue: string, subjectKey: string): boolean {
+  return !isScheduleMarkAsSize(sizeValue, subjectKey);
+}
+
+function collectScheduleMaterialTokens(
+  subjectKey: string,
+  member: StructuralMember,
+  records: readonly Evidence[],
+  dictionary: ProjectDictionary | GovernedProjectDictionary | null | undefined,
+): string[] {
+  const texts: string[] = [];
+
+  if (member.size !== null && sizeTextIsUsable(member.size, subjectKey)) {
+    texts.push(member.size);
+  }
+
+  for (const record of records) {
+    if (record.propertyPath !== "size") {
+      continue;
+    }
+    if (typeof record.candidateValue !== "string") {
+      continue;
+    }
+    const value = record.candidateValue.trim();
+    if (value.length === 0 || !sizeTextIsUsable(value, subjectKey)) {
+      continue;
+    }
+    texts.push(value);
+  }
+
+  const definition = lookupProjectDictionaryDefinition(dictionary, subjectKey);
+  if (definition) {
+    for (const property of definition.properties) {
+      if (!DICTIONARY_MATERIAL_PROPERTY_PATHS.has(property.propertyPath)) {
+        continue;
+      }
+      const raw = property.rawText.trim();
+      if (raw.length === 0) {
+        continue;
+      }
+      if (
+        property.propertyPath === "size" &&
+        !sizeTextIsUsable(raw, subjectKey)
+      ) {
+        continue;
+      }
+      texts.push(raw);
+    }
+  }
+
+  const tokens = new Set<string>();
+  for (const text of texts) {
+    for (const token of parseMaterialTokensFromScheduleText(text)) {
+      tokens.add(token);
+    }
+  }
+  return [...tokens].sort(compareIds);
+}
+
+function canonicalEvidencedMaterialType(value: string): string {
+  const parsed = parseMaterialTypeFromScheduleText(value);
+  if (parsed) {
+    return parsed;
+  }
+  return normalizeMaterialToken(value);
+}
+
+function materialTypeIsUnresolved(
+  traces: readonly PropertyResolutionTrace[],
+): boolean {
+  return traces.some(
+    (trace) =>
+      trace.propertyPath === "materialType" && trace.method === "unresolved",
+  );
+}
+
+function sizeIsEstablished(member: StructuralMember, subjectKey: string): boolean {
+  return member.size !== null && sizeTextIsUsable(member.size, subjectKey);
+}
+
+/**
+ * Fill materialType from explicit schedule size / dictionary tokens (LVL, DF,
+ * …) when an identified member already has size and materialType is missing.
+ * Never overrides an agreeing evidenced materialType. Conflicting evidenced
+ * vs schedule/dictionary material stays unresolved. Does not mint members.
+ */
+export function applyScheduleMaterialTypeToIdentifiedMember(
+  subjectKey: string,
+  member: StructuralMember,
+  records: readonly Evidence[],
+  dictionary: ProjectDictionary | GovernedProjectDictionary | null | undefined,
+): StructuralMember {
+  const tokens = collectScheduleMaterialTokens(
+    subjectKey,
+    member,
+    records,
+    dictionary,
+  );
+  const uniqueToken = tokens.length === 1 ? tokens[0]! : null;
+  const sourcesConflict = tokens.length > 1;
+
+  if (member.materialType !== null) {
+    if (tokens.length === 0) {
+      return member;
+    }
+    const evidenced = canonicalEvidencedMaterialType(member.materialType);
+    if (!sourcesConflict && uniqueToken === evidenced) {
+      return member;
+    }
+    return {
+      ...member,
+      materialType: null,
+      resolutionTraces: replacePropertyTrace(
+        member.resolutionTraces,
+        "materialType",
+        createTrace(
+          "materialType",
+          "unresolved",
+          `${MATERIAL_TYPE_CONFLICT_MARKER}: evidenced materialType "${member.materialType}" vs schedule/dictionary (${tokens.join(", ")}).`,
+        ),
+      ),
+    };
+  }
+
+  if (materialTypeIsUnresolved(member.resolutionTraces)) {
+    return member;
+  }
+
+  if (sourcesConflict) {
+    return {
+      ...member,
+      materialType: null,
+      resolutionTraces: replacePropertyTrace(
+        member.resolutionTraces,
+        "materialType",
+        createTrace(
+          "materialType",
+          "unresolved",
+          `${MATERIAL_TYPE_CONFLICT_MARKER}: candidates (${tokens.join(", ")}).`,
+        ),
+      ),
+    };
+  }
+
+  if (uniqueToken === null || !sizeIsEstablished(member, subjectKey)) {
+    return member;
+  }
+
+  return {
+    ...member,
+    materialType: uniqueToken,
+    resolutionTraces: replacePropertyTrace(
+      member.resolutionTraces,
+      "materialType",
+      createTrace(
+        "materialType",
+        "supported-inference",
+        `${SCHEDULE_MATERIAL_TYPE_MARKER}: parsed "${uniqueToken}" from size/definition text.`,
+      ),
+    ),
+  };
+}
+
+/**
+ * Copy missing schedule size (and category if unset) from a validated Plan
+ * Dictionary definition onto an Evidence-identified structural member.
+ * Definitions never mint occurrences. Conflicting evidenced size stays unresolved.
+ */
+export function applyPlanDictionaryToIdentifiedMember(
+  subjectKey: string,
+  member: StructuralMember,
+  records: readonly Evidence[],
+  dictionary: ProjectDictionary | GovernedProjectDictionary | null | undefined,
+): StructuralMember {
+  if (!dictionary) {
+    return member;
+  }
+
+  const definition = lookupProjectDictionaryDefinition(dictionary, subjectKey);
+  if (!definition) {
+    return member;
+  }
+
+  let next = member;
+  let traces = [...member.resolutionTraces];
+
+  const dictionarySize = uniqueDefinitionProperty(definition, "size");
+  if (dictionarySize) {
+    const evidenceConflict = evidencedDimensionalSizesConflict(
+      subjectKey,
+      records,
+    );
+    const currentIsMark =
+      next.size !== null && isScheduleMarkAsSize(next.size, subjectKey);
+    const sizeMissing = next.size === null || currentIsMark;
+
+    if (evidenceConflict) {
+      // Conflicting evidenced sizes — do not pick the dictionary value.
+    } else if (
+      next.size !== null &&
+      !currentIsMark &&
+      dictionarySizeConflictsWithEvidenced(subjectKey, next.size, dictionarySize)
+    ) {
+      traces = replacePropertyTrace(
+        traces,
+        "size",
+        createTrace(
+          "size",
+          "unresolved",
+          `${DICTIONARY_SIZE_CONFLICT_MARKER}: evidenced size "${next.size}" vs dictionary size "${dictionarySize}"; no pick.`,
+        ),
+      );
+      next = {
+        ...next,
+        size: null,
+        resolutionTraces: traces,
+      };
+    } else if (sizeMissing) {
+      traces = replacePropertyTrace(
+        traces,
+        "size",
+        createTrace(
+          "size",
+          "supported-inference",
+          `${DICTIONARY_SCHEDULE_SIZE_MARKER}: ${definition.semanticTypeKey} → "${dictionarySize}".`,
+        ),
+      );
+      next = {
+        ...next,
+        size: dictionarySize,
+        resolutionTraces: traces,
+      };
+    }
+  }
+
+  if (next.category === "unknown") {
+    const categoryConflict = traces.some(
+      (trace) =>
+        trace.propertyPath === "category" && trace.method === "unresolved",
+    );
+    const dictionaryCategoryRaw = uniqueDefinitionProperty(
+      definition,
+      "category",
+    );
+    const dictionaryCategory = dictionaryCategoryRaw
+      ? parseDictionaryCategory(dictionaryCategoryRaw)
+      : null;
+    if (!categoryConflict && dictionaryCategory) {
+      traces = replacePropertyTrace(
+        traces,
+        "category",
+        createTrace(
+          "category",
+          "supported-inference",
+          `${DICTIONARY_SCHEDULE_CATEGORY_MARKER}: ${definition.semanticTypeKey} → "${dictionaryCategory}".`,
+        ),
+      );
+      next = {
+        ...next,
+        category: dictionaryCategory,
+        resolutionTraces: traces,
+      };
+    }
+  }
+
+  return next;
+}
+
 export function applyStructuralMemberAuthority(
   subjectKey: string,
   member: StructuralMember,
   records: readonly Evidence[],
+  options: StructuralMemberAuthorityOptions = {},
 ): StructuralMember {
   let next: StructuralMember = member;
   const traces = [...member.resolutionTraces];
@@ -606,6 +1125,21 @@ export function applyStructuralMemberAuthority(
     }
   }
 
+  next = applyPlanDictionaryToIdentifiedMember(
+    subjectKey,
+    { ...next, resolutionTraces: [...traces] },
+    records,
+    options.projectDictionary,
+  );
+  next = applyScheduleMaterialTypeToIdentifiedMember(
+    subjectKey,
+    next,
+    records,
+    options.projectDictionary,
+  );
+  traces.length = 0;
+  traces.push(...next.resolutionTraces);
+
   const quantityResolution = resolveExplicitSingleOccurrenceQuantity(
     records,
     next.lengthFeet,
@@ -629,6 +1163,7 @@ export function applyStructuralMemberAuthority(
   if (
     next.category === member.category &&
     next.size === member.size &&
+    next.materialType === member.materialType &&
     next.quantity === member.quantity &&
     traces.length === member.resolutionTraces.length
   ) {

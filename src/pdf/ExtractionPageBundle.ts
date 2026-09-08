@@ -59,6 +59,10 @@ export interface ExtractionPageBundle {
   scopeName: string;
   /** Scoped extraction intent key, e.g. "wall-framing" — not a construction object. */
   intent: string;
+  /** Construction-region id (usually one relevant framing sheet). */
+  regionId?: string;
+  identifiedSystems?: string[];
+  requiredInputs?: string[];
   members: ExtractionPageBundleMember[];
   /** Deterministic page order for Stage 5 content assembly. */
   orderedPageNumbers: number[];

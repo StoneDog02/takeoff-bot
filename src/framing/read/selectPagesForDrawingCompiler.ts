@@ -44,6 +44,8 @@ export function selectPagesForDrawingCompiler(input: {
   orderedPageNumbers?: readonly number[];
   /** Pages whose plan index textContent is empty (Beckstead OCR-only path). */
   emptyTextPageNumbers?: readonly number[];
+  /** When true, compile unknown OCR-only pages (empty-text production rule). */
+  compilerOcrEnabled?: boolean;
 }): number[] {
   const orderIndex = new Map(
     (input.orderedPageNumbers ?? []).map((pageNumber, index) => [
@@ -56,6 +58,7 @@ export function selectPagesForDrawingCompiler(input: {
     .filter((page) =>
       shouldCompilePage(page, {
         emptyTextPageNumbers: input.emptyTextPageNumbers,
+        compilerOcrEnabled: input.compilerOcrEnabled,
       }),
     )
     .map((page) => page.pageNumber);
@@ -81,14 +84,19 @@ export function selectPagesForDrawingCompiler(input: {
 
 export function shouldCompilePage(
   page: ClassifiedPlanPage,
-  opts?: { emptyTextPageNumbers?: readonly number[] },
+  opts?: {
+    emptyTextPageNumbers?: readonly number[];
+    compilerOcrEnabled?: boolean;
+  },
 ): boolean {
   const emptyIndexText =
     opts?.emptyTextPageNumbers?.includes(page.pageNumber) ?? false;
+  const compilerOcrEnabled =
+    opts?.compilerOcrEnabled ?? process.env.TAKEOFF_COMPILER_OCR === "1";
 
   if (
     page.needsVisualClassification &&
-    process.env.TAKEOFF_COMPILER_OCR === "1" &&
+    compilerOcrEnabled &&
     emptyIndexText
   ) {
     return true;
@@ -145,5 +153,9 @@ export function shouldCompilePage(
     }
   }
 
-  return hintsOverlap(page.scopeHints, WALL_FRAMING_SCOPE_HINTS);
+  return (
+    hintsOverlap(page.scopeHints, WALL_FRAMING_SCOPE_HINTS) ||
+    hintsOverlap(page.scopeHints, ["floor", "roof", "framing", "structural"]) ||
+    hasPlanLayout
+  );
 }

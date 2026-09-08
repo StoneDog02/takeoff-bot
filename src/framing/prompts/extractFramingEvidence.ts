@@ -36,7 +36,7 @@ import {
   type PageClassificationPayload,
   type PlanReadingOrderPayload,
 } from "../schemas/framing-artifacts.schema.js";
-import { resolveExtractionBrainPackPaths } from "../extract/framingExtractionBrainPacks.js";
+import { resolveExtractionBrainPackPathsForIntents } from "../extract/framingExtractionBrainPacks.js";
 import type { ExtractionProjectContext } from "../extract/extractionProjectContext.schema.js";
 
 export interface ExtractFramingEvidenceInput {
@@ -157,6 +157,19 @@ Rules:
   from construction convention alone.
 - Do not copy sheet IDs, titles, originalText, or candidate values from the
   example JSON unless they appear in the provided page text or page visual.
+- Region reads: the bundle routing intent sequences the pass; it does not
+  authorize skipping other identifiedSystems on this sheet. When identifiedSystems
+  includes openings, emit one opening subjectKey per distinct printed opening
+  mark (two labeled openings → two subjectKeys, never one unlabeled stub).
+  When it includes structural-members, emit one structural-member subjectKey
+  per printed member tag. Fill calculator-required inputs listed in project
+  context when those values are printed; omit the field when they are not
+  (omit = unresolved-after-read). Reuse knownSubjects subjectKeys. Do not
+  invent marks or mint sibling keys for a known tag.
+- When project context includes requiredInputFollowUp, this is a completeness-only
+  same-bundle pass: reuse knownSubjects subjectKeys; emit printed completeness
+  fields (parentWallTag, quantity, rough width/height, size, lengthFeet); do not
+  re-emit category or openingType; omit unprinted paths; do not mint sibling keys.
 - Prior-stage assembly names are context only, not plan evidence.
 - When a page visual is attached, treat it as source context for that
   pageNumber only. Prefer explicit printed marks over guesses.
@@ -448,7 +461,18 @@ floor-framing extraction rules (this stage):
 - Emit one Evidence record per atomic property candidate.
 - Do not calculate joist count or joist linear footage.
 - Do not derive joistLayoutLengthFeet from areaSquareFeet, room polygons, or
-  diagrams.
+  diagrams alone.
+- Geometry observations in project context are measured dimension spans
+  (parsedFeet, orientation, bbox, nearby text, associated run). They are not
+  Evidence. associatedRunKey is a location hint (nearby physical run on the
+  sheet). It is not exclusive wall ownership of that dim. The same dim may
+  already appear as wall lengthFeet; that does not consume it. You may emit
+  floor-area joistLayoutLengthFeet for that bay when the plan notes together
+  with those observations explicitly establish the spacing-axis bay length.
+- If two competing layout lengths remain after reading the region, omit
+  joistLayoutLengthFeet (leave unresolved). Do not pick a winner. Do not copy
+  a unique remaining observation onto layout merely because it is the only
+  dim left.
 - Do not infer joist spacing, joist size, joist type, or span direction.
 - MAX SPAN / SPAN = X callouts (examples: "MAX. SPAN = 17'-0"") are member-length
   or span facts: emit joistMemberLengthFeet when the source identifies installed
@@ -465,10 +489,11 @@ floor-framing extraction rules (this stage):
   sheet role, assembly callouts co-located on a plan). The TypeScript authority
   compiler mints CONSTRUCTION_SEMANTIC relationships after extraction; continue
   extracting observations (region labels, assembly specs, span facts) only.
-- Emit joistLayoutLengthFeet only when the page text explicitly establishes the
-  floor bay length along the joist spacing axis (perpendicular to span), in
-  feet, for that floor area — including orthogonal bay dimensions when span
-  direction is stated and the dimension is clearly the spacing-axis length.
+- Emit joistLayoutLengthFeet only when the page text and/or geometry
+  observations explicitly establish the floor bay length along the joist
+  spacing axis (perpendicular to span), in feet, for that floor area —
+  including orthogonal bay dimensions when span direction is stated and the
+  dimension is clearly the spacing-axis length.
 - In description for joistLayoutLengthFeet evidence, identify spacing-axis
   authority when the source makes that axis explicit.
 - If the source does not explicitly establish joistLayoutLengthFeet, omit it.
@@ -580,8 +605,16 @@ floor / roof spacing-axis dimension rules (this stage):
   example "SPAN N-S" / "RAFTERS SPAN N-S").
   Examples of form only: bay dimension labeled orthogonal to stated span;
   gable/ridge length for commons that span perpendicular to the gable.
-- Do not derive layout length from areaSquareFeet, pitch, or unlabeled overall
-  building dimensions.
+- associatedRunKey on a geometry observation locates the dim; it does not mean
+  the dim is only a wall length. When notes establish joist span / spacing axis
+  for a named bay and an observation is that bay length, emit
+  joistLayoutLengthFeet on the floor-area subject even if associatedRunKey is a
+  physical wall run. Wall lengthFeet from the same dim may remain as a separate
+  wall Evidence record.
+- Do not derive layout length from areaSquareFeet, pitch, unlabeled overall
+  building dimensions, or "the only remaining dim."
+- If two competing layout lengths remain (examples of form: 40'-0" vs 50'-8"),
+  omit joistLayoutLengthFeet. Do not pick a winner.
 - Emit joistMemberLengthFeet only when the source explicitly identifies installed
   / common joist piece length (for example wording of the form
   "JOISTS … LONG" or "joist member length …").
@@ -752,7 +785,27 @@ Page text:
 ${pageBlocks}`;
 }
 
-function buildExtractionPreamble(
+export function shouldInjectExtractionProjectContext(
+  extractionProjectContext?: ExtractionProjectContext | null,
+): extractionProjectContext is ExtractionProjectContext {
+  if (!extractionProjectContext) {
+    return false;
+  }
+  return (
+    extractionProjectContext.knownSystemTags.length > 0 ||
+    extractionProjectContext.knownAreaTags.length > 0 ||
+    extractionProjectContext.dictionaryBindings.length > 0 ||
+    extractionProjectContext.crossPageNotes.length > 0 ||
+    (extractionProjectContext.knownDefinitions?.length ?? 0) > 0 ||
+    (extractionProjectContext.knownSubjects?.length ?? 0) > 0 ||
+    (extractionProjectContext.geometryObservations?.length ?? 0) > 0 ||
+    (extractionProjectContext.requiredInputs?.length ?? 0) > 0 ||
+    (extractionProjectContext.identifiedSystems?.length ?? 0) > 0 ||
+    extractionProjectContext.requiredInputFollowUp != null
+  );
+}
+
+export function buildExtractionPreamble(
   buildingAssemblies: ExtractFramingEvidenceInput["buildingAssemblies"],
   extractionBundle?: ExtractionPageBundle,
   extractionProjectContext?: ExtractionProjectContext | null,
@@ -763,6 +816,19 @@ function buildExtractionPreamble(
       "",
       `Extraction page bundle: ${extractionBundle.bundleId}`,
       `Scope intent: ${extractionBundle.intent}`,
+    );
+    if (extractionBundle.identifiedSystems?.length) {
+      bundleLines.push(
+        `Identified systems on this sheet (extract all of them; routing intent is not a skip list): ${extractionBundle.identifiedSystems.join(", ")}.`,
+      );
+    }
+    if (extractionBundle.requiredInputs?.length) {
+      bundleLines.push(
+        "Calculator-required inputs to attempt when printed on this sheet (omit the field when not printed; do not invent):",
+        ...extractionBundle.requiredInputs.map((path) => `- ${path}`),
+      );
+    }
+    bundleLines.push(
       "Bundle page roles (source context only — not construction objects):",
     );
     for (const member of extractionBundle.members) {
@@ -805,21 +871,45 @@ function buildExtractionPreamble(
   }
 
   const contextLines: string[] = [];
-  if (
-    extractionProjectContext &&
-    (extractionProjectContext.knownSystemTags.length > 0 ||
-      extractionProjectContext.knownAreaTags.length > 0 ||
-      extractionProjectContext.dictionaryBindings.length > 0 ||
-      extractionProjectContext.crossPageNotes.length > 0)
-  ) {
+  if (shouldInjectExtractionProjectContext(extractionProjectContext)) {
     contextLines.push(
       "",
       "Project context (not plan text):",
       extractionProjectContext.contextDisclaimer,
-      "Use this block only to recognize tags, cross-page notes, and validated project definitions.",
+      "Use this block only to recognize tags, cross-page notes, validated project definitions, known subjects from earlier region reads, and geometry observations.",
       "knownDefinitions interpret marks that are visible in the tile/page — they do not prove a physical occurrence exists.",
+      "Reuse knownSubjects subjectKey values when the same mark/tag is visible rather than minting a sibling key.",
+      "Geometry observations are measured spans, not Evidence. associatedRunKey is a location hint, not exclusive wall ownership of the dim. Floor-area joistLayoutLengthFeet may be emitted for that bay when plan notes establish the spacing axis. The same dim may also appear as wall lengthFeet; layout is a separate floor-area Evidence record. If two layout lengths compete, omit. Do not mint layout from a unique remaining observation alone.",
       "Do not invent occurrences from definitions alone. Do not force a definition onto an object that does not show that mark.",
       "Do not emit relationships from context alone — plan text in this pass must explicitly establish ownership.",
+    );
+    const identifiedSystems = extractionProjectContext.identifiedSystems ?? [];
+    const isRequiredInputFollowUp =
+      extractionProjectContext.requiredInputFollowUp != null;
+    if (identifiedSystems.includes("openings") && !isRequiredInputFollowUp) {
+      contextLines.push(
+        "Region opening recovery: search the primary sheet for every printed opening mark (doors, windows, garage doors, crawl access, cased openings).",
+        "Emit one opening subjectKey per distinct labeled mark. Two labeled openings → two subjectKeys. Do not collapse them into one unlabeled stub.",
+        "When printed, emit parentWallTag, quantity, dimensions.roughWidthFeet, and dimensions.roughHeightFeet. If a printed property is absent, omit that propertyPath.",
+        "Do not invent openings from wall-line gaps without a readable mark or symbol.",
+      );
+    }
+    if (identifiedSystems.includes("structural-members") && !isRequiredInputFollowUp) {
+      contextLines.push(
+        "Region tagged-member recovery: emit one structural-member subjectKey per printed member tag on this sheet.",
+        "When printed, emit category, size, and lengthFeet. Omit unprinted fields. Reuse knownSubjects. Do not mint a sibling key for a known tag.",
+      );
+    }
+    if (extractionProjectContext.requiredInputFollowUp) {
+      const followUp = extractionProjectContext.requiredInputFollowUp;
+      contextLines.push(
+        `This is a required-input follow-up on the SAME sheet/bundle. The previous region read did not establish calculator-required completeness for: ${followUp.systems.join(", ")}.`,
+        `Missing property paths: ${followUp.missingPropertyPaths.join(", ") || "(none listed)"}.`,
+        "Completeness-only: reuse knownSubjects subjectKeys. Do not re-emit category or openingType. Do not mint sibling keys. Do not invent marks.",
+        "For those known subjects, emit the missing property paths above only when they are printed on this sheet. Omit unprinted completeness paths.",
+      );
+    }
+    contextLines.push(
       JSON.stringify(extractionProjectContext, null, 2),
     );
   }
@@ -1026,8 +1116,12 @@ export async function extractFramingEvidenceViaClaude(
     );
   }
 
-  const brainPackPaths = resolveExtractionBrainPackPaths(
-    input.extractionBundle?.intent,
+  const brainPackPaths = resolveExtractionBrainPackPathsForIntents(
+    input.extractionBundle?.identifiedSystems?.length
+      ? input.extractionBundle.identifiedSystems
+      : input.extractionBundle?.intent
+        ? [input.extractionBundle.intent]
+        : [],
   );
   const knowledge = await loadKnowledgeFiles([...brainPackPaths]);
   const knowledgeBlock = formatKnowledgeForPrompt(knowledge);

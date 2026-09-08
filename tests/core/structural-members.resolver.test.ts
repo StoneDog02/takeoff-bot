@@ -488,6 +488,50 @@ describe("resolveStructuralMembers", () => {
     });
   });
 
+  it("does not mint connector/holdown SKU identities as structural members", () => {
+    const skuKeys = ["MST37", "MTS30C", "STHD14RJ", "HDU8", "CS16x48"];
+    const skuEvidence = skuKeys.flatMap((subjectKey) =>
+      completeHeaderEvidence(subjectKey, `E-${subjectKey}`),
+    );
+    const payload = resolveStructuralMembers([
+      ...skuEvidence,
+      ...completeHeaderEvidence("WB2-11.88LVL", "E-WB2"),
+      memberEvidence("6x6 POST W/TRIM", {
+        id: "E-6X6-CATEGORY",
+        propertyPath: "category",
+        candidateValue: "post",
+      }),
+      memberEvidence("6x6 POST W/TRIM", {
+        id: "E-6X6-SIZE",
+        propertyPath: "size",
+        candidateValue: "6x6",
+      }),
+    ]);
+
+    const ids = payload.structuralMembers.map((member) => member.id);
+    assert.deepEqual(ids, ["SM-6x6-POST-WTRIM", "SM-WB2-11.88LVL"]);
+    assert.equal(
+      ids.some((id) =>
+        ["SM-MST37", "SM-MTS30C", "SM-STHD14RJ", "SM-HDU8", "SM-CS16x48"].includes(
+          id,
+        ),
+      ),
+      false,
+    );
+
+    const materials = calculateStructuralMembers(payload);
+    assert.equal(
+      materials.some((line) =>
+        /hanger|hold-?down|strap|MST37|MTS30C|STHD|HDU|CS16/i.test(
+          `${line.material ?? ""} ${line.description ?? ""} ${line.id}`,
+        ),
+      ),
+      false,
+    );
+    assert.equal(materials.length, 1);
+    assert.equal(materials[0]?.sourceObjectIds[0], "SM-WB2-11.88LVL");
+  });
+
   it("calculates material for a resolved header", () => {
     const payload = resolveStructuralMembers(completeHeaderEvidence());
     const materials = calculateStructuralMembers(payload);

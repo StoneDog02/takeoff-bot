@@ -18,6 +18,7 @@ const PHYSICAL_INTENTS = new Set([
   "sheathing",
   "roof-framing",
   "openings",
+  "framing-general",
 ]);
 
 function normalizeKey(raw: string): string {

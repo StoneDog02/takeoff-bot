@@ -69,6 +69,7 @@ export const projectLearningHarvestTelemetrySchema = z.object({
   forceOcrRequested: z.boolean(),
   structuredElementsRecovered: z.number().int().nonnegative(),
   ocrFallbackUsed: z.boolean().default(false),
+  indexedOdlReused: z.boolean().default(false),
 });
 
 export type ProjectLearningHarvestTelemetry = z.infer<

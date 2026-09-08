@@ -56,7 +56,7 @@ describe("selectPagesForDrawingCompiler", () => {
     );
   });
 
-  it("includes unknown OCR-only pages when TAKEOFF_COMPILER_OCR=1", () => {
+  it("includes unknown OCR-only pages when compiler OCR is enabled", () => {
     process.env.TAKEOFF_COMPILER_OCR = "1";
     const page = classifiedPage({
       pageNumber: 4,
@@ -77,6 +77,16 @@ describe("selectPagesForDrawingCompiler", () => {
       }),
       [4],
     );
+  });
+
+  it("selects framing plan-layout pages without wall hints", () => {
+    const page = classifiedPage({
+      pageNumber: 3,
+      pageKind: "framing-plan",
+      scopeHints: ["floor", "framing"],
+      contentRoles: ["plan-layout"],
+    });
+    assert.equal(shouldCompilePage(page), true);
   });
 
   it("skips elevation pages without plan-layout role", () => {

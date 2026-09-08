@@ -24,14 +24,14 @@ export async function indexPlan(pdfPath: string): Promise<PlanIndex> {
 
   const sourceContentHash = await computePdfContentHash(pdfPath);
 
-  let pages: PlanPage[];
+  let extracted: { pages: PlanPage[]; odlDocument: unknown };
   try {
-    pages = await extractPlanPages(pdfPath);
+    extracted = await extractPlanPages(pdfPath);
   } catch (error) {
     throw wrapIndexError(pdfPath, error);
   }
 
-  pages = await enrichPagesWithOutlineIdentity(pdfPath, pages);
+  const pages = await enrichPagesWithOutlineIdentity(pdfPath, extracted.pages);
 
   return {
     pdfPath,
@@ -39,6 +39,7 @@ export async function indexPlan(pdfPath: string): Promise<PlanIndex> {
     pages,
     indexedAt: new Date().toISOString(),
     sourceContentHash,
+    odlDocument: extracted.odlDocument,
   };
 }
 
@@ -87,7 +88,9 @@ async function assertPdfFile(pdfPath: string): Promise<void> {
   }
 }
 
-async function extractPlanPages(pdfPath: string): Promise<PlanPage[]> {
+async function extractPlanPages(
+  pdfPath: string,
+): Promise<{ pages: PlanPage[]; odlDocument: unknown }> {
   const resolvedPath = path.resolve(pdfPath);
   const outputDir = await mkdtemp(path.join(tmpdir(), "takeoff-bot-pdf-index-"));
 
@@ -101,7 +104,10 @@ async function extractPlanPages(pdfPath: string): Promise<PlanPage[]> {
     });
 
     const document = await readConversionJson(outputDir, resolvedPath);
-    return mapDocumentToPlanPages(document, pdfPath);
+    return {
+      pages: mapDocumentToPlanPages(document, pdfPath),
+      odlDocument: document,
+    };
   } finally {
     await rm(outputDir, { recursive: true, force: true });
   }

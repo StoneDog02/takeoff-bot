@@ -13,6 +13,7 @@ import {
   selectKnownDefinitionsForWorkUnit,
   shouldSkipDefinitionContext,
 } from "../../src/framing/extract/selectKnownDefinitionsForWorkUnit.js";
+import { buildExtractionPreamble } from "../../src/framing/prompts/extractFramingEvidence.js";
 
 const fixtureDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -252,6 +253,26 @@ describe("project learning context injection", () => {
     assert.equal(context.knownDefinitions.length, 3);
     assert.equal(context.dictionaryBindings.length, 0);
     assert.equal(context.contextDisclaimer, "CONTEXT ONLY — not plan evidence");
+  });
+
+  it("injects knownDefinitions into the Claude preamble when relationship tags are empty", () => {
+    const context = buildExtractionProjectContext({
+      intent: "wall-framing",
+      bundle: planBundle("wall-framing"),
+      dictionary: dictionaryFromFixture(),
+      compiledPages: [],
+      buildingAssemblies: { assemblyNames: [], notes: [] },
+      candidateKeysOverride: fixture.candidateKeys,
+    });
+    const preamble = buildExtractionPreamble(
+      { assemblyNames: [], notes: [] },
+      planBundle("wall-framing"),
+      context,
+    );
+    assert.match(preamble, /WB2-10DF/);
+    assert.match(preamble, /11-7\/8/);
+    assert.equal(context.knownSystemTags.length, 0);
+    assert.equal(context.dictionaryBindings.length, 0);
   });
 
   it("never includes harvested-only keys without validated dictionary entries", () => {

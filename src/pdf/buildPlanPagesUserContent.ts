@@ -143,11 +143,16 @@ export interface BuildPlanPagesUserContentInput {
 /**
  * Assembles a multimodal user message content array for Stage 5.
  * Pure construction helper — does not call Anthropic.
+ *
+ * Page/image blocks come first so `runClaudeJson` can put `cache_control` on
+ * the last image as a stable prefix. Pass-specific preamble (including
+ * required-input follow-up text) is appended after images so same-sheet
+ * follow-ups can cache-read the visuals.
  */
 export async function buildPlanPagesUserContent(
   input: BuildPlanPagesUserContentInput,
 ): Promise<ContentBlockParam[]> {
-  const blocks: ContentBlockParam[] = [textBlock(input.preambleText)];
+  const blocks: ContentBlockParam[] = [];
 
   for (const page of input.pages) {
     const visual = input.visualsByPageNumber?.get(page.pageNumber) ?? null;
@@ -160,6 +165,7 @@ export async function buildPlanPagesUserContent(
     blocks.push(...pageBlocks);
   }
 
+  blocks.push(textBlock(input.preambleText));
   return blocks;
 }
 

@@ -137,7 +137,13 @@ describe("runClaudeJson Stage-5 output reliability", () => {
       messages: [{ role: "user", content: "page text only" }],
       maxTokens: 2048,
     });
-    assert.equal(params.system, "extract");
+    assert.deepEqual(params.system, [
+      {
+        type: "text",
+        text: "extract",
+        cache_control: { type: "ephemeral" },
+      },
+    ]);
     assert.equal(params.messages[0]?.role, "user");
     assert.equal(params.thinking?.type, "disabled");
     // Schema remains Zod-validated by callers; this helper does not weaken it.

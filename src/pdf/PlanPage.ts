@@ -17,4 +17,9 @@ export interface PlanIndex {
    * touched PDF bytes.
    */
   sourceContentHash: string | null;
+  /**
+   * Structured OpenDataLoader JSON for this PDF, when indexing captured it.
+   * Optional so synthetic test indexes remain valid without ODL.
+   */
+  odlDocument?: unknown | null;
 }

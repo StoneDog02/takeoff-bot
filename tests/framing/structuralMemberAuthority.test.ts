@@ -6,16 +6,21 @@ import {
   applyStructuralMemberAuthority,
   BEAM_HEADER_CATEGORY_SYNONYM_MARKER,
   formatCanonicalDimensionalMemberSize,
+  isConnectorOrHoldownSkuIdentity,
   isScheduleMarkAsSize,
   looksLikeDimensionalMemberSize,
+  MATERIAL_TYPE_CONFLICT_MARKER,
   parseCanonicalDimensionalMemberSize,
   parseInchMeasureToMilli,
+  parseMaterialTypeFromScheduleText,
   resolveBeamHeaderCategorySynonym,
   resolveDimensionalSizeOverScheduleMark,
   resolveExplicitSingleOccurrenceQuantity,
   resolveNotationEquivalentDimensionalSizes,
+  SCHEDULE_MATERIAL_TYPE_MARKER,
 } from "../../src/framing/resolve/structuralMemberAuthority.js";
 import type { StructuralMember } from "../../src/framing/schemas/structural-member.schema.js";
+import type { GovernedProjectDictionary } from "../../src/project-reading/schemas/projectDictionary.schema.js";
 
 const source = {
   page: {
@@ -82,6 +87,67 @@ function categoryEvidence(id: string, value: string) {
   });
 }
 
+function materialTypeEvidence(
+  id: string,
+  value: string,
+  subjectKey = "WB2-11.88LVL",
+) {
+  return evidenceSchema.parse({
+    id,
+    type: "schedule",
+    relationship: "supports",
+    description: "Material candidate",
+    source: { ...source, elementLabel: subjectKey },
+    originalText: value,
+    references: [],
+    subjectKind: "structural-member",
+    subjectKey,
+    propertyPath: "materialType",
+    candidateValue: value,
+  });
+}
+
+function governedDictionary(
+  definitions: Array<{
+    semanticTypeKey: string;
+    properties: Array<{ propertyPath: string; rawText: string }>;
+  }>,
+): GovernedProjectDictionary {
+  return {
+    projectId: "test",
+    generatedAt: "2026-01-01T00:00:00.000Z",
+    interpreterModel: "test",
+    experimentBranch: "hybrid",
+    observations: [],
+    hypotheses: [],
+    definitions: definitions.map((definition) => ({
+      ...definition,
+      sourcePage: 1,
+      status: "definition" as const,
+      provenance: [{ kind: "compiler" as const, toolCallId: "t1" }],
+    })),
+    bindings: [],
+    unresolved: [],
+    contradictions: [],
+    metrics: { toolCalls: 0, tokens: 0, durationMs: 0 },
+    governance: {
+      evaluatedAt: "2026-01-01T00:00:00.000Z",
+      passRate: 1,
+      acceptedHypothesisIds: [],
+      rejectedHypothesisIds: [],
+      acceptedBindingIds: [],
+      rejectedBindingIds: [],
+      acceptedDefinitionKeys: definitions.map(
+        (definition) => definition.semanticTypeKey,
+      ),
+      rejectedDefinitionKeys: [],
+      validatorResults: [],
+      greenOutcome: "GREEN",
+      greenCriterion: "test",
+    },
+  };
+}
+
 function baseMember(
   overrides: Partial<StructuralMember> = {},
 ): StructuralMember {
@@ -118,6 +184,18 @@ function baseMember(
 }
 
 describe("structuralMemberAuthority", () => {
+  it("recognizes connector/holdown SKU identity without matching WB headers or posts", () => {
+    assert.equal(isConnectorOrHoldownSkuIdentity("MST37"), true);
+    assert.equal(isConnectorOrHoldownSkuIdentity("SM-MST37"), true);
+    assert.equal(isConnectorOrHoldownSkuIdentity("MTS30C"), true);
+    assert.equal(isConnectorOrHoldownSkuIdentity("STHD14RJ"), true);
+    assert.equal(isConnectorOrHoldownSkuIdentity("HDU8"), true);
+    assert.equal(isConnectorOrHoldownSkuIdentity("CS16x48"), true);
+    assert.equal(isConnectorOrHoldownSkuIdentity("WB2-11.88LVL"), false);
+    assert.equal(isConnectorOrHoldownSkuIdentity("6x6 POST W/TRIM"), false);
+    assert.equal(isConnectorOrHoldownSkuIdentity("HDR-001"), false);
+  });
+
   it("detects schedule-mark-as-size vs dimensional size", () => {
     assert.equal(isScheduleMarkAsSize("WB2-11.88LVL", "WB2-11.88LVL"), true);
     assert.equal(
@@ -424,5 +502,297 @@ describe("structuralMemberAuthority", () => {
       records,
     );
     assert.equal(applied.category, "unknown");
+  });
+
+  it("copies missing size from Plan Dictionary onto an identified mark", () => {
+    const records = [categoryEvidence("E-WB2-8DF-CAT", "beam")];
+    const applied = applyStructuralMemberAuthority(
+      "WB2-8DF",
+      baseMember({
+        id: "SM-WB2-8DF",
+        category: "beam",
+        materialType: null,
+        size: null,
+        lengthFeet: null,
+        quantity: null,
+        resolutionTraces: [],
+      }),
+      records,
+      {
+        projectDictionary: {
+          projectId: "test",
+          generatedAt: "2026-01-01T00:00:00.000Z",
+          interpreterModel: "test",
+          experimentBranch: "hybrid",
+          observations: [],
+          hypotheses: [],
+          definitions: [
+            {
+              semanticTypeKey: "WB2-8DF",
+              sourcePage: 1,
+              properties: [{ propertyPath: "size", rawText: "(2)-2x8 DF#2" }],
+              status: "definition",
+              provenance: [{ kind: "compiler", toolCallId: "t1" }],
+            },
+          ],
+          bindings: [],
+          unresolved: [],
+          contradictions: [],
+          metrics: { toolCalls: 0, tokens: 0, durationMs: 0 },
+          governance: {
+            evaluatedAt: "2026-01-01T00:00:00.000Z",
+            passRate: 1,
+            acceptedHypothesisIds: [],
+            rejectedHypothesisIds: [],
+            acceptedBindingIds: [],
+            rejectedBindingIds: [],
+            acceptedDefinitionKeys: ["WB2-8DF"],
+            rejectedDefinitionKeys: [],
+            validatorResults: [],
+            greenOutcome: "GREEN",
+            greenCriterion: "test",
+          },
+        },
+      },
+    );
+    assert.equal(applied.size, "(2)-2x8 DF#2");
+    assert.equal(applied.category, "beam");
+    assert.equal(applied.lengthFeet, null);
+    assert.equal(
+      applied.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "size" &&
+          trace.method === "supported-inference" &&
+          trace.explanation.includes("Plan Dictionary"),
+      ),
+      true,
+    );
+  });
+
+  it("leaves size unresolved when evidenced size conflicts with Plan Dictionary", () => {
+    const records = [
+      categoryEvidence("E-WB2-8DF-CAT", "beam"),
+      sizeEvidence("E-WB2-8DF-SIZE", "2x10"),
+    ];
+    const applied = applyStructuralMemberAuthority(
+      "WB2-8DF",
+      baseMember({
+        id: "SM-WB2-8DF",
+        category: "beam",
+        materialType: null,
+        size: "2x10",
+        lengthFeet: null,
+        quantity: null,
+        resolutionTraces: [
+          {
+            propertyPath: "size",
+            method: "explicit-project-value",
+            explanation: "Resolved from explicit project evidence E-WB2-8DF-SIZE.",
+            assumptionIds: [],
+          },
+        ],
+      }),
+      records,
+      {
+        projectDictionary: {
+          projectId: "test",
+          generatedAt: "2026-01-01T00:00:00.000Z",
+          interpreterModel: "test",
+          experimentBranch: "hybrid",
+          observations: [],
+          hypotheses: [],
+          definitions: [
+            {
+              semanticTypeKey: "WB2-8DF",
+              sourcePage: 1,
+              properties: [{ propertyPath: "size", rawText: "(2)-2x8 DF#2" }],
+              status: "definition",
+              provenance: [{ kind: "compiler", toolCallId: "t1" }],
+            },
+          ],
+          bindings: [],
+          unresolved: [],
+          contradictions: [],
+          metrics: { toolCalls: 0, tokens: 0, durationMs: 0 },
+          governance: {
+            evaluatedAt: "2026-01-01T00:00:00.000Z",
+            passRate: 1,
+            acceptedHypothesisIds: [],
+            rejectedHypothesisIds: [],
+            acceptedBindingIds: [],
+            rejectedBindingIds: [],
+            acceptedDefinitionKeys: ["WB2-8DF"],
+            rejectedDefinitionKeys: [],
+            validatorResults: [],
+            greenOutcome: "GREEN",
+            greenCriterion: "test",
+          },
+        },
+      },
+    );
+    assert.equal(applied.size, null);
+    assert.equal(
+      applied.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "size" &&
+          trace.method === "unresolved" &&
+          trace.explanation.includes("no pick"),
+      ),
+      true,
+    );
+  });
+
+  it("parses explicit schedule material tokens and not dimensions alone", () => {
+    assert.equal(
+      parseMaterialTypeFromScheduleText('(2)-1.3/4"x11.7/8" LVL'),
+      "lvl",
+    );
+    assert.equal(parseMaterialTypeFromScheduleText("(2)-2x8 DF#2"), "dimensional-lumber");
+    assert.equal(parseMaterialTypeFromScheduleText("lvl"), "lvl");
+    assert.equal(parseMaterialTypeFromScheduleText('(2)-1.75"x11.875"'), null);
+    assert.equal(parseMaterialTypeFromScheduleText("2x10"), null);
+  });
+
+  it("fills missing materialType from an LVL size token", () => {
+    const records = [
+      categoryEvidence("E-CAT", "header"),
+      sizeEvidence("E-DIM", '(2)-1.3/4"x11.7/8" LVL'),
+      lengthEvidence("E-LEN", 23.5),
+    ];
+    const applied = applyStructuralMemberAuthority(
+      "WB2-11.88LVL",
+      baseMember({
+        materialType: null,
+        size: '(2)-1.3/4"x11.7/8" LVL',
+        quantity: 1,
+        resolutionTraces: [
+          {
+            propertyPath: "size",
+            method: "explicit-project-value",
+            explanation: "Resolved size",
+            assumptionIds: [],
+          },
+          {
+            propertyPath: "lengthFeet",
+            method: "explicit-project-value",
+            explanation: "Resolved length",
+            assumptionIds: [],
+          },
+        ],
+      }),
+      records,
+    );
+    assert.equal(applied.materialType, "lvl");
+    assert.equal(applied.size, '(2)-1.3/4"x11.7/8" LVL');
+    assert.equal(
+      applied.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "materialType" &&
+          trace.method === "supported-inference" &&
+          trace.explanation.includes(SCHEDULE_MATERIAL_TYPE_MARKER),
+      ),
+      true,
+    );
+  });
+
+  it("does not invent materialType from dimensional size without a material token", () => {
+    const applied = applyStructuralMemberAuthority(
+      "WB2-11.88LVL",
+      baseMember({
+        materialType: null,
+        size: "2x10",
+        quantity: 1,
+        resolutionTraces: [],
+      }),
+      [sizeEvidence("E-SIZE", "2x10")],
+    );
+    assert.equal(applied.materialType, null);
+    assert.equal(
+      applied.resolutionTraces.some(
+        (trace) => trace.propertyPath === "materialType",
+      ),
+      false,
+    );
+  });
+
+  it("does not override an evidenced materialType that agrees with the size token", () => {
+    const applied = applyStructuralMemberAuthority(
+      "WB2-11.88LVL",
+      baseMember({
+        materialType: "LVL",
+        size: '(2)-1.3/4"x11.7/8" LVL',
+        quantity: 1,
+        resolutionTraces: [
+          {
+            propertyPath: "materialType",
+            method: "explicit-project-value",
+            explanation: "Resolved from explicit project evidence E-MAT.",
+            assumptionIds: [],
+          },
+        ],
+      }),
+      [
+        materialTypeEvidence("E-MAT", "LVL"),
+        sizeEvidence("E-DIM", '(2)-1.3/4"x11.7/8" LVL'),
+      ],
+    );
+    assert.equal(applied.materialType, "LVL");
+    assert.equal(
+      applied.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "materialType" &&
+          trace.method === "explicit-project-value",
+      ),
+      true,
+    );
+    assert.equal(
+      applied.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "materialType" &&
+          trace.method === "supported-inference",
+      ),
+      false,
+    );
+  });
+
+  it("leaves materialType unresolved when evidenced value conflicts with dictionary", () => {
+    const applied = applyStructuralMemberAuthority(
+      "WB2-11.88LVL",
+      baseMember({
+        materialType: "psl",
+        size: '(2)-1.3/4"x11.7/8" LVL',
+        quantity: 1,
+        resolutionTraces: [
+          {
+            propertyPath: "materialType",
+            method: "explicit-project-value",
+            explanation: "Resolved from explicit project evidence E-MAT.",
+            assumptionIds: [],
+          },
+        ],
+      }),
+      [materialTypeEvidence("E-MAT", "psl")],
+      {
+        projectDictionary: governedDictionary([
+          {
+            semanticTypeKey: "WB2-11.88LVL",
+            properties: [
+              { propertyPath: "size", rawText: '(2)-1.3/4"x11.7/8" LVL' },
+              { propertyPath: "materialType", rawText: "LVL" },
+            ],
+          },
+        ]),
+      },
+    );
+    assert.equal(applied.materialType, null);
+    assert.equal(
+      applied.resolutionTraces.some(
+        (trace) =>
+          trace.propertyPath === "materialType" &&
+          trace.method === "unresolved" &&
+          trace.explanation.includes(MATERIAL_TYPE_CONFLICT_MARKER),
+      ),
+      true,
+    );
   });
 });

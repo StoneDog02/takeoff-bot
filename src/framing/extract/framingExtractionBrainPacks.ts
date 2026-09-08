@@ -50,17 +50,26 @@ export const INTENT_EXTRACTION_BRAIN_PATHS: Record<
 export function resolveExtractionBrainPackPaths(
   intent: string | undefined,
 ): readonly string[] {
-  if (!intent) {
+  return resolveExtractionBrainPackPathsForIntents(intent ? [intent] : []);
+}
+
+export function resolveExtractionBrainPackPathsForIntents(
+  intents: readonly string[],
+): readonly string[] {
+  if (intents.length === 0) {
     return INTENT_EXTRACTION_BRAIN_PATHS["wall-framing"];
   }
-  const mapped =
-    INTENT_EXTRACTION_BRAIN_PATHS[
-      intent as FramingExtractionIntent | "referenced-detail"
-    ];
-  if (mapped) {
-    return mapped;
+  const paths = new Set<string>();
+  for (const intent of intents) {
+    const mapped =
+      INTENT_EXTRACTION_BRAIN_PATHS[
+        intent as FramingExtractionIntent | "referenced-detail"
+      ];
+    for (const path of mapped ?? INTENT_EXTRACTION_BRAIN_PATHS["wall-framing"]) {
+      paths.add(path);
+    }
   }
-  return INTENT_EXTRACTION_BRAIN_PATHS["wall-framing"];
+  return [...paths];
 }
 
 /** Export map for metrics / audits (single source of truth). */

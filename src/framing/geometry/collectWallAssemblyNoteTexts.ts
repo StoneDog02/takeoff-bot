@@ -53,7 +53,7 @@ async function loadCachedPageText(
 export async function collectWallAssemblyNoteTexts(
   input: CollectWallAssemblyNoteTextsInput,
 ): Promise<string[]> {
-  const pageNumbers = input.pageNumbers ?? [1, 3, 4];
+  const pageNumbers = input.pageNumbers ?? [];
   const texts: string[] = [];
 
   for (const pageNumber of pageNumbers) {

@@ -23,6 +23,17 @@ const WOOD_FLOOR_TOKENS = [
   "crawl-space-floor",
 ] as const;
 
+const JOIST_CONDITION_NOTE_TOKENS = [
+  "crawl",
+  "visqueen",
+  "joist",
+  "tji",
+  "i-joist",
+  "floor-framing",
+  "floor-system",
+  "crawl-space-floor",
+] as const;
+
 function tokenizeSubject(text: string): string[] {
   return normalizeToken(text)
     .split(/[^a-z0-9]+/)
@@ -57,6 +68,44 @@ function subjectKeyIndicatesSlabSurface(subjectKey: string): boolean {
   );
 }
 
+/**
+ * True when a floor-area layout string is an explicit concrete slab
+ * (including OCR/abbrev forms such as `4" CONC. SLAB`).
+ *
+ * Layouts that also name joist/TJI/truss framing are not slab-only conditions.
+ */
+export function layoutTextIndicatesExplicitConcreteSlab(text: string): boolean {
+  const compact = text
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (compact.length === 0) {
+    return false;
+  }
+
+  if (/\b(?:joist|tji|truss|i ?joist)\b/.test(compact)) {
+    return false;
+  }
+
+  return /\bslab\b/.test(compact) || /\bconcrete\b/.test(compact) || /\bconc\b/.test(compact);
+}
+
+function recordsHaveExplicitConcreteSlabLayout(
+  records: readonly Evidence[],
+): boolean {
+  return records.some((record) => {
+    if (record.propertyPath !== "layout") {
+      return false;
+    }
+
+    return layoutTextIndicatesExplicitConcreteSlab(
+      String(record.candidateValue ?? record.originalText ?? ""),
+    );
+  });
+}
+
 function recordsIndicateWoodJoistFloor(records: readonly Evidence[]): boolean {
   for (const record of records) {
     if (
@@ -85,6 +134,55 @@ function recordsIndicateWoodJoistFloor(records: readonly Evidence[]): boolean {
   return false;
 }
 
+function recordsHaveJoistLayoutOrMemberEvidence(
+  records: readonly Evidence[],
+): boolean {
+  return records.some(
+    (record) =>
+      record.propertyPath === "joistLayoutLengthFeet" ||
+      record.propertyPath === "joistMemberLengthFeet" ||
+      record.propertyPath === "assembly.joistType" ||
+      record.propertyPath === "assembly.joistSpacingInches",
+  );
+}
+
+function recordsHaveJoistConditionNotes(records: readonly Evidence[]): boolean {
+  for (const record of records) {
+    if (
+      record.propertyPath === "parentSystemTag" ||
+      record.propertyPath === "parentSystemId"
+    ) {
+      continue;
+    }
+
+    for (const token of JOIST_CONDITION_NOTE_TOKENS) {
+      if (recordsContainToken([record], token)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * True when a floor area is itself a wood-joist takeoff condition:
+ * crawl / visqueen / joist notes, or explicit joist layout / member Evidence.
+ * Co-located porch / patio square footage is not a joist condition.
+ */
+export function isJoistConditionFloorArea(
+  records: readonly Evidence[],
+): boolean {
+  if (records.length === 0) {
+    return false;
+  }
+
+  return (
+    recordsHaveJoistLayoutOrMemberEvidence(records) ||
+    recordsHaveJoistConditionNotes(records)
+  );
+}
+
 /**
  * True when a floor-framing-area subject represents a slab / non-wood floor surface
  * rather than a wood-joist takeoff bay.
@@ -92,6 +190,10 @@ function recordsIndicateWoodJoistFloor(records: readonly Evidence[]): boolean {
 export function isSlabOrNonWoodFloorArea(records: readonly Evidence[]): boolean {
   if (records.length === 0) {
     return false;
+  }
+
+  if (recordsHaveExplicitConcreteSlabLayout(records)) {
+    return true;
   }
 
   const subjectKey = records[0]!.subjectKey;
@@ -114,23 +216,14 @@ export function isSlabOrNonWoodFloorArea(records: readonly Evidence[]): boolean 
     return true;
   }
 
-  if (slabByKey && woodSignals) {
-    return false;
-  }
-
-  const layoutNotesSlab = records.some((record) => {
-    if (record.propertyPath !== "layout") {
-      return false;
-    }
-    const text = normalizeToken(String(record.candidateValue ?? record.originalText ?? ""));
-    return text.includes("slab") || text.includes("concrete");
-  });
-
-  return layoutNotesSlab && !woodSignals;
+  return false;
 }
 
 const SLAB_PARENT_REJECTION_MARKER =
   "Slab or non-wood floor surface cannot inherit a wood-joist floor system parent.";
+
+export const NON_JOIST_CONDITION_PARENT_REJECTION_MARKER =
+  "Floor area is not a joist condition and cannot inherit a wood-joist floor system parent.";
 
 export function isNonWoodFloorTakeoffAreaFromTraces(
   area: import("../schemas/floor-framing.schema.js").FloorFramingArea,
@@ -143,7 +236,8 @@ export function isNonWoodFloorTakeoffAreaFromTraces(
 }
 
 /**
- * Wood-joist floor systems must not own slab-only areas.
+ * Wood-joist floor systems may own an area only when that area is a joist
+ * condition. Slab / non-wood surfaces stay incompatible.
  */
 export function isWoodJoistFloorSystemCompatibleWithArea(input: {
   systemRecords: readonly Evidence[];
@@ -158,5 +252,5 @@ export function isWoodJoistFloorSystemCompatibleWithArea(input: {
     return true;
   }
 
-  return !isSlabOrNonWoodFloorArea(input.areaRecords);
+  return isJoistConditionFloorArea(input.areaRecords);
 }

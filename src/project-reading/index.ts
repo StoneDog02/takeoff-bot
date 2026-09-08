@@ -42,9 +42,16 @@ export {
 export {
   DictionaryGovernor,
   governDefinitions,
+  toGovernedProjectDictionary,
   type ValidatorResult,
   type GovernanceReport,
 } from "./dictionaryGovernor.js";
+
+export {
+  lookupProjectDictionaryDefinition,
+  lookupProjectDictionaryDefinitionFromTexts,
+  collectDictionaryMarkTokens,
+} from "./lookupProjectDictionaryDefinition.js";
 
 export {
   BRANCH_CONFIGS,

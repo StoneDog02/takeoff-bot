@@ -1,6 +1,7 @@
 import { logger } from "../../core/logging/logger.js";
 import type { Evidence } from "../../core/schemas/evidence.schema.js";
 import type { PlanIndex } from "../../pdf/PlanIndex.js";
+import type { GovernedProjectDictionary } from "../../project-reading/schemas/projectDictionary.schema.js";
 import { calculateFramingTakeoff } from "../calculate/calculateFramingTakeoff.js";
 import { buildProductAccounting } from "../product/buildProductAccounting.js";
 import type { FramingConstruction } from "../schemas/framingConstruction.schema.js";
@@ -22,6 +23,11 @@ export type RunFramingTakeoffInput = {
   constructionOverride?: FramingConstruction;
   /** Inject Evidence and skip live extraction (replay). */
   evidenceReplay?: readonly Evidence[];
+  /**
+   * Inject a governed Plan Dictionary on Evidence replay.
+   * Replay skips Project Learning; without this, schedule sizes are dropped.
+   */
+  projectDictionary?: GovernedProjectDictionary | null;
   writeDebugArtifacts?: boolean;
   artifactsRoot?: string;
 };
@@ -59,6 +65,7 @@ export async function runFramingTakeoff(
         planIndex: input.planIndex,
         useMockAi: input.useMockAi,
         evidenceReplay: input.evidenceReplay,
+        projectDictionary: input.projectDictionary,
         writeDebugArtifacts: input.writeDebugArtifacts ?? true,
         artifactsRoot: input.artifactsRoot,
       });

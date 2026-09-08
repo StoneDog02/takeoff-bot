@@ -48,6 +48,48 @@ function normalizeToken(value: string): string {
   return value.trim().toLowerCase().replaceAll(/\s+/g, "-");
 }
 
+const JOIST_SIZE_PLAN_POINTER_PATTERN =
+  /\bsee\s+plans?\b|\brefer(?:red)?\s+to\s+(?:the\s+)?plans?\b|\bper\s+plans?\b|\bas\s+noted(?:\s+on\s+plans?)?\b|\bsee\s+(?:schedule|detail|notes?)\b/i;
+
+const JOIST_SIZE_DIMENSIONAL_PATTERN =
+  /(\d+\.\d+\/\d|\d+-\d+\/\d|\d+\s+\d+\/\d|\d+\s*[x×]\s*\d+)/i;
+
+/**
+ * True when a joist-size candidate is a plan pointer/deferral, not a dimensional size.
+ * A string that also contains a dimensional token is treated as a size, not a pointer.
+ */
+export function isJoistSizePlanPointerValue(value: unknown): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return false;
+  }
+
+  if (!JOIST_SIZE_PLAN_POINTER_PATTERN.test(trimmed)) {
+    return false;
+  }
+
+  return !JOIST_SIZE_DIMENSIONAL_PATTERN.test(trimmed);
+}
+
+/**
+ * OCR-ish mixed fractions such as `11.7/8"` are the same construction size as `11-7/8`.
+ * Does not rewrite already-established space or hyphen forms, and does not invent size
+ * from a TJI series number.
+ */
+export function normalizeOcrJoistSizeCandidate(value: string): string {
+  const trimmed = value.trim();
+  const match = /^(\d+)\.(\d+\/\d)\s*"?$/.exec(trimmed);
+  if (!match) {
+    return trimmed;
+  }
+
+  return `${match[1]}-${match[2]}`;
+}
+
 /**
  * I-joist material class for floor joist type strings.
  * Matches the I-joist branch of simple-area joist LF eligibility.
@@ -130,11 +172,21 @@ export function normalizeFloorSystemCandidate(
     case "name":
     case "level":
     case "assembly.joistType":
-    case "assembly.joistSize":
     case "assembly.rimBoard":
       return typeof candidateValue === "string" && candidateValue.trim().length > 0
         ? candidateValue.trim()
         : undefined;
+    case "assembly.joistSize": {
+      if (typeof candidateValue !== "string" || candidateValue.trim().length === 0) {
+        return undefined;
+      }
+
+      if (isJoistSizePlanPointerValue(candidateValue)) {
+        return undefined;
+      }
+
+      return normalizeOcrJoistSizeCandidate(candidateValue);
+    }
     case "assembly.joistSpacingInches":
       return isPositiveNumber(candidateValue) ? candidateValue : undefined;
   }

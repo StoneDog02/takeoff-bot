@@ -25,6 +25,12 @@ export type ExtractionProjectContextKnownDefinition = z.infer<
   typeof extractionProjectContextKnownDefinitionSchema
 >;
 
+export const extractionProjectContextKnownSubjectSchema = z.object({
+  subjectKind: z.string().trim().min(1),
+  subjectKey: z.string().trim().min(1),
+  propertyPaths: z.array(z.string().trim().min(1)),
+});
+
 export const extractionProjectContextSchema = z.object({
   intent: z.string().trim().min(1),
   bundlePageNumbers: z.array(z.number().int().positive()),
@@ -35,6 +41,37 @@ export const extractionProjectContextSchema = z.object({
   knownDefinitions: z
     .array(extractionProjectContextKnownDefinitionSchema)
     .default([]),
+  knownSubjects: z
+    .array(extractionProjectContextKnownSubjectSchema)
+    .default([]),
+  geometryObservations: z
+    .array(
+      z.object({
+        id: z.string().trim().min(1),
+        pageNumber: z.number().int().positive(),
+        parsedFeet: z.number().finite().positive(),
+        orientation: z.enum(["H", "V", "unknown"]),
+        associatedRunKey: z.string().nullable(),
+        nearbyText: z.array(z.string()),
+        rawText: z.string(),
+      }),
+    )
+    .default([]),
+  /**
+   * Usage note serialized next to geometryObservations. Not Evidence.
+   * associatedRunKey locates a dim; it does not consume it as wall-only.
+   */
+  geometryObservationUsage: z.string().nullable().default(null),
+  requiredInputs: z.array(z.string().trim().min(1)).default([]),
+  identifiedSystems: z.array(z.string().trim().min(1)).default([]),
+  requiredInputFollowUp: z
+    .object({
+      systems: z.array(z.string().trim().min(1)).min(1),
+      missingPropertyPaths: z.array(z.string().trim().min(1)),
+    })
+    .nullable()
+    .optional()
+    .default(null),
   contextDisclaimer: z.literal("CONTEXT ONLY — not plan evidence"),
 });
 

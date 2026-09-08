@@ -334,17 +334,7 @@ export function buildOpeningEvidenceWithMarkOwnership(
       }),
     );
 
-    evidence.push(
-      makeOpeningEvidence({
-        subjectKey: openingSubjectKey,
-        pageNumber,
-        propertyPath: "quantity",
-        candidateValue: 1,
-        description: "Single labeled opening occurrence at gap location",
-        originalText: notes,
-        type: "geometry",
-      }),
-    );
+    // Do not invent quantity=1 from a gap occurrence. Quantity stays a plan fact.
   }
 
   return { evidence, ownedMarks };

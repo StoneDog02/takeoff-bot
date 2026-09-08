@@ -1,0 +1,6315 @@
+{
+  "sourceArtifact": "artifacts/beckstead-w4c-char-20260905-183009/framing/reader-compiled-drawing-pages.json",
+  "note": "Slim PBG opening-gap inventory from frozen W4-C compiled pages. Empty-text plan: 0 primitives, 0 SMR observations. Load the full artifact when present; this fixture is the CI fallback. Do not invent marks or quantity.",
+  "pages": [
+    {
+      "pageNumber": 3,
+      "pageWidth": 2592,
+      "pageHeight": 1728,
+      "pageRole": {
+        "role": "unknown",
+        "allowsWallPlanLengthEvidence": true,
+        "planHits": [],
+        "elevationHits": [],
+        "sectionHits": [],
+        "detailHits": [],
+        "rawItemCount": 0,
+        "method": "empty-text-layer"
+      },
+      "ptPerFt": 18,
+      "emitDimIds": [
+        "ds-2",
+        "ds-4",
+        "ds-5",
+        "ds-7"
+      ],
+      "pbgRuns": [
+        {
+          "id": "run:p3:21b58d2992e4",
+          "physicalRunKey": "physical-run:p3:c529df116770",
+          "pageNumber": 3,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.16,
+          "centerline": {
+            "x1": 828.12,
+            "y1": 1004.22,
+            "x2": 1080.12,
+            "y2": 1004.22
+          },
+          "endpoints": [
+            {
+              "x": 828.12,
+              "y": 1004.22
+            },
+            {
+              "x": 1080.12,
+              "y": 1004.22
+            }
+          ],
+          "lengthPt": 252,
+          "mid": {
+            "x": 954.1199999999999,
+            "y": 1004.22
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 801.12,
+                "y": 1001.64
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 1107.12,
+                "y": 1001.64
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 1413.12,
+                "y": 1001.64
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 801.12,
+                "y": 1006.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 1107.12,
+                "y": 1006.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 1413.12,
+                "y": 1006.8
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect"
+          ]
+        },
+        {
+          "id": "run:p3:96d879fc7125",
+          "physicalRunKey": "physical-run:p3:f557006338b3",
+          "pageNumber": 3,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.16,
+          "centerline": {
+            "x1": 1134.12,
+            "y1": 1004.22,
+            "x2": 1386.12,
+            "y2": 1004.22
+          },
+          "endpoints": [
+            {
+              "x": 1134.12,
+              "y": 1004.22
+            },
+            {
+              "x": 1386.12,
+              "y": 1004.22
+            }
+          ],
+          "lengthPt": 252,
+          "mid": {
+            "x": 1260.12,
+            "y": 1004.22
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 801.12,
+                "y": 1001.64
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 1107.12,
+                "y": 1001.64
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 1413.12,
+                "y": 1001.64
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 801.12,
+                "y": 1006.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 1107.12,
+                "y": 1006.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 1413.12,
+                "y": 1006.8
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect"
+          ]
+        },
+        {
+          "id": "run:p3:38ca3fbf3423",
+          "physicalRunKey": "physical-run:p3:90d9a1ee9bde",
+          "pageNumber": 3,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.16,
+          "centerline": {
+            "x1": 804.12,
+            "y1": 797.5799999999999,
+            "x2": 993.12,
+            "y2": 797.5799999999999
+          },
+          "endpoints": [
+            {
+              "x": 804.12,
+              "y": 797.5799999999999
+            },
+            {
+              "x": 993.12,
+              "y": 797.5799999999999
+            }
+          ],
+          "lengthPt": 189,
+          "mid": {
+            "x": 898.62,
+            "y": 797.5799999999999
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 777.12,
+                "y": 795
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 53.999999999999886,
+              "at": {
+                "x": 1020.1199999999999,
+                "y": 795
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 777.12,
+                "y": 800.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 53.999999999999886,
+              "at": {
+                "x": 1020.1199999999999,
+                "y": 800.16
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "low",
+          "authorityScore": 1.5,
+          "authorityReasons": [
+            "thickness-mode"
+          ]
+        },
+        {
+          "id": "run:p3:35c1d58f45b0",
+          "physicalRunKey": "physical-run:p3:4c244be97e8e",
+          "pageNumber": 3,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 12,
+          "centerline": {
+            "x1": 478.56000244140614,
+            "y1": 560.16,
+            "x2": 636.12,
+            "y2": 560.16
+          },
+          "endpoints": [
+            {
+              "x": 478.56000244140614,
+              "y": 560.16
+            },
+            {
+              "x": 636.12,
+              "y": 560.16
+            }
+          ],
+          "lengthPt": 157.56,
+          "mid": {
+            "x": 557.340001220703,
+            "y": 560.16
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceB",
+              "gapPt": 422.9999999999999,
+              "at": {
+                "x": 847.6199999999999,
+                "y": 566.16
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 2.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "junction"
+          ]
+        },
+        {
+          "id": "run:p3:fd50e9582519",
+          "physicalRunKey": "physical-run:p3:de2c90b29bd4",
+          "pageNumber": 3,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.16,
+          "centerline": {
+            "x1": 651.12,
+            "y1": 1004.22,
+            "x2": 774.12,
+            "y2": 1004.22
+          },
+          "endpoints": [
+            {
+              "x": 651.12,
+              "y": 1004.22
+            },
+            {
+              "x": 774.12,
+              "y": 1004.22
+            }
+          ],
+          "lengthPt": 123,
+          "mid": {
+            "x": 712.62,
+            "y": 1004.22
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 801.12,
+                "y": 1001.64
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 1107.12,
+                "y": 1001.64
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 1413.12,
+                "y": 1001.64
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 801.12,
+                "y": 1006.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 1107.12,
+                "y": 1006.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 1413.12,
+                "y": 1006.8
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "low",
+          "authorityScore": 1.5,
+          "authorityReasons": [
+            "thickness-mode"
+          ]
+        },
+        {
+          "id": "run:p3:15747c16080a",
+          "physicalRunKey": "physical-run:p3:343b5ac7d6dc",
+          "pageNumber": 3,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.16,
+          "centerline": {
+            "x1": 1440.12,
+            "y1": 1004.22,
+            "x2": 1563.12,
+            "y2": 1004.22
+          },
+          "endpoints": [
+            {
+              "x": 1440.12,
+              "y": 1004.22
+            },
+            {
+              "x": 1563.12,
+              "y": 1004.22
+            }
+          ],
+          "lengthPt": 123,
+          "mid": {
+            "x": 1501.62,
+            "y": 1004.22
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 801.12,
+                "y": 1001.64
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 1107.12,
+                "y": 1001.64
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 1413.12,
+                "y": 1001.64
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 801.12,
+                "y": 1006.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 1107.12,
+                "y": 1006.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 1413.12,
+                "y": 1006.8
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 2.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "junction"
+          ]
+        },
+        {
+          "id": "run:p3:bbe255f6ac39",
+          "physicalRunKey": "physical-run:p3:d03f217eacaa",
+          "pageNumber": 3,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.16,
+          "centerline": {
+            "x1": 651.12,
+            "y1": 797.5799999999999,
+            "x2": 750.12,
+            "y2": 797.5799999999999
+          },
+          "endpoints": [
+            {
+              "x": 651.12,
+              "y": 797.5799999999999
+            },
+            {
+              "x": 750.12,
+              "y": 797.5799999999999
+            }
+          ],
+          "lengthPt": 99,
+          "mid": {
+            "x": 700.62,
+            "y": 797.5799999999999
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 777.12,
+                "y": 795
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 53.999999999999886,
+              "at": {
+                "x": 1020.1199999999999,
+                "y": 795
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 777.12,
+                "y": 800.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 53.999999999999886,
+              "at": {
+                "x": 1020.1199999999999,
+                "y": 800.16
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "low",
+          "authorityScore": 1.5,
+          "authorityReasons": [
+            "thickness-mode"
+          ]
+        },
+        {
+          "id": "run:p3:55d6729caf39",
+          "physicalRunKey": "physical-run:p3:40989f944b9b",
+          "pageNumber": 3,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.16,
+          "centerline": {
+            "x1": 1047.12,
+            "y1": 797.5799999999999,
+            "x2": 1146.12,
+            "y2": 797.5799999999999
+          },
+          "endpoints": [
+            {
+              "x": 1047.12,
+              "y": 797.5799999999999
+            },
+            {
+              "x": 1146.12,
+              "y": 797.5799999999999
+            }
+          ],
+          "lengthPt": 99,
+          "mid": {
+            "x": 1096.62,
+            "y": 797.5799999999999
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 777.12,
+                "y": 795
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 53.999999999999886,
+              "at": {
+                "x": 1020.1199999999999,
+                "y": 795
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 777.12,
+                "y": 800.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 53.999999999999886,
+              "at": {
+                "x": 1020.1199999999999,
+                "y": 800.16
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "run:p3:4f38fbb9d2d6",
+          "physicalRunKey": "physical-run:p3:ee2e3ac59450",
+          "pageNumber": 3,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.28,
+          "centerline": {
+            "x1": 1371.12,
+            "y1": 1210.79995,
+            "x2": 1440.12,
+            "y2": 1210.79995
+          },
+          "endpoints": [
+            {
+              "x": 1371.12,
+              "y": 1210.79995
+            },
+            {
+              "x": 1440.12,
+              "y": 1210.79995
+            }
+          ],
+          "lengthPt": 69,
+          "mid": {
+            "x": 1405.62,
+            "y": 1210.79995
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 1467.12,
+                "y": 1208.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 1467.12,
+                "y": 1213.4399
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "low",
+          "authorityScore": 1.5,
+          "authorityReasons": [
+            "thickness-mode"
+          ]
+        },
+        {
+          "id": "run:p3:1b245997af7e",
+          "physicalRunKey": "physical-run:p3:8c1cbf07c005",
+          "pageNumber": 3,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.28,
+          "centerline": {
+            "x1": 1494.12,
+            "y1": 1210.79995,
+            "x2": 1563.12,
+            "y2": 1210.79995
+          },
+          "endpoints": [
+            {
+              "x": 1494.12,
+              "y": 1210.79995
+            },
+            {
+              "x": 1563.12,
+              "y": 1210.79995
+            }
+          ],
+          "lengthPt": 69,
+          "mid": {
+            "x": 1528.62,
+            "y": 1210.79995
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 1467.12,
+                "y": 1208.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 1467.12,
+                "y": 1213.4399
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "low",
+          "authorityScore": 1.5,
+          "authorityReasons": [
+            "thickness-mode"
+          ]
+        },
+        {
+          "id": "lane:V:9998cc57c668",
+          "physicalRunKey": "physical-run:p3:401b34e82ae7",
+          "pageNumber": 3,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 15,
+          "centerline": {
+            "x1": 468.12,
+            "y1": 350.16,
+            "x2": 468.12,
+            "y2": 1328.1599999999999
+          },
+          "endpoints": [
+            {
+              "x": 468.12,
+              "y": 350.16
+            },
+            {
+              "x": 468.12,
+              "y": 1328.1599999999999
+            }
+          ],
+          "lengthPt": 978,
+          "mid": {
+            "x": 468.12,
+            "y": 839.16
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceB",
+              "gapPt": 12,
+              "at": {
+                "x": 483.12,
+                "y": 560.16
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 8.5,
+          "authorityReasons": [
+            "long",
+            "envelope",
+            "thickness-mode",
+            "opening-suspect",
+            "junction"
+          ]
+        },
+        {
+          "id": "lane:V:68bb129bc017",
+          "physicalRunKey": "physical-run:p3:660dd7766a1b",
+          "pageNumber": 3,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 12,
+          "centerline": {
+            "x1": 1107.12,
+            "y1": 572.1600000000001,
+            "x2": 1107.12,
+            "y2": 1328.16
+          },
+          "endpoints": [
+            {
+              "x": 1107.12,
+              "y": 572.1600000000001
+            },
+            {
+              "x": 1107.12,
+              "y": 1328.16
+            }
+          ],
+          "lengthPt": 756,
+          "mid": {
+            "x": 1107.12,
+            "y": 950.1600000000001
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 126,
+              "at": {
+                "x": 1122.36,
+                "y": 617.1600000000001
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 129.0000000000001,
+              "at": {
+                "x": 1146.12,
+                "y": 615.6600000000001
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 12,
+              "at": {
+                "x": 1146.12,
+                "y": 560.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 6.000000000000114,
+              "at": {
+                "x": 1146.12,
+                "y": 677.1600000000001
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.160003662109375,
+              "at": {
+                "x": 690.48,
+                "y": 797.5799981689453
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.160004272460924,
+              "at": {
+                "x": 690.48,
+                "y": 1004.2199978637695
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 96.24000152587894,
+              "at": {
+                "x": 651.12,
+                "y": 697.7999974060058
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 359.1600000000001,
+              "at": {
+                "x": 651.12,
+                "y": 971.58
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 63,
+              "at": {
+                "x": 1047.12,
+                "y": 582.66
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 39,
+              "at": {
+                "x": 1059.12,
+                "y": 582.66
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 96.24000152587894,
+              "at": {
+                "x": 651.12,
+                "y": 697.7999974060058
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 359.1600000000001,
+              "at": {
+                "x": 651.12,
+                "y": 971.58
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 96.24000152587894,
+              "at": {
+                "x": 651.12,
+                "y": 697.7999974060058
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 359.1600000000001,
+              "at": {
+                "x": 651.12,
+                "y": 971.58
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 12,
+              "at": {
+                "x": 1563.12,
+                "y": 794.1600000000001
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.159999389648533,
+              "at": {
+                "x": 1514.4,
+                "y": 1004.2199996948243
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.279899999999998,
+              "at": {
+                "x": 1514.4,
+                "y": 1210.79995
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.159999389648533,
+              "at": {
+                "x": 1514.4,
+                "y": 1004.2199996948243
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.279899999999998,
+              "at": {
+                "x": 1514.4,
+                "y": 1210.79995
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.159999389648533,
+              "at": {
+                "x": 1514.4,
+                "y": 1004.2199996948243
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.279899999999998,
+              "at": {
+                "x": 1514.4,
+                "y": 1210.79995
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.159999389648533,
+              "at": {
+                "x": 1514.4,
+                "y": 1004.2199996948243
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.279899999999998,
+              "at": {
+                "x": 1514.4,
+                "y": 1210.79995
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 7,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "run:p3:0c23574dee01",
+          "physicalRunKey": "physical-run:p3:93a52c4712df",
+          "pageNumber": 3,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 12,
+          "centerline": {
+            "x1": 1569.12,
+            "y1": 362.16,
+            "x2": 1569.12,
+            "y2": 788.1600000000001
+          },
+          "endpoints": [
+            {
+              "x": 1569.12,
+              "y": 362.16
+            },
+            {
+              "x": 1569.12,
+              "y": 788.1600000000001
+            }
+          ],
+          "lengthPt": 426,
+          "mid": {
+            "x": 1569.12,
+            "y": 575.1600000000001
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 12,
+              "at": {
+                "x": 1563.12,
+                "y": 794.1600000000001
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 5.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:V:a7ce2fd27d52",
+          "physicalRunKey": "physical-run:p3:d915fef2b6e3",
+          "pageNumber": 3,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 23.62,
+          "centerline": {
+            "x1": 1143.1799999999998,
+            "y1": 353.16,
+            "x2": 1143.1799999999998,
+            "y2": 554.16
+          },
+          "endpoints": [
+            {
+              "x": 1143.1799999999998,
+              "y": 353.16
+            },
+            {
+              "x": 1143.1799999999998,
+              "y": 554.16
+            }
+          ],
+          "lengthPt": 201,
+          "mid": {
+            "x": 1143.1799999999998,
+            "y": 453.65999999999997
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 126,
+              "at": {
+                "x": 1122.36,
+                "y": 617.1600000000001
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 129.0000000000001,
+              "at": {
+                "x": 1146.12,
+                "y": 615.6600000000001
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 12,
+              "at": {
+                "x": 1146.12,
+                "y": 560.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 6.000000000000114,
+              "at": {
+                "x": 1146.12,
+                "y": 677.1600000000001
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "run:p3:8df3ff99fa3c",
+          "physicalRunKey": "physical-run:p3:eec39e0f75c0",
+          "pageNumber": 3,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 12.07,
+          "centerline": {
+            "x1": 1152.12,
+            "y1": 566.16,
+            "x2": 1152.12,
+            "y2": 674.16
+          },
+          "endpoints": [
+            {
+              "x": 1152.12,
+              "y": 566.16
+            },
+            {
+              "x": 1152.12,
+              "y": 674.16
+            }
+          ],
+          "lengthPt": 108,
+          "mid": {
+            "x": 1152.12,
+            "y": 620.16
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 12,
+              "at": {
+                "x": 1146.12,
+                "y": 560.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 6.000000000000114,
+              "at": {
+                "x": 1146.12,
+                "y": 677.1600000000001
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "run:p3:2732204b7587",
+          "physicalRunKey": "physical-run:p3:bd7511737000",
+          "pageNumber": 3,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 12,
+          "centerline": {
+            "x1": 1053.12,
+            "y1": 446.9999963378906,
+            "x2": 1053.12,
+            "y2": 551.16
+          },
+          "endpoints": [
+            {
+              "x": 1053.12,
+              "y": 446.9999963378906
+            },
+            {
+              "x": 1053.12,
+              "y": 551.16
+            }
+          ],
+          "lengthPt": 104.16,
+          "mid": {
+            "x": 1053.12,
+            "y": 499.0799981689453
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 63,
+              "at": {
+                "x": 1047.12,
+                "y": 582.66
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 39,
+              "at": {
+                "x": 1059.12,
+                "y": 582.66
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "multi-junction"
+          ]
+        }
+      ],
+      "dims": [
+        {
+          "id": "ds-0",
+          "candidateSource": "near-high-seed",
+          "orientation": "H",
+          "length": 911.9999999999999
+        },
+        {
+          "id": "ds-1",
+          "candidateSource": "near-high-seed",
+          "orientation": "H",
+          "length": 911.9999999999999
+        },
+        {
+          "id": "ds-4",
+          "candidateSource": "near-high-seed",
+          "orientation": "H",
+          "length": 405
+        },
+        {
+          "id": "ds-7",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 426.00000000000006
+        }
+      ],
+      "transcriptions": [
+        {
+          "dimId": "ds-0",
+          "authority": "localized-ocr",
+          "rawText": "7'-6\"",
+          "parsedFeet": 7.5,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 28,
+          "rotationDeg": 0,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-5a1bGV/ds-0-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-1",
+          "authority": "localized-ocr",
+          "rawText": "3'-10\"",
+          "parsedFeet": 3.8333333333333335,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 22,
+          "rotationDeg": 0,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-5a1bGV/ds-1-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-7",
+          "authority": "localized-ocr",
+          "rawText": "23'-8\"",
+          "parsedFeet": 23.666666666666668,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 28,
+          "rotationDeg": 90,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-5a1bGV/ds-7-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-4",
+          "authority": "localized-ocr",
+          "rawText": "22'-6\"",
+          "parsedFeet": 22.5,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 8,
+          "rotationDeg": 0,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-5a1bGV/ds-4-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        }
+      ],
+      "associations": [
+        {
+          "dimId": "ds-0",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "run:p3:11dd4e15fd2d",
+          "physicalRunKey": "physical-run:p3:ccb892789c46",
+          "orientation": "H",
+          "uniquenessMargin": 2.91,
+          "lengthOk": true,
+          "lengthRatio": 1,
+          "ocrText": "7'-6\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "7'-6\"",
+            "feet": 7.5
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-1",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "lane:H:41697a9ecef8",
+          "physicalRunKey": "physical-run:p3:0503260dcc2a",
+          "orientation": "H",
+          "uniquenessMargin": 2.21,
+          "lengthOk": true,
+          "lengthRatio": 1,
+          "ocrText": "3'-10\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "3'-10\"",
+            "feet": 3.8333333333333335
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-4",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "run:p3:701d5e22c238",
+          "physicalRunKey": "physical-run:p3:e0bd8a4f454a",
+          "orientation": "H",
+          "uniquenessMargin": 2.42,
+          "lengthOk": true,
+          "lengthRatio": 1,
+          "ocrText": "22'-6\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "22'-6\"",
+            "feet": 22.5
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-7",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "run:p3:0c23574dee01",
+          "physicalRunKey": "physical-run:p3:93a52c4712df",
+          "orientation": "V",
+          "uniquenessMargin": 2.66,
+          "lengthOk": true,
+          "lengthRatio": 1,
+          "ocrText": "23'-8\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "23'-8\"",
+            "feet": 23.666666666666668
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        }
+      ]
+    },
+    {
+      "pageNumber": 4,
+      "pageWidth": 2592,
+      "pageHeight": 1728,
+      "pageRole": {
+        "role": "unknown",
+        "allowsWallPlanLengthEvidence": true,
+        "planHits": [],
+        "elevationHits": [],
+        "sectionHits": [],
+        "detailHits": [],
+        "rawItemCount": 0,
+        "method": "empty-text-layer"
+      },
+      "ptPerFt": 126.143994140625,
+      "emitDimIds": [
+        "ds-39"
+      ],
+      "pbgRuns": [
+        {
+          "id": "lane:H:1b75d735819d",
+          "physicalRunKey": "physical-run:p4:fef0128c41b0",
+          "pageNumber": 4,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 24.24,
+          "centerline": {
+            "x1": 642.48,
+            "y1": 1220.0100000071525,
+            "x2": 1364.0399963378907,
+            "y2": 1220.0100000071525
+          },
+          "endpoints": [
+            {
+              "x": 642.48,
+              "y": 1220.0100000071525
+            },
+            {
+              "x": 1364.0399963378907,
+              "y": 1220.0100000071525
+            }
+          ],
+          "lengthPt": 721.56,
+          "mid": {
+            "x": 1003.2599981689453,
+            "y": 1220.0100000071525
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 90.0000024414062,
+              "at": {
+                "x": 773.0399987792969,
+                "y": 1213.8
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 107.9999963378907,
+              "at": {
+                "x": 1210.2000018310546,
+                "y": 1213.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 90,
+              "at": {
+                "x": 773.04,
+                "y": 1215.36
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 107.9999963378907,
+              "at": {
+                "x": 1210.2000018310546,
+                "y": 1215.36
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 90.00000061035155,
+              "at": {
+                "x": 773.0400003051757,
+                "y": 1212.000000152588
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.159999999999968,
+              "at": {
+                "x": 901.26,
+                "y": 1212
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.279998779296875,
+              "at": {
+                "x": 1050.4799993896484,
+                "y": 1212
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 144.36000305175799,
+              "at": {
+                "x": 1192.0200015258788,
+                "y": 1212
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 89.9999963378907,
+              "at": {
+                "x": 773.0399981689453,
+                "y": 1220.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 108.00000183105453,
+              "at": {
+                "x": 1210.2000009155272,
+                "y": 1220.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 334.55999999999995,
+              "at": {
+                "x": 986.76,
+                "y": 1223.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 757.2000975585938,
+              "at": {
+                "x": 1645.0800512207031,
+                "y": 1223.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 691.5601000000001,
+              "at": {
+                "x": 1677.90005,
+                "y": 1247.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 90.0000024414062,
+              "at": {
+                "x": 773.0399987792969,
+                "y": 1213.8
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 107.9999963378907,
+              "at": {
+                "x": 1210.2000018310546,
+                "y": 1213.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 90,
+              "at": {
+                "x": 773.04,
+                "y": 1215.36
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 107.9999963378907,
+              "at": {
+                "x": 1210.2000018310546,
+                "y": 1215.36
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 334.55999999999995,
+              "at": {
+                "x": 986.76,
+                "y": 1223.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 757.2000975585938,
+              "at": {
+                "x": 1645.0800512207031,
+                "y": 1223.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 691.5601000000001,
+              "at": {
+                "x": 1677.90005,
+                "y": 1247.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 90.0000024414062,
+              "at": {
+                "x": 773.0399987792969,
+                "y": 1216.8
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 107.9999963378907,
+              "at": {
+                "x": 1210.2000018310546,
+                "y": 1216.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 90,
+              "at": {
+                "x": 773.04,
+                "y": 1218.36
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 107.9999963378907,
+              "at": {
+                "x": 1210.2000018310546,
+                "y": 1218.36
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 90.00000061035155,
+              "at": {
+                "x": 773.0400003051757,
+                "y": 1212.000000152588
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.159999999999968,
+              "at": {
+                "x": 901.26,
+                "y": 1212
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.279998779296875,
+              "at": {
+                "x": 1050.4799993896484,
+                "y": 1212
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 144.36000305175799,
+              "at": {
+                "x": 1192.0200015258788,
+                "y": 1212
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 89.9999963378907,
+              "at": {
+                "x": 773.0399981689453,
+                "y": 1220.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 108.00000183105453,
+              "at": {
+                "x": 1210.2000009155272,
+                "y": 1220.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 90.00000061035155,
+              "at": {
+                "x": 773.0400003051757,
+                "y": 1212.000000152588
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.159999999999968,
+              "at": {
+                "x": 901.26,
+                "y": 1212
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.279998779296875,
+              "at": {
+                "x": 1050.4799993896484,
+                "y": 1212
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 144.36000305175799,
+              "at": {
+                "x": 1192.0200015258788,
+                "y": 1212
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 89.9999963378907,
+              "at": {
+                "x": 773.0399981689453,
+                "y": 1220.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 108.00000183105453,
+              "at": {
+                "x": 1210.2000009155272,
+                "y": 1220.16
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 5.5,
+          "authorityReasons": [
+            "long",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:H:01845faffade",
+          "physicalRunKey": "physical-run:p4:c3957c31477f",
+          "pageNumber": 4,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 6,
+          "centerline": {
+            "x1": 1125.12,
+            "y1": 353.54999999999995,
+            "x2": 1777.7999926757811,
+            "y2": 353.54999999999995
+          },
+          "endpoints": [
+            {
+              "x": 1125.12,
+              "y": 353.54999999999995
+            },
+            {
+              "x": 1777.7999926757811,
+              "y": 353.54999999999995
+            }
+          ],
+          "lengthPt": 652.68,
+          "mid": {
+            "x": 1451.4599963378905,
+            "y": 353.54999999999995
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 273.35999450683585,
+              "at": {
+                "x": 988.440002746582,
+                "y": 354.6
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 276.35999450683585,
+              "at": {
+                "x": 986.940002746582,
+                "y": 357.6
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 327,
+              "at": {
+                "x": 1363.62,
+                "y": 350.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 323.99990137329087,
+              "at": {
+                "x": 1363.6800506866455,
+                "y": 356.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 327,
+              "at": {
+                "x": 1363.62,
+                "y": 350.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 323.99990137329087,
+              "at": {
+                "x": 1363.6800506866455,
+                "y": 356.16
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 9.5,
+          "authorityReasons": [
+            "long",
+            "envelope",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:H:4f0a93807afa",
+          "physicalRunKey": "physical-run:p4:dc63227c014a",
+          "pageNumber": 4,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 19.43,
+          "centerline": {
+            "x1": 420.7199755859374,
+            "y1": 569.01,
+            "x2": 882.12,
+            "y2": 569.01
+          },
+          "endpoints": [
+            {
+              "x": 420.7199755859374,
+              "y": 569.01
+            },
+            {
+              "x": 882.12,
+              "y": 569.01
+            }
+          ],
+          "lengthPt": 461.4,
+          "mid": {
+            "x": 651.4199877929686,
+            "y": 569.01
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceB",
+              "gapPt": 138,
+              "at": {
+                "x": 951.12,
+                "y": 572.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 138,
+              "at": {
+                "x": 951.12,
+                "y": 572.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 94.55999877929685,
+              "at": {
+                "x": 747.1199993896485,
+                "y": 566.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 90,
+              "at": {
+                "x": 747.12,
+                "y": 572.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 94.55999877929685,
+              "at": {
+                "x": 747.1199993896485,
+                "y": 566.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 90,
+              "at": {
+                "x": 747.12,
+                "y": 572.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 90.0000012207031,
+              "at": {
+                "x": 747.12,
+                "y": 578.64
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 89.9999963378907,
+              "at": {
+                "x": 747.12,
+                "y": 577.08
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 90.0000012207031,
+              "at": {
+                "x": 747.12,
+                "y": 578.64
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 89.9999963378907,
+              "at": {
+                "x": 747.12,
+                "y": 577.08
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 90.0000012207031,
+              "at": {
+                "x": 747.12,
+                "y": 578.64
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 4,
+          "authorityReasons": [
+            "medium-length",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:H:7344323f3e7d",
+          "physicalRunKey": "physical-run:p4:d09cf93289c4",
+          "pageNumber": 4,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 8.28,
+          "centerline": {
+            "x1": 1152.12,
+            "y1": 775.02,
+            "x2": 1575.12,
+            "y2": 775.02
+          },
+          "endpoints": [
+            {
+              "x": 1152.12,
+              "y": 775.02
+            },
+            {
+              "x": 1575.12,
+              "y": 775.02
+            }
+          ],
+          "lengthPt": 423,
+          "mid": {
+            "x": 1363.62,
+            "y": 775.02
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceB",
+              "gapPt": 225.72000000000003,
+              "at": {
+                "x": 1402.98,
+                "y": 767.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 225.72000000000003,
+              "at": {
+                "x": 1402.98,
+                "y": 767.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 225.72000000000003,
+              "at": {
+                "x": 1402.98,
+                "y": 767.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 54.00001342773453,
+              "at": {
+                "x": 1263.120006713867,
+                "y": 790.08
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 53.9999853515626,
+              "at": {
+                "x": 1263.1199926757813,
+                "y": 791.64
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.279997558593777,
+              "at": {
+                "x": 1442.759998779297,
+                "y": 796.44
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 5.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:H:46c37510e5e2",
+          "physicalRunKey": "physical-run:p4:d0e2c481a4e1",
+          "pageNumber": 4,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.16,
+          "centerline": {
+            "x1": 1332.12,
+            "y1": 1315.44,
+            "x2": 1602.12,
+            "y2": 1315.44
+          },
+          "endpoints": [
+            {
+              "x": 1332.12,
+              "y": 1315.44
+            },
+            {
+              "x": 1602.12,
+              "y": 1315.44
+            }
+          ],
+          "lengthPt": 270,
+          "mid": {
+            "x": 1467.12,
+            "y": 1315.44
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 108.00000061035144,
+              "at": {
+                "x": 1467.1199996948242,
+                "y": 1321.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 107.99999816894524,
+              "at": {
+                "x": 1467.1200009155273,
+                "y": 1323.36
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 108.00000061035144,
+              "at": {
+                "x": 1467.1199996948242,
+                "y": 1321.8
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 107.99999816894524,
+              "at": {
+                "x": 1467.1200009155273,
+                "y": 1323.36
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 8,
+          "authorityReasons": [
+            "medium-length",
+            "envelope",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:H:359e2d5db11c",
+          "physicalRunKey": "physical-run:p4:8d22f61578b3",
+          "pageNumber": 4,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 18,
+          "centerline": {
+            "x1": 850.2000012207031,
+            "y1": 602.01,
+            "x2": 1053.1199993896485,
+            "y2": 602.01
+          },
+          "endpoints": [
+            {
+              "x": 850.2000012207031,
+              "y": 602.01
+            },
+            {
+              "x": 1053.1199993896485,
+              "y": 602.01
+            }
+          ],
+          "lengthPt": 202.92,
+          "mid": {
+            "x": 951.6600003051758,
+            "y": 602.01
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 93,
+              "at": {
+                "x": 948.54,
+                "y": 602.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 89.99999938964845,
+              "at": {
+                "x": 948.4800003051757,
+                "y": 608.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 90,
+              "at": {
+                "x": 948.48,
+                "y": 613.08
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 90,
+              "at": {
+                "x": 948.48,
+                "y": 614.64
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 90,
+              "at": {
+                "x": 948.48,
+                "y": 613.08
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 90,
+              "at": {
+                "x": 948.48,
+                "y": 614.64
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 93,
+              "at": {
+                "x": 948.54,
+                "y": 602.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 89.99999938964845,
+              "at": {
+                "x": 948.4800003051757,
+                "y": 608.16
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 5.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "run:p4:c339ef662235",
+          "physicalRunKey": "physical-run:p4:3fc73fa826e3",
+          "pageNumber": 4,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.28,
+          "centerline": {
+            "x1": 1290.1200012207032,
+            "y1": 901.08,
+            "x2": 1440.12,
+            "y2": 901.08
+          },
+          "endpoints": [
+            {
+              "x": 1290.1200012207032,
+              "y": 901.08
+            },
+            {
+              "x": 1440.12,
+              "y": 901.08
+            }
+          ],
+          "lengthPt": 150,
+          "mid": {
+            "x": 1365.1200006103516,
+            "y": 901.08
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 80.28000137329104,
+              "at": {
+                "x": 1480.2600006866455,
+                "y": 898.44
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 42.00000137329084,
+              "at": {
+                "x": 1499.4000006866454,
+                "y": 903.72
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "merge:H:dd43883703a6",
+          "physicalRunKey": "physical-run:p4:00b9abd7a594",
+          "pageNumber": 4,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.28,
+          "centerline": {
+            "x1": 903.84,
+            "y1": 1117.79995,
+            "x2": 1047.839998626709,
+            "y2": 1117.79995
+          },
+          "endpoints": [
+            {
+              "x": 903.84,
+              "y": 1117.79995
+            },
+            {
+              "x": 1047.839998626709,
+              "y": 1117.79995
+            }
+          ],
+          "lengthPt": 144,
+          "mid": {
+            "x": 975.8399993133546,
+            "y": 1117.79995
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 5.28000122070307,
+              "at": {
+                "x": 989.7599993896484,
+                "y": 1115.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.28000122070307,
+              "at": {
+                "x": 989.7599993896484,
+                "y": 1115.16
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:V:33b8209a8b3a",
+          "physicalRunKey": "physical-run:p4:56b410484f2d",
+          "pageNumber": 4,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 15,
+          "centerline": {
+            "x1": 425.19000000000005,
+            "y1": 350.1600000000001,
+            "x2": 425.19000000000005,
+            "y2": 1328.16
+          },
+          "endpoints": [
+            {
+              "x": 425.19000000000005,
+              "y": 350.1600000000001
+            },
+            {
+              "x": 425.19000000000005,
+              "y": 1328.16
+            }
+          ],
+          "lengthPt": 978,
+          "mid": {
+            "x": 425.19000000000005,
+            "y": 839.1600000000001
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceB",
+              "gapPt": 12,
+              "at": {
+                "x": 425.16,
+                "y": 560.1600000000001
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 9.5,
+          "authorityReasons": [
+            "long",
+            "envelope",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:V:4623088d0fbf",
+          "physicalRunKey": "physical-run:p4:39bf86d87f6b",
+          "pageNumber": 4,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 4.56,
+          "centerline": {
+            "x1": 669.5999999999999,
+            "y1": 575.6400109863281,
+            "x2": 669.5999999999999,
+            "y2": 1247.16
+          },
+          "endpoints": [
+            {
+              "x": 669.5999999999999,
+              "y": 575.6400109863281
+            },
+            {
+              "x": 669.5999999999999,
+              "y": 1247.16
+            }
+          ],
+          "lengthPt": 671.52,
+          "mid": {
+            "x": 669.5999999999999,
+            "y": 911.4000054931641
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceB",
+              "gapPt": 65.27999999999997,
+              "at": {
+                "x": 647.4,
+                "y": 844.08
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 21.720000000000027,
+              "at": {
+                "x": 647.4,
+                "y": 944.58
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 129.96001342773434,
+              "at": {
+                "x": 644.52,
+                "y": 512.1000067138672
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 286.91999847412114,
+              "at": {
+                "x": 647.52,
+                "y": 587.5799992370605
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 7,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:V:c1b6a1d78123",
+          "physicalRunKey": "physical-run:p4:fd36917c47ec",
+          "pageNumber": 4,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 12.36,
+          "centerline": {
+            "x1": 1053.12,
+            "y1": 581.1600000000001,
+            "x2": 1053.12,
+            "y2": 1247.16
+          },
+          "endpoints": [
+            {
+              "x": 1053.12,
+              "y": 581.1600000000001
+            },
+            {
+              "x": 1053.12,
+              "y": 1247.16
+            }
+          ],
+          "lengthPt": 666,
+          "mid": {
+            "x": 1053.12,
+            "y": 914.1600000000001
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceB",
+              "gapPt": 169.44000244140625,
+              "at": {
+                "x": 1016.28,
+                "y": 879.7199987792969
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.2798987792969,
+              "at": {
+                "x": 1016.28,
+                "y": 1117.7999506103515
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 169.44000244140625,
+              "at": {
+                "x": 1016.28,
+                "y": 879.7199987792969
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.2798987792969,
+              "at": {
+                "x": 1016.28,
+                "y": 1117.7999506103515
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 8.280002441406282,
+              "at": {
+                "x": 1053.12,
+                "y": 684.300001220703
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.160000000000082,
+              "at": {
+                "x": 1003.92,
+                "y": 1058.58
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.160000000000082,
+              "at": {
+                "x": 1003.92,
+                "y": 1058.58
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 44.40000091552736,
+              "at": {
+                "x": 1051.2,
+                "y": 708.8400004577636
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 44.40000091552736,
+              "at": {
+                "x": 1046.76,
+                "y": 708.8400004577636
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 44.40000091552736,
+              "at": {
+                "x": 1046.76,
+                "y": 708.8400004577636
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.160000000000082,
+              "at": {
+                "x": 1003.92,
+                "y": 1058.58
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 55.440000000000055,
+              "at": {
+                "x": 1026.8400000286101,
+                "y": 822.72
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 325.4399024414063,
+              "at": {
+                "x": 1016.28,
+                "y": 957.7199487792969
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 361.439998626709,
+              "at": {
+                "x": 1026.8400000286101,
+                "y": 975.7199993133545
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 169.44000244140625,
+              "at": {
+                "x": 1016.28,
+                "y": 879.7199987792969
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.2798987792969,
+              "at": {
+                "x": 1016.28,
+                "y": 1117.7999506103515
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 169.44000244140625,
+              "at": {
+                "x": 1016.28,
+                "y": 879.7199987792969
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.2798987792969,
+              "at": {
+                "x": 1016.28,
+                "y": 1117.7999506103515
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 325.4399024414063,
+              "at": {
+                "x": 1016.28,
+                "y": 957.7199487792969
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 361.439998626709,
+              "at": {
+                "x": 1026.8400000286101,
+                "y": 975.7199993133545
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 199.9199993896484,
+              "at": {
+                "x": 1053.12,
+                "y": 1053.8399995422365
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.280001373291043,
+              "at": {
+                "x": 1071.12,
+                "y": 961.7999993133545
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 199.9199993896484,
+              "at": {
+                "x": 1053.12,
+                "y": 1053.8399995422365
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.280001373291043,
+              "at": {
+                "x": 1071.12,
+                "y": 961.7999993133545
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.280000152587945,
+              "at": {
+                "x": 1047.84,
+                "y": 961.799998703003
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.280002441406168,
+              "at": {
+                "x": 1047.84,
+                "y": 1117.800001220703
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.160002441406277,
+              "at": {
+                "x": 1053.12,
+                "y": 1142.579998779297
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.280000152587945,
+              "at": {
+                "x": 1047.84,
+                "y": 961.799998703003
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.280002441406168,
+              "at": {
+                "x": 1047.84,
+                "y": 1117.800001220703
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.160002441406277,
+              "at": {
+                "x": 1053.12,
+                "y": 1142.579998779297
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 7,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:V:8f141a5c4b3e",
+          "physicalRunKey": "physical-run:p4:74b4eaebc40a",
+          "pageNumber": 4,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 27,
+          "centerline": {
+            "x1": 1158.87,
+            "y1": 356.15998535156245,
+            "x2": 1158.87,
+            "y2": 1247.16
+          },
+          "endpoints": [
+            {
+              "x": 1158.87,
+              "y": 356.15998535156245
+            },
+            {
+              "x": 1158.87,
+              "y": 1247.16
+            }
+          ],
+          "lengthPt": 891,
+          "mid": {
+            "x": 1158.87,
+            "y": 801.6599926757813
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceB",
+              "gapPt": 112.08000000000004,
+              "at": {
+                "x": 1154.1000000013412,
+                "y": 850.6800000000001
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 226.55999999999995,
+              "at": {
+                "x": 1152.12,
+                "y": 793.44
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 6.480013427734434,
+              "at": {
+                "x": 1154.1000000013412,
+                "y": 683.3999932861327
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 3.480000000000018,
+              "at": {
+                "x": 1155.539999998659,
+                "y": 681.9
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 5.5,
+          "authorityReasons": [
+            "long",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:V:2358940e14cf",
+          "physicalRunKey": "physical-run:p4:cafe9edb9e1b",
+          "pageNumber": 4,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 8.28,
+          "centerline": {
+            "x1": 1525.62,
+            "y1": 788.1600036621094,
+            "x2": 1525.62,
+            "y2": 1247.1600036621094
+          },
+          "endpoints": [
+            {
+              "x": 1525.62,
+              "y": 788.1600036621094
+            },
+            {
+              "x": 1525.62,
+              "y": 1247.1600036621094
+            }
+          ],
+          "lengthPt": 459,
+          "mid": {
+            "x": 1525.62,
+            "y": 1017.6600036621094
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 90,
+              "at": {
+                "x": 1569.84,
+                "y": 563.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 76.92000183105472,
+              "at": {
+                "x": 1569.84,
+                "y": 754.6200009155273
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 90,
+              "at": {
+                "x": 1575.12,
+                "y": 563.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 72.0000036621094,
+              "at": {
+                "x": 1575.12,
+                "y": 752.1600018310546
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 270.0000036621094,
+              "at": {
+                "x": 1573.2,
+                "y": 653.1600018310546
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 372.7200048828125,
+              "at": {
+                "x": 1575.12,
+                "y": 601.8000012207032
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.279999999999973,
+              "at": {
+                "x": 1566.84,
+                "y": 901.08
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 117.36009923706047,
+              "at": {
+                "x": 1568.76,
+                "y": 1095.1199496185304
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 101.28000000000003,
+              "at": {
+                "x": 1569.84,
+                "y": 466.08000000000004
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 184.9199993896484,
+              "at": {
+                "x": 1569.84,
+                "y": 702.1799996948242
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 71.9999963378907,
+              "at": {
+                "x": 1568.76,
+                "y": 998.9999981689454
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 180.0000036621094,
+              "at": {
+                "x": 1573.2,
+                "y": 698.1600018310546
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 101.28000000000003,
+              "at": {
+                "x": 1569.84,
+                "y": 466.08000000000004
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 184.9199993896484,
+              "at": {
+                "x": 1569.84,
+                "y": 702.1799996948242
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 71.9999963378907,
+              "at": {
+                "x": 1568.76,
+                "y": 998.9999981689454
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 180.0000036621094,
+              "at": {
+                "x": 1573.2,
+                "y": 698.1600018310546
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 41.27999999999997,
+              "at": {
+                "x": 1478.4,
+                "y": 919.08
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.279999999999973,
+              "at": {
+                "x": 1517.28,
+                "y": 901.08
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.279999999999973,
+              "at": {
+                "x": 1566.84,
+                "y": 901.08
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 248.2799000000001,
+              "at": {
+                "x": 1563.12,
+                "y": 837.2999500000001
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 208.56009999999992,
+              "at": {
+                "x": 1566.84,
+                "y": 1140.7199500000002
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 351.71990000000005,
+              "at": {
+                "x": 1578.12,
+                "y": 785.57995
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 208.56009999999992,
+              "at": {
+                "x": 1578.12,
+                "y": 1140.7199500000002
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 117.36009923706047,
+              "at": {
+                "x": 1566.84,
+                "y": 1095.1199496185304
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 36,
+              "at": {
+                "x": 1566.84,
+                "y": 1227
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.279999999999973,
+              "at": {
+                "x": 1517.28,
+                "y": 901.08
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.279999999999973,
+              "at": {
+                "x": 1517.28,
+                "y": 901.08
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 41.27999999999997,
+              "at": {
+                "x": 1478.4,
+                "y": 919.08
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 41.27999999999997,
+              "at": {
+                "x": 1478.4,
+                "y": 919.08
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 5.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:V:c1f92dadbdee",
+          "physicalRunKey": "physical-run:p4:20d9e2040f9e",
+          "pageNumber": 4,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 24.36,
+          "centerline": {
+            "x1": 1578.03,
+            "y1": 359.16,
+            "x2": 1578.03,
+            "y2": 518.16
+          },
+          "endpoints": [
+            {
+              "x": 1578.03,
+              "y": 359.16
+            },
+            {
+              "x": 1578.03,
+              "y": 518.16
+            }
+          ],
+          "lengthPt": 159,
+          "mid": {
+            "x": 1578.03,
+            "y": 438.65999999999997
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceB",
+              "gapPt": 90,
+              "at": {
+                "x": 1571.76,
+                "y": 563.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 377.6400030517578,
+              "at": {
+                "x": 1575.12,
+                "y": 604.2600003051758
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 270.0000036621094,
+              "at": {
+                "x": 1573.2,
+                "y": 653.1600018310546
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 372.7200048828125,
+              "at": {
+                "x": 1575.12,
+                "y": 601.8000012207032
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 2,
+          "authorityReasons": [
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "run:p4:cb475853d1cf",
+          "physicalRunKey": "physical-run:p4:189824022331",
+          "pageNumber": 4,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.28,
+          "centerline": {
+            "x1": 1050.48,
+            "y1": 964.439998779297,
+            "x2": 1050.48,
+            "y2": 1115.16
+          },
+          "endpoints": [
+            {
+              "x": 1050.48,
+              "y": 964.439998779297
+            },
+            {
+              "x": 1050.48,
+              "y": 1115.16
+            }
+          ],
+          "lengthPt": 150.72,
+          "mid": {
+            "x": 1050.48,
+            "y": 1039.7999993896485
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 5.280000152587945,
+              "at": {
+                "x": 1047.84,
+                "y": 961.799998703003
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 5.280002441406168,
+              "at": {
+                "x": 1047.84,
+                "y": 1117.800001220703
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 5.160002441406277,
+              "at": {
+                "x": 1053.12,
+                "y": 1142.579998779297
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "run:p4:c05dc107df67",
+          "physicalRunKey": "physical-run:p4:8a9e75734306",
+          "pageNumber": 4,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.56,
+          "centerline": {
+            "x1": 1572.48,
+            "y1": 608.16,
+            "x2": 1572.48,
+            "y2": 716.16
+          },
+          "endpoints": [
+            {
+              "x": 1572.48,
+              "y": 608.16
+            },
+            {
+              "x": 1572.48,
+              "y": 716.16
+            }
+          ],
+          "lengthPt": 108,
+          "mid": {
+            "x": 1572.48,
+            "y": 662.16
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 90,
+              "at": {
+                "x": 1569.84,
+                "y": 563.16
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 76.92000183105472,
+              "at": {
+                "x": 1569.84,
+                "y": 754.6200009155273
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 90,
+              "at": {
+                "x": 1575.12,
+                "y": 563.16
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 72.0000036621094,
+              "at": {
+                "x": 1575.12,
+                "y": 752.1600018310546
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "run:p4:2baafd59e1b5",
+          "physicalRunKey": "physical-run:p4:918c02b0a887",
+          "pageNumber": 4,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 3.24,
+          "centerline": {
+            "x1": 646.02,
+            "y1": 357.6000033569336,
+            "x2": 646.02,
+            "y2": 444.12
+          },
+          "endpoints": [
+            {
+              "x": 646.02,
+              "y": 357.6000033569336
+            },
+            {
+              "x": 646.02,
+              "y": 444.12
+            }
+          ],
+          "lengthPt": 86.52,
+          "mid": {
+            "x": 646.02,
+            "y": 400.8600016784668
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 129.96001342773434,
+              "at": {
+                "x": 644.52,
+                "y": 512.1000067138672
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 286.91999847412114,
+              "at": {
+                "x": 647.52,
+                "y": 587.5799992370605
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "multi-junction"
+          ]
+        }
+      ],
+      "dims": [
+        {
+          "id": "ds-1",
+          "candidateSource": "detected",
+          "orientation": "H",
+          "length": 710.9999999999999
+        },
+        {
+          "id": "ds-9",
+          "candidateSource": "detected",
+          "orientation": "V",
+          "length": 603
+        },
+        {
+          "id": "ds-43",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 630.719970703125
+        },
+        {
+          "id": "ds-44",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 630.719970703125
+        },
+        {
+          "id": "ds-46",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 630.719970703125
+        },
+        {
+          "id": "ds-47",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 630.719970703125
+        },
+        {
+          "id": "ds-48",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 630.719970703125
+        },
+        {
+          "id": "ds-49",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 630.719970703125
+        },
+        {
+          "id": "ds-51",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 639
+        },
+        {
+          "id": "ds-53",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 666
+        },
+        {
+          "id": "ds-54",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 666
+        },
+        {
+          "id": "ds-60",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 639
+        },
+        {
+          "id": "ds-61",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 639
+        },
+        {
+          "id": "ds-62",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 567
+        },
+        {
+          "id": "ds-64",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 567
+        },
+        {
+          "id": "ds-67",
+          "candidateSource": "near-high-seed",
+          "orientation": "V",
+          "length": 630.719970703125
+        }
+      ],
+      "transcriptions": [
+        {
+          "dimId": "ds-1",
+          "authority": "localized-ocr",
+          "rawText": "10'-5\"",
+          "parsedFeet": 10.416666666666666,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 6,
+          "rotationDeg": 0,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-1-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-53",
+          "authority": "localized-ocr",
+          "rawText": "5'-5\"",
+          "parsedFeet": 5.416666666666667,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 12,
+          "rotationDeg": 90,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-53-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-54",
+          "authority": "localized-ocr",
+          "rawText": "6'9\"",
+          "parsedFeet": 6.75,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 7,
+          "rotationDeg": 0,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-54-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-51",
+          "authority": "localized-ocr",
+          "rawText": "6'-0\"",
+          "parsedFeet": 6,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 26,
+          "rotationDeg": 90,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-51-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-60",
+          "authority": "localized-ocr",
+          "rawText": "2'-5\"",
+          "parsedFeet": 2.4166666666666665,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 26,
+          "rotationDeg": 90,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-60-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-61",
+          "authority": "localized-ocr",
+          "rawText": "3'-0\"",
+          "parsedFeet": 3,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 5,
+          "rotationDeg": 90,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-61-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-43",
+          "authority": "localized-ocr",
+          "rawText": "5'-0\"",
+          "parsedFeet": 5,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 5,
+          "rotationDeg": 270,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-43-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-44",
+          "authority": "localized-ocr",
+          "rawText": "3'-10\"",
+          "parsedFeet": 3.8333333333333335,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 13,
+          "rotationDeg": 0,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-44-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-46",
+          "authority": "localized-ocr",
+          "rawText": "14'-3\"",
+          "parsedFeet": 14.25,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 14,
+          "rotationDeg": 90,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-46-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-47",
+          "authority": "localized-ocr",
+          "rawText": "12'10\"",
+          "parsedFeet": 12.833333333333334,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 11,
+          "rotationDeg": 90,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-47-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-48",
+          "authority": "localized-ocr",
+          "rawText": "2'-3\"",
+          "parsedFeet": 2.25,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 25,
+          "rotationDeg": 270,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-48-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-49",
+          "authority": "localized-ocr",
+          "rawText": "5'-3\"",
+          "parsedFeet": 5.25,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 15,
+          "rotationDeg": 90,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-49-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-67",
+          "authority": "localized-ocr",
+          "rawText": "7'-1\"",
+          "parsedFeet": 7.083333333333333,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 28,
+          "rotationDeg": 270,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-67-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-9",
+          "authority": "localized-ocr",
+          "rawText": "2'-1\"",
+          "parsedFeet": 2.0833333333333335,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 23,
+          "rotationDeg": 90,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-9-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-62",
+          "authority": "localized-ocr",
+          "rawText": "2'-2\"",
+          "parsedFeet": 2.1666666666666665,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 27,
+          "rotationDeg": 90,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-62-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        },
+        {
+          "dimId": "ds-64",
+          "authority": "localized-ocr",
+          "rawText": "3'-0\"",
+          "parsedFeet": 3,
+          "parseStatus": "ok",
+          "textPrimitiveId": null,
+          "confidence": 19,
+          "rotationDeg": 270,
+          "cropPath": "/var/folders/ww/56jqzp6x1cq8_42yj_x301580000gn/T/takeoff-compiler-crops-Yvrp8m/ds-64-band.png",
+          "association": {
+            "normalDist": null,
+            "axialOverlap": null,
+            "method": "ocr-normal-offset-band"
+          }
+        }
+      ],
+      "associations": [
+        {
+          "dimId": "ds-1",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "lane:H:1b75d735819d",
+          "physicalRunKey": "physical-run:p4:fef0128c41b0",
+          "orientation": "H",
+          "uniquenessMargin": 7.8,
+          "lengthOk": true,
+          "lengthRatio": 0.985,
+          "ocrText": "10'-5\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "10'-5\"",
+            "feet": 10.416666666666666
+          },
+          "candidateSource": "detected",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-9",
+          "roleGuess": "overall-candidate",
+          "status": "ambiguous",
+          "runId": "lane:V:4623088d0fbf",
+          "physicalRunKey": "physical-run:p4:39bf86d87f6b",
+          "orientation": "V",
+          "uniquenessMargin": 1.47,
+          "lengthOk": true,
+          "lengthRatio": 0.898,
+          "ocrText": "2'-1\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "2'-1\"",
+            "feet": 2.0833333333333335
+          },
+          "candidateSource": "detected",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-43",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "lane:V:4623088d0fbf",
+          "physicalRunKey": "physical-run:p4:39bf86d87f6b",
+          "orientation": "V",
+          "uniquenessMargin": 2.24,
+          "lengthOk": true,
+          "lengthRatio": 0.939,
+          "ocrText": "5'-0\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "5'-0\"",
+            "feet": 5
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-44",
+          "roleGuess": "overall-candidate",
+          "status": "ambiguous",
+          "runId": "lane:V:f7ac3e38b0d5",
+          "physicalRunKey": "physical-run:p4:cde365fcf1e2",
+          "orientation": "V",
+          "uniquenessMargin": 1.13,
+          "lengthOk": true,
+          "lengthRatio": 0.987,
+          "ocrText": "3'-10\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "3'-10\"",
+            "feet": 3.8333333333333335
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-46",
+          "roleGuess": "overall-candidate",
+          "status": "ambiguous",
+          "runId": "lane:V:4623088d0fbf",
+          "physicalRunKey": "physical-run:p4:39bf86d87f6b",
+          "orientation": "V",
+          "uniquenessMargin": 1.3,
+          "lengthOk": true,
+          "lengthRatio": 0.939,
+          "ocrText": "14'-3\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "14'-3\"",
+            "feet": 14.25
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-47",
+          "roleGuess": "overall-candidate",
+          "status": "ambiguous",
+          "runId": "lane:V:4623088d0fbf",
+          "physicalRunKey": "physical-run:p4:39bf86d87f6b",
+          "orientation": "V",
+          "uniquenessMargin": 1.27,
+          "lengthOk": true,
+          "lengthRatio": 0.939,
+          "ocrText": "12'10\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "12'10\"",
+            "feet": 12.833333333333334
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-48",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "lane:V:f7ac3e38b0d5",
+          "physicalRunKey": "physical-run:p4:cde365fcf1e2",
+          "orientation": "V",
+          "uniquenessMargin": 1.6,
+          "lengthOk": true,
+          "lengthRatio": 0.987,
+          "ocrText": "2'-3\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "2'-3\"",
+            "feet": 2.25
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-49",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "lane:V:f7ac3e38b0d5",
+          "physicalRunKey": "physical-run:p4:cde365fcf1e2",
+          "orientation": "V",
+          "uniquenessMargin": 1.54,
+          "lengthOk": true,
+          "lengthRatio": 0.987,
+          "ocrText": "5'-3\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "5'-3\"",
+            "feet": 5.25
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-51",
+          "roleGuess": "overall-candidate",
+          "status": "ambiguous",
+          "runId": "lane:V:ed4ca931a201",
+          "physicalRunKey": "physical-run:p4:57ddff902cc3",
+          "orientation": "V",
+          "uniquenessMargin": 1.14,
+          "lengthOk": true,
+          "lengthRatio": 0.959,
+          "ocrText": "6'-0\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "6'-0\"",
+            "feet": 6
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-53",
+          "roleGuess": "overall-candidate",
+          "status": "ambiguous",
+          "runId": "lane:V:e3bbc00716f7",
+          "physicalRunKey": "physical-run:p4:04428eae721e",
+          "orientation": "V",
+          "uniquenessMargin": 1.32,
+          "lengthOk": true,
+          "lengthRatio": 1,
+          "ocrText": "5'-5\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "5'-5\"",
+            "feet": 5.416666666666667
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-54",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "lane:V:e3bbc00716f7",
+          "physicalRunKey": "physical-run:p4:04428eae721e",
+          "orientation": "V",
+          "uniquenessMargin": 1.55,
+          "lengthOk": true,
+          "lengthRatio": 1,
+          "ocrText": "6'9\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "6'9\"",
+            "feet": 6.75
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-60",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "lane:V:c1b6a1d78123",
+          "physicalRunKey": "physical-run:p4:fd36917c47ec",
+          "orientation": "V",
+          "uniquenessMargin": 1.7,
+          "lengthOk": true,
+          "lengthRatio": 0.959,
+          "ocrText": "2'-5\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "2'-5\"",
+            "feet": 2.4166666666666665
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-61",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "lane:V:c1b6a1d78123",
+          "physicalRunKey": "physical-run:p4:fd36917c47ec",
+          "orientation": "V",
+          "uniquenessMargin": 1.77,
+          "lengthOk": true,
+          "lengthRatio": 0.959,
+          "ocrText": "3'-0\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "3'-0\"",
+            "feet": 3
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-62",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "lane:V:c1b6a1d78123",
+          "physicalRunKey": "physical-run:p4:fd36917c47ec",
+          "orientation": "V",
+          "uniquenessMargin": 1.94,
+          "lengthOk": true,
+          "lengthRatio": 0.851,
+          "ocrText": "2'-2\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "2'-2\"",
+            "feet": 2.1666666666666665
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-64",
+          "roleGuess": "overall-candidate",
+          "status": "ambiguous",
+          "runId": "lane:V:c1b6a1d78123",
+          "physicalRunKey": "physical-run:p4:fd36917c47ec",
+          "orientation": "V",
+          "uniquenessMargin": 1.14,
+          "lengthOk": true,
+          "lengthRatio": 0.851,
+          "ocrText": "3'-0\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "3'-0\"",
+            "feet": 3
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        },
+        {
+          "dimId": "ds-67",
+          "roleGuess": "overall-candidate",
+          "status": "associated",
+          "runId": "lane:V:f7ac3e38b0d5",
+          "physicalRunKey": "physical-run:p4:cde365fcf1e2",
+          "orientation": "V",
+          "uniquenessMargin": 1.87,
+          "lengthOk": true,
+          "lengthRatio": 0.987,
+          "ocrText": "7'-1\"",
+          "parse": {
+            "status": "ok",
+            "originalText": "7'-1\"",
+            "feet": 7.083333333333333
+          },
+          "candidateSource": "near-high-seed",
+          "transcriptionAuthority": "localized-ocr"
+        }
+      ]
+    },
+    {
+      "pageNumber": 5,
+      "pageWidth": 2592,
+      "pageHeight": 1728,
+      "pageRole": {
+        "role": "unknown",
+        "allowsWallPlanLengthEvidence": true,
+        "planHits": [],
+        "elevationHits": [],
+        "sectionHits": [],
+        "detailHits": [],
+        "rawItemCount": 0,
+        "method": "empty-text-layer"
+      },
+      "ptPerFt": 318.86997985839844,
+      "emitDimIds": [],
+      "pbgRuns": [
+        {
+          "id": "lane:H:a5fe5d1c7ecf",
+          "physicalRunKey": "physical-run:p5:5af6fd516bd0",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 6.24,
+          "centerline": {
+            "x1": 714.5999755859375,
+            "y1": 840.8699951171875,
+            "x2": 1254.5999755859375,
+            "y2": 840.8699951171875
+          },
+          "endpoints": [
+            {
+              "x": 714.5999755859375,
+              "y": 840.8699951171875
+            },
+            {
+              "x": 1254.5999755859375,
+              "y": 840.8699951171875
+            }
+          ],
+          "lengthPt": 540,
+          "mid": {
+            "x": 984.5999755859375,
+            "y": 840.8699951171875
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 67.44000244140625,
+              "at": {
+                "x": 811.3199768066406,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 907.5,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1019.4599914550781,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 108.239990234375,
+              "at": {
+                "x": 1125.5999755859375,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 67.44000244140625,
+              "at": {
+                "x": 811.3199768066406,
+                "y": 838.3200073242188
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 81,
+              "at": {
+                "x": 1139.219970703125,
+                "y": 838.3200073242188
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 253.67999267578125,
+              "at": {
+                "x": 971.8799743652344,
+                "y": 834.719970703125
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 250.800048828125,
+              "at": {
+                "x": 971.6400146484375,
+                "y": 840.47998046875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 67.44000244140625,
+              "at": {
+                "x": 811.3199768066406,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 907.5,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1019.4599914550781,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 108.239990234375,
+              "at": {
+                "x": 1125.5999755859375,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 67.44000244140625,
+              "at": {
+                "x": 811.3199768066406,
+                "y": 838.3200073242188
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 81,
+              "at": {
+                "x": 1139.219970703125,
+                "y": 838.3200073242188
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 253.67999267578125,
+              "at": {
+                "x": 971.8799743652344,
+                "y": 834.719970703125
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 250.800048828125,
+              "at": {
+                "x": 971.6400146484375,
+                "y": 840.47998046875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 67.44000244140625,
+              "at": {
+                "x": 811.3199768066406,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 907.5,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1019.4599914550781,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 108.239990234375,
+              "at": {
+                "x": 1125.5999755859375,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 67.44000244140625,
+              "at": {
+                "x": 811.3199768066406,
+                "y": 838.3200073242188
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 81,
+              "at": {
+                "x": 1139.219970703125,
+                "y": 838.3200073242188
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 67.44000244140625,
+              "at": {
+                "x": 811.3199768066406,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 907.5,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1019.4599914550781,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 108.239990234375,
+              "at": {
+                "x": 1125.5999755859375,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 67.44000244140625,
+              "at": {
+                "x": 811.3199768066406,
+                "y": 838.3200073242188
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 81,
+              "at": {
+                "x": 1139.219970703125,
+                "y": 838.3200073242188
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 67.44000244140625,
+              "at": {
+                "x": 811.3199768066406,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 907.5,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1019.4599914550781,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 108.239990234375,
+              "at": {
+                "x": 1125.5999755859375,
+                "y": 832.0800170898438
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 67.44000244140625,
+              "at": {
+                "x": 811.3199768066406,
+                "y": 838.3200073242188
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 81,
+              "at": {
+                "x": 1139.219970703125,
+                "y": 838.3200073242188
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 6,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "junction"
+          ]
+        },
+        {
+          "id": "lane:H:866accecbfc5",
+          "physicalRunKey": "physical-run:p5:2d09c61e4cbe",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 2.74,
+          "centerline": {
+            "x1": 1487.52001953125,
+            "y1": 1426.2900085449219,
+            "x2": 2026.3199462890625,
+            "y2": 1426.2900085449219
+          },
+          "endpoints": [
+            {
+              "x": 1487.52001953125,
+              "y": 1426.2900085449219
+            },
+            {
+              "x": 2026.3199462890625,
+              "y": 1426.2900085449219
+            }
+          ],
+          "lengthPt": 538.8,
+          "mid": {
+            "x": 1756.9199829101562,
+            "y": 1426.2900085449219
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 67.56005859375,
+              "at": {
+                "x": 1583.0999755859375,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1679.3399658203125,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.840087890625,
+              "at": {
+                "x": 1791.239990234375,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 108.2401123046875,
+              "at": {
+                "x": 1897.4400024414062,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 67.56005859375,
+              "at": {
+                "x": 1583.0999755859375,
+                "y": 1428.1199951171875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 81,
+              "at": {
+                "x": 1911.06005859375,
+                "y": 1428.1199951171875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 253.6800537109375,
+              "at": {
+                "x": 1743.7200317382812,
+                "y": 1424.6400146484375
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 250.9200439453125,
+              "at": {
+                "x": 1743.4199829101562,
+                "y": 1430.4000244140625
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 67.56005859375,
+              "at": {
+                "x": 1583.0999755859375,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1679.3399658203125,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.840087890625,
+              "at": {
+                "x": 1791.239990234375,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 108.2401123046875,
+              "at": {
+                "x": 1897.4400024414062,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 67.56005859375,
+              "at": {
+                "x": 1583.0999755859375,
+                "y": 1428.1199951171875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 81,
+              "at": {
+                "x": 1911.06005859375,
+                "y": 1428.1199951171875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 253.6800537109375,
+              "at": {
+                "x": 1743.7200317382812,
+                "y": 1424.6400146484375
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 250.9200439453125,
+              "at": {
+                "x": 1743.4199829101562,
+                "y": 1430.4000244140625
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 67.56005859375,
+              "at": {
+                "x": 1583.0999755859375,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1679.3399658203125,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.840087890625,
+              "at": {
+                "x": 1791.239990234375,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 108.2401123046875,
+              "at": {
+                "x": 1897.4400024414062,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 67.56005859375,
+              "at": {
+                "x": 1583.0999755859375,
+                "y": 1428.1199951171875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 81,
+              "at": {
+                "x": 1911.06005859375,
+                "y": 1428.1199951171875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 67.56005859375,
+              "at": {
+                "x": 1583.0999755859375,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1679.3399658203125,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.840087890625,
+              "at": {
+                "x": 1791.239990234375,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 108.2401123046875,
+              "at": {
+                "x": 1897.4400024414062,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 67.56005859375,
+              "at": {
+                "x": 1583.0999755859375,
+                "y": 1428.1199951171875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 81,
+              "at": {
+                "x": 1911.06005859375,
+                "y": 1428.1199951171875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 67.56005859375,
+              "at": {
+                "x": 1583.0999755859375,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1679.3399658203125,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.840087890625,
+              "at": {
+                "x": 1791.239990234375,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 108.2401123046875,
+              "at": {
+                "x": 1897.4400024414062,
+                "y": 1422
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 67.56005859375,
+              "at": {
+                "x": 1583.0999755859375,
+                "y": 1428.1199951171875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 81,
+              "at": {
+                "x": 1911.06005859375,
+                "y": 1428.1199951171875
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 7,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:H:4c7effd17ecc",
+          "physicalRunKey": "physical-run:p5:c8b4a76fbfbe",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 13.56,
+          "centerline": {
+            "x1": 996.719970703125,
+            "y1": 294.93000411987305,
+            "x2": 1433.1600341796875,
+            "y2": 294.93000411987305
+          },
+          "endpoints": [
+            {
+              "x": 996.719970703125,
+              "y": 294.93000411987305
+            },
+            {
+              "x": 1433.1600341796875,
+              "y": 294.93000411987305
+            }
+          ],
+          "lengthPt": 436.44,
+          "mid": {
+            "x": 1214.9400024414062,
+            "y": 294.93000411987305
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceB",
+              "gapPt": 37.91998291015625,
+              "at": {
+                "x": 996.8399963378906,
+                "y": 385.44000244140625
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 840.9599456787109,
+              "at": {
+                "x": 654.9599685668945,
+                "y": 307.260009765625
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 840.9599456787109,
+              "at": {
+                "x": 654.9599685668945,
+                "y": 332.0400085449219
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 7,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:H:09ecf48331ab",
+          "physicalRunKey": "physical-run:p5:7acd530fcda6",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 13.32,
+          "centerline": {
+            "x1": 1095.719970703125,
+            "y1": 482.79000091552734,
+            "x2": 1412.8800048828125,
+            "y2": 482.79000091552734
+          },
+          "endpoints": [
+            {
+              "x": 1095.719970703125,
+              "y": 482.79000091552734
+            },
+            {
+              "x": 1412.8800048828125,
+              "y": 482.79000091552734
+            }
+          ],
+          "lengthPt": 317.16,
+          "mid": {
+            "x": 1254.2999877929688,
+            "y": 482.79000091552734
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceB",
+              "gapPt": 169.3199462890625,
+              "at": {
+                "x": 1283.8200073242188,
+                "y": 498.4800109863281
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 7,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:H:f8a391fc05f1",
+          "physicalRunKey": "physical-run:p5:5c2789e6724e",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 6.12,
+          "centerline": {
+            "x1": 1199.1600341796875,
+            "y1": 521.7299957275391,
+            "x2": 1409.280029296875,
+            "y2": 521.7299957275391
+          },
+          "endpoints": [
+            {
+              "x": 1199.1600341796875,
+              "y": 521.7299957275391
+            },
+            {
+              "x": 1409.280029296875,
+              "y": 521.7299957275391
+            }
+          ],
+          "lengthPt": 210.12,
+          "mid": {
+            "x": 1304.2200317382812,
+            "y": 521.7299957275391
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 40.4400634765625,
+              "at": {
+                "x": 1178.9400024414062,
+                "y": 516.8400268554688
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 40.4400634765625,
+              "at": {
+                "x": 1178.9400024414062,
+                "y": 519.1199951171875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 3.840087890625,
+              "at": {
+                "x": 1313.6400146484375,
+                "y": 520.4400024414062
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 6,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "junction"
+          ]
+        },
+        {
+          "id": "lane:H:67f2fb69060c",
+          "physicalRunKey": "physical-run:p5:29018aa4152b",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 6.24,
+          "centerline": {
+            "x1": 1971,
+            "y1": 1111.6199951171875,
+            "x2": 2181,
+            "y2": 1111.6199951171875
+          },
+          "endpoints": [
+            {
+              "x": 1971,
+              "y": 1111.6199951171875
+            },
+            {
+              "x": 2181,
+              "y": 1111.6199951171875
+            }
+          ],
+          "lengthPt": 210,
+          "mid": {
+            "x": 2076,
+            "y": 1111.6199951171875
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 40.56005859375,
+              "at": {
+                "x": 1950.719970703125,
+                "y": 1106.6400146484375
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 40.56005859375,
+              "at": {
+                "x": 1950.719970703125,
+                "y": 1108.9200439453125
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 2085.419921875,
+                "y": 1110.3599853515625
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 7,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:H:2ebee16921ce",
+          "physicalRunKey": "physical-run:p5:cf9cb32856e2",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 13.56,
+          "centerline": {
+            "x1": 690.719970703125,
+            "y1": 347.8500061035156,
+            "x2": 893.1599731445312,
+            "y2": 347.8500061035156
+          },
+          "endpoints": [
+            {
+              "x": 690.719970703125,
+              "y": 347.8500061035156
+            },
+            {
+              "x": 893.1599731445312,
+              "y": 347.8500061035156
+            }
+          ],
+          "lengthPt": 202.44,
+          "mid": {
+            "x": 791.9399719238281,
+            "y": 347.8500061035156
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 103.55999755859375,
+              "at": {
+                "x": 944.9399719238281,
+                "y": 352.32000732421875
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 6,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "junction"
+          ]
+        },
+        {
+          "id": "lane:H:9302e92c1ae1",
+          "physicalRunKey": "physical-run:p5:622f6ec4c108",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 6.24,
+          "centerline": {
+            "x1": 1230.719970703125,
+            "y1": 895.6799926757812,
+            "x2": 1433.1600341796875,
+            "y2": 895.6799926757812
+          },
+          "endpoints": [
+            {
+              "x": 1230.719970703125,
+              "y": 895.6799926757812
+            },
+            {
+              "x": 1433.1600341796875,
+              "y": 895.6799926757812
+            }
+          ],
+          "lengthPt": 202.44,
+          "mid": {
+            "x": 1331.9400024414062,
+            "y": 895.6799926757812
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 954.1199645996094,
+              "at": {
+                "x": 753.6599884033203,
+                "y": 861.1799926757812
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 918.1199645996094,
+              "at": {
+                "x": 771.6599884033203,
+                "y": 885.6000061035156
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 355.5599365234375,
+              "at": {
+                "x": 1610.9400024414062,
+                "y": 919.3200073242188
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 355.5599365234375,
+              "at": {
+                "x": 1610.9400024414062,
+                "y": 932.760009765625
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 6,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "junction"
+          ]
+        },
+        {
+          "id": "lane:H:3e42c791ea59",
+          "physicalRunKey": "physical-run:p5:b23ee2ba131a",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 2.74,
+          "centerline": {
+            "x1": 1487.52001953125,
+            "y1": 943.5599975585938,
+            "x2": 1639.9200439453125,
+            "y2": 943.5599975585938
+          },
+          "endpoints": [
+            {
+              "x": 1487.52001953125,
+              "y": 943.5599975585938
+            },
+            {
+              "x": 1639.9200439453125,
+              "y": 943.5599975585938
+            }
+          ],
+          "lengthPt": 152.4,
+          "mid": {
+            "x": 1563.7200317382812,
+            "y": 943.5599975585938
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 67.43994140625,
+              "at": {
+                "x": 1563.719970703125,
+                "y": 942.1199951171875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 67.43994140625,
+              "at": {
+                "x": 1563.719970703125,
+                "y": 948.3599853515625
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 67.43994140625,
+              "at": {
+                "x": 1563.719970703125,
+                "y": 942.1199951171875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 67.43994140625,
+              "at": {
+                "x": 1563.719970703125,
+                "y": 948.3599853515625
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 5.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:H:2e424cfc4e7a",
+          "physicalRunKey": "physical-run:p5:011f3231058d",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 25.62,
+          "centerline": {
+            "x1": 1488.8399658203125,
+            "y1": 1220.6100158691406,
+            "x2": 1625.0400390625,
+            "y2": 1220.6100158691406
+          },
+          "endpoints": [
+            {
+              "x": 1488.8399658203125,
+              "y": 1220.6100158691406
+            },
+            {
+              "x": 1625.0400390625,
+              "y": 1220.6100158691406
+            }
+          ],
+          "lengthPt": 136.2,
+          "mid": {
+            "x": 1556.9400024414062,
+            "y": 1220.6100158691406
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 345.9599609375,
+              "at": {
+                "x": 1798.02001953125,
+                "y": 1201.43994140625
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 397.679931640625,
+              "at": {
+                "x": 1823.8800048828125,
+                "y": 1225.6800537109375
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 5.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:H:49628348abba",
+          "physicalRunKey": "physical-run:p5:3bb1fd3205f3",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 25.56,
+          "centerline": {
+            "x1": 717.1199951171875,
+            "y1": 630.7200012207031,
+            "x2": 853.2000122070312,
+            "y2": 630.7200012207031
+          },
+          "endpoints": [
+            {
+              "x": 717.1199951171875,
+              "y": 630.7200012207031
+            },
+            {
+              "x": 853.2000122070312,
+              "y": 630.7200012207031
+            }
+          ],
+          "lengthPt": 136.08,
+          "mid": {
+            "x": 785.1600036621094,
+            "y": 630.7200012207031
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 345.96002197265625,
+              "at": {
+                "x": 1026.1800231933594,
+                "y": 611.6400146484375
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 397.67999267578125,
+              "at": {
+                "x": 1052.0400085449219,
+                "y": 635.760009765625
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect"
+          ]
+        },
+        {
+          "id": "lane:H:b2cd8df96bff",
+          "physicalRunKey": "physical-run:p5:aa25c876a0bd",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 3.96,
+          "centerline": {
+            "x1": 1199.1600341796875,
+            "y1": 606.7200164794922,
+            "x2": 1331.8800048828125,
+            "y2": 606.7200164794922
+          },
+          "endpoints": [
+            {
+              "x": 1199.1600341796875,
+              "y": 606.7200164794922
+            },
+            {
+              "x": 1331.8800048828125,
+              "y": 606.7200164794922
+            }
+          ],
+          "lengthPt": 132.72,
+          "mid": {
+            "x": 1265.52001953125,
+            "y": 606.7200164794922
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 345.96002197265625,
+              "at": {
+                "x": 1026.1800231933594,
+                "y": 611.6400146484375
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 397.67999267578125,
+              "at": {
+                "x": 1052.0400085449219,
+                "y": 635.760009765625
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect"
+          ]
+        },
+        {
+          "id": "lane:H:c2de1d42f431",
+          "physicalRunKey": "physical-run:p5:7993c3e6d81a",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 3.96,
+          "centerline": {
+            "x1": 1971,
+            "y1": 1196.52001953125,
+            "x2": 2103.719970703125,
+            "y2": 1196.52001953125
+          },
+          "endpoints": [
+            {
+              "x": 1971,
+              "y": 1196.52001953125
+            },
+            {
+              "x": 2103.719970703125,
+              "y": 1196.52001953125
+            }
+          ],
+          "lengthPt": 132.72,
+          "mid": {
+            "x": 2037.3599853515625,
+            "y": 1196.52001953125
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 345.9599609375,
+              "at": {
+                "x": 1798.02001953125,
+                "y": 1201.43994140625
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 397.679931640625,
+              "at": {
+                "x": 1823.8800048828125,
+                "y": 1225.6800537109375
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 5.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:H:006ad4b3f638",
+          "physicalRunKey": "physical-run:p5:1cfc998974df",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 3.96,
+          "centerline": {
+            "x1": 909.47998046875,
+            "y1": 765.8399963378906,
+            "x2": 1017.47998046875,
+            "y2": 765.8399963378906
+          },
+          "endpoints": [
+            {
+              "x": 909.47998046875,
+              "y": 765.8399963378906
+            },
+            {
+              "x": 1017.47998046875,
+              "y": 765.8399963378906
+            }
+          ],
+          "lengthPt": 108,
+          "mid": {
+            "x": 963.47998046875,
+            "y": 765.8399963378906
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 973.8600158691406,
+                "y": 759.47998046875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 973.8600158691406,
+                "y": 759.47998046875
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect"
+          ]
+        },
+        {
+          "id": "lane:H:86f969675bd8",
+          "physicalRunKey": "physical-run:p5:34a149b70ce2",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 3.96,
+          "centerline": {
+            "x1": 1681.3199462890625,
+            "y1": 1355.7300109863281,
+            "x2": 1789.3199462890625,
+            "y2": 1355.7300109863281
+          },
+          "endpoints": [
+            {
+              "x": 1681.3199462890625,
+              "y": 1355.7300109863281
+            },
+            {
+              "x": 1789.3199462890625,
+              "y": 1355.7300109863281
+            }
+          ],
+          "lengthPt": 108,
+          "mid": {
+            "x": 1735.3199462890625,
+            "y": 1355.7300109863281
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 3.9600830078125,
+              "at": {
+                "x": 1745.7000122070312,
+                "y": 1349.4000244140625
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9600830078125,
+              "at": {
+                "x": 1745.7000122070312,
+                "y": 1349.4000244140625
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 5.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "run:p5:7b70174f014e",
+          "physicalRunKey": "physical-run:p5:2d513f786a3a",
+          "pageNumber": 5,
+          "orientation": "H",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 13.5,
+          "centerline": {
+            "x1": 1788.719970703125,
+            "y1": 921.8999938964844,
+            "x2": 1863,
+            "y2": 921.8999938964844
+          },
+          "endpoints": [
+            {
+              "x": 1788.719970703125,
+              "y": 921.8999938964844
+            },
+            {
+              "x": 1863,
+              "y": 921.8999938964844
+            }
+          ],
+          "lengthPt": 74.28,
+          "mid": {
+            "x": 1825.8599853515625,
+            "y": 921.8999938964844
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 355.5599365234375,
+              "at": {
+                "x": 1610.9400024414062,
+                "y": 919.3200073242188
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 355.5599365234375,
+              "at": {
+                "x": 1610.9400024414062,
+                "y": 932.760009765625
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:V:050ee15fa83e",
+          "physicalRunKey": "physical-run:p5:934adb847971",
+          "pageNumber": 5,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 3.96,
+          "centerline": {
+            "x1": 1061.0699920654297,
+            "y1": 353.6400146484375,
+            "x2": 1061.0699920654297,
+            "y2": 900.719970703125
+          },
+          "endpoints": [
+            {
+              "x": 1061.0699920654297,
+              "y": 353.6400146484375
+            },
+            {
+              "x": 1061.0699920654297,
+              "y": 900.719970703125
+            }
+          ],
+          "lengthPt": 547.08,
+          "mid": {
+            "x": 1061.0699920654297,
+            "y": 627.1799926757812
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1406.760009765625,
+                "y": 598.9800109863281
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 241.31997680664062,
+              "at": {
+                "x": 1411.56005859375,
+                "y": 578.6999969482422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1017.47998046875,
+                "y": 644.4599914550781
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1017.47998046875,
+                "y": 761.4599914550781
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1021.4400024414062,
+                "y": 780.0599975585938
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 6.1199951171875,
+              "at": {
+                "x": 1021.4400024414062,
+                "y": 436.3800048828125
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1406.760009765625,
+                "y": 598.9800109863281
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 135,
+              "at": {
+                "x": 1411.3199462890625,
+                "y": 446.82000732421875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 263.7599792480469,
+              "at": {
+                "x": 1415.1600341796875,
+                "y": 512.2799835205078
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1017.47998046875,
+                "y": 644.4599914550781
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1017.47998046875,
+                "y": 761.4599914550781
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1021.4400024414062,
+                "y": 780.0599975585938
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1017.47998046875,
+                "y": 644.4599914550781
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.96002197265625,
+              "at": {
+                "x": 1017.47998046875,
+                "y": 761.4599914550781
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1021.4400024414062,
+                "y": 780.0599975585938
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 39.96002197265625,
+              "at": {
+                "x": 1199.1600341796875,
+                "y": 580.9800109863281
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 264.9599914550781,
+              "at": {
+                "x": 1408.9200439453125,
+                "y": 512.8799896240234
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 159.1199951171875,
+              "at": {
+                "x": 1409.4000244140625,
+                "y": 778.9199829101562
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 263.7599792480469,
+              "at": {
+                "x": 1415.1600341796875,
+                "y": 512.2799835205078
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 156.3599853515625,
+              "at": {
+                "x": 1415.1600341796875,
+                "y": 778.6199951171875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 57.5999755859375,
+              "at": {
+                "x": 1408.9200439453125,
+                "y": 489.1199951171875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 1412.8800048828125,
+                "y": 487.32000732421875
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 7,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:V:329b4ae63964",
+          "physicalRunKey": "physical-run:p5:5b5c6be00703",
+          "pageNumber": 5,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 27,
+          "centerline": {
+            "x1": 1503.3899841308594,
+            "y1": 946.9199829101562,
+            "x2": 1503.3899841308594,
+            "y2": 1423.43994140625
+          },
+          "endpoints": [
+            {
+              "x": 1503.3899841308594,
+              "y": 946.9199829101562
+            },
+            {
+              "x": 1503.3899841308594,
+              "y": 1423.43994140625
+            }
+          ],
+          "lengthPt": 476.52,
+          "mid": {
+            "x": 1503.3899841308594,
+            "y": 1185.1799621582031
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 40.43994140625,
+              "at": {
+                "x": 1482.719970703125,
+                "y": 1191.9000244140625
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 108,
+              "at": {
+                "x": 1488.8399658203125,
+                "y": 1175.6400146484375
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 40.43994140625,
+              "at": {
+                "x": 1482.719970703125,
+                "y": 1191.9000244140625
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 108,
+              "at": {
+                "x": 1488.8399658203125,
+                "y": 1175.6400146484375
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 7,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:V:eef50a3c185b",
+          "physicalRunKey": "physical-run:p5:85f937093e0a",
+          "pageNumber": 5,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 6.24,
+          "centerline": {
+            "x1": 2178.239990234375,
+            "y1": 1107.8399658203125,
+            "x2": 2178.239990234375,
+            "y2": 1488.9599609375
+          },
+          "endpoints": [
+            {
+              "x": 2178.239990234375,
+              "y": 1107.8399658203125
+            },
+            {
+              "x": 2178.239990234375,
+              "y": 1488.9599609375
+            }
+          ],
+          "lengthPt": 381.12,
+          "mid": {
+            "x": 2178.239990234375,
+            "y": 1298.3999633789062
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 57.719970703125,
+              "at": {
+                "x": 2180.760009765625,
+                "y": 1078.97998046875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 55.4400634765625,
+              "at": {
+                "x": 2184.719970703125,
+                "y": 1077.8400268554688
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 2178.47998046875,
+                "y": 1188.780029296875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 2178.47998046875,
+                "y": 1262.280029296875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 2184.719970703125,
+                "y": 1262.280029296875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 2178.47998046875,
+                "y": 1188.780029296875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 2178.47998046875,
+                "y": 1262.280029296875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 2184.719970703125,
+                "y": 1262.280029296875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 264.96002197265625,
+              "at": {
+                "x": 2180.760009765625,
+                "y": 1102.8000183105469
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 159.1199951171875,
+              "at": {
+                "x": 2181.239990234375,
+                "y": 1368.8400268554688
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 263.75994873046875,
+              "at": {
+                "x": 2187,
+                "y": 1102.1999816894531
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 156.3599853515625,
+              "at": {
+                "x": 2187,
+                "y": 1368.5399780273438
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 2178.47998046875,
+                "y": 1188.780029296875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 54,
+              "at": {
+                "x": 2178.47998046875,
+                "y": 1262.280029296875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 2184.719970703125,
+                "y": 1262.280029296875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 264.96002197265625,
+              "at": {
+                "x": 2180.760009765625,
+                "y": 1102.8000183105469
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 159.1199951171875,
+              "at": {
+                "x": 2181.239990234375,
+                "y": 1368.8400268554688
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 263.75994873046875,
+              "at": {
+                "x": 2187,
+                "y": 1102.1999816894531
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 156.3599853515625,
+              "at": {
+                "x": 2187,
+                "y": 1368.5399780273438
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 9.5,
+          "authorityReasons": [
+            "long",
+            "envelope",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:V:bfdd881f6e5a",
+          "physicalRunKey": "physical-run:p5:8d4541d26386",
+          "pageNumber": 5,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.04,
+          "centerline": {
+            "x1": 1414.3800354003906,
+            "y1": 191.63999938964844,
+            "x2": 1414.3800354003906,
+            "y2": 460.32000732421875
+          },
+          "endpoints": [
+            {
+              "x": 1414.3800354003906,
+              "y": 191.63999938964844
+            },
+            {
+              "x": 1414.3800354003906,
+              "y": 460.32000732421875
+            }
+          ],
+          "lengthPt": 268.68,
+          "mid": {
+            "x": 1414.3800354003906,
+            "y": 325.9800033569336
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 241.31997680664062,
+              "at": {
+                "x": 1411.56005859375,
+                "y": 578.6999969482422
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 57.5999755859375,
+              "at": {
+                "x": 1408.9200439453125,
+                "y": 489.1199951171875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 54,
+              "at": {
+                "x": 1412.8800048828125,
+                "y": 487.32000732421875
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 7,
+          "authorityReasons": [
+            "long",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "lane:V:c7d9693fb7d1",
+          "physicalRunKey": "physical-run:p5:4ab488d97545",
+          "pageNumber": 5,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 5.04,
+          "centerline": {
+            "x1": 2180.489990234375,
+            "y1": 784.0800170898438,
+            "x2": 2180.489990234375,
+            "y2": 1050.1199951171875
+          },
+          "endpoints": [
+            {
+              "x": 2180.489990234375,
+              "y": 784.0800170898438
+            },
+            {
+              "x": 2180.489990234375,
+              "y": 1050.1199951171875
+            }
+          ],
+          "lengthPt": 266.04,
+          "mid": {
+            "x": 2180.489990234375,
+            "y": 917.1000061035156
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 57.719970703125,
+              "at": {
+                "x": 2180.760009765625,
+                "y": 1078.97998046875
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 55.4400634765625,
+              "at": {
+                "x": 2184.719970703125,
+                "y": 1077.8400268554688
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 8.5,
+          "authorityReasons": [
+            "long",
+            "envelope",
+            "thickness-mode",
+            "opening-suspect",
+            "junction"
+          ]
+        },
+        {
+          "id": "merge:V:9cae82f945cc",
+          "physicalRunKey": "physical-run:p5:db3210e32f1c",
+          "pageNumber": 5,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 3.84,
+          "centerline": {
+            "x1": 1791.239990234375,
+            "y1": 1190.760009765625,
+            "x2": 1791.239990234375,
+            "y2": 1349.4000244140625
+          },
+          "endpoints": [
+            {
+              "x": 1791.239990234375,
+              "y": 1190.760009765625
+            },
+            {
+              "x": 1791.239990234375,
+              "y": 1349.4000244140625
+            }
+          ],
+          "lengthPt": 158.64,
+          "mid": {
+            "x": 1791.239990234375,
+            "y": 1270.0800170898438
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1789.3199462890625,
+                "y": 1234.3800048828125
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1789.3199462890625,
+                "y": 1351.3800048828125
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1793.1600341796875,
+                "y": 1369.97998046875
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1789.3199462890625,
+                "y": 1234.3800048828125
+              }
+            },
+            {
+              "along": "faceA",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1789.3199462890625,
+                "y": 1351.3800048828125
+              }
+            },
+            {
+              "along": "faceB",
+              "gapPt": 3.9599609375,
+              "at": {
+                "x": 1793.1600341796875,
+                "y": 1369.97998046875
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "high",
+          "authorityScore": 5.5,
+          "authorityReasons": [
+            "medium-length",
+            "thickness-mode",
+            "opening-suspect",
+            "multi-junction"
+          ]
+        },
+        {
+          "id": "run:p5:d95f09a95fd1",
+          "physicalRunKey": "physical-run:p5:5e404f5a3bca",
+          "pageNumber": 5,
+          "orientation": "V",
+          "sourceCandidateIds": [],
+          "faceSegmentIds": [],
+          "thicknessPt": 6.12,
+          "centerline": {
+            "x1": 1790.1000366210938,
+            "y1": 1029.3599853515625,
+            "x2": 1790.1000366210938,
+            "y2": 1109.280029296875
+          },
+          "endpoints": [
+            {
+              "x": 1790.1000366210938,
+              "y": 1029.3599853515625
+            },
+            {
+              "x": 1790.1000366210938,
+              "y": 1109.280029296875
+            }
+          ],
+          "lengthPt": 79.92,
+          "mid": {
+            "x": 1790.1000366210938,
+            "y": 1069.3200073242188
+          },
+          "openingGapSuspects": [
+            {
+              "along": "faceB",
+              "gapPt": 6.239990234375,
+              "at": {
+                "x": 1793.1600341796875,
+                "y": 1026.239990234375
+              }
+            }
+          ],
+          "junctions": [],
+          "connectedRunIds": [],
+          "wallAuthority": "medium",
+          "authorityScore": 3.5,
+          "authorityReasons": [
+            "thickness-mode",
+            "multi-junction"
+          ]
+        }
+      ],
+      "dims": [],
+      "transcriptions": [],
+      "associations": []
+    }
+  ]
+}
