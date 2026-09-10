@@ -26,7 +26,11 @@ export const floorFramingAssemblySchema = z.object({
 export const floorFramingSystemSchema = resolvedObjectBaseSchema.extend({
   objectType: z.literal("floor-framing-system"),
   name: z.string().trim().min(1),
-  level: z.string().trim().min(1),
+  /**
+   * Building level is a construction fact. It stays null until Evidence
+   * can resolve it. Do not store the string "Unresolved".
+   */
+  level: z.string().trim().min(1).nullable().default(null),
   constructionPhase: floorConstructionPhaseSchema,
   assembly: floorFramingAssemblySchema,
   areaIds: z.array(objectIdSchema).default([]),

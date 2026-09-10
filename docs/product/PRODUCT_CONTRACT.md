@@ -6,7 +6,8 @@ This folder holds the **authoritative finished-product contract** for the reside
 
 | File | Authority |
 |------|-----------|
-| `RESIDENTIAL_FRAMING_MATERIALS_MASTER_TAXONOMY.pdf` | Locked Material Taxonomy + Recommended Lumber Takeoff Format |
+| `V1_FRAMING_INTELLIGENCE_SPEC.md` | **HOW** V1 may know, resolve, calculate, materialize, purchase, review, diagnose, and account |
+| `RESIDENTIAL_FRAMING_MATERIALS_MASTER_TAXONOMY.pdf` | **WHAT** — locked Material Taxonomy + Recommended Lumber Takeoff Format (completeness / output vocabulary) |
 | This file (`PRODUCT_CONTRACT.md`) | How to interpret that contract relative to the engine |
 
 **Status:** Place the Master Taxonomy PDF in this directory as:
@@ -22,8 +23,9 @@ If the PDF is missing from the repository, restore the reviewed external copy he
 | Source | Answers |
 |--------|---------|
 | **Construction plans** | What does this house contain? |
+| **V1 Framing Intelligence Spec** (`V1_FRAMING_INTELLIGENCE_SPEC.md`) | **HOW** V1 may know enough to produce the takeoff |
 | **Construction Brain** (`knowledge/framing/`) | How does residential framing work, and how should the engine reason about it? |
-| **Master Taxonomy** (PDF in this folder) | What must the finished framing product ultimately account for / what is the output vocabulary? |
+| **Master Taxonomy** (PDF in this folder) | **WHAT** the finished framing product must ultimately account for / output vocabulary. Taxonomy does not decide what exists. |
 | **Recommended Lumber Takeoff Format** (in the same PDF) | What should the contractor-facing takeoff presentation look like? |
 
 ---
@@ -39,6 +41,7 @@ If the PDF is missing from the repository, restore the reviewed external copy he
 
 ## Related docs
 
-- Architecture: [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
-- Current limitations: [`../LIMITATIONS.md`](../LIMITATIONS.md)
+- HOW (V1 spec): [`V1_FRAMING_INTELLIGENCE_SPEC.md`](V1_FRAMING_INTELLIGENCE_SPEC.md)
+- Architecture (current production spine): [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
+- Current limitations (HEAD, not V1 scope): [`../LIMITATIONS.md`](../LIMITATIONS.md)
 - Construction Brain material vocabulary (not the product contract): [`../../knowledge/framing/09-material-taxonomy.md`](../../knowledge/framing/09-material-taxonomy.md)

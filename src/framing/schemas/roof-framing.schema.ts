@@ -26,7 +26,11 @@ export const roofFramingAssemblySchema = z.object({
 export const roofFramingSystemSchema = resolvedObjectBaseSchema.extend({
   objectType: z.literal("roof-framing-system"),
   name: z.string().trim().min(1),
-  level: z.string().trim().min(1),
+  /**
+   * Building level is a construction fact. It stays null until Evidence
+   * can resolve it. Do not store the string "Unresolved".
+   */
+  level: z.string().trim().min(1).nullable().default(null),
   constructionPhase: roofConstructionPhaseSchema,
   assembly: roofFramingAssemblySchema,
   planeIds: z.array(objectIdSchema).default([]),

@@ -52,6 +52,14 @@ export const resolvedObjectBaseSchema = z.object({
   id: objectIdSchema,
 
   /**
+   * Canonical physical identity (spec §7, §32). Semantic locator remains `id`.
+   * Default population is 1:1 with the ObjectId mint. Dual-role existing
+   * realizations (for example an opening linked to its header member) share
+   * one physicalId without merging bag rows.
+   */
+  physicalId: objectIdSchema.optional(),
+
+  /**
    * Generic here so the core schema remains scope-agnostic.
    * Concrete domain schemas should override this with a literal.
    */

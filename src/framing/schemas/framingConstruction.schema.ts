@@ -8,6 +8,10 @@ import {
   structuralMembersPayloadSchema,
   wallFramingPayloadSchema,
 } from "./framing-artifacts.schema.js";
+import {
+  reviewRecordSchema,
+  unresolvedRecordSchema,
+} from "./honesty-records.schema.js";
 
 /**
  * Production reader → calculator boundary for the factory reset.
@@ -22,6 +26,8 @@ export const framingConstructionSchema = z.object({
   floorFraming: floorFramingPayloadSchema,
   roofFraming: roofFramingPayloadSchema,
   sheathing: sheathingPayloadSchema,
+  unresolved: z.array(unresolvedRecordSchema).default([]),
+  reviews: z.array(reviewRecordSchema).default([]),
 });
 
 export type FramingConstruction = z.infer<typeof framingConstructionSchema>;
@@ -34,5 +40,7 @@ export function emptyFramingConstruction(): FramingConstruction {
     floorFraming: { systems: [], areas: [] },
     roofFraming: { systems: [], planes: [] },
     sheathing: { systems: [], areas: [] },
+    unresolved: [],
+    reviews: [],
   };
 }

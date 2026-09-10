@@ -8,19 +8,22 @@ Do not add architecture for other construction scopes (concrete, electrical, plu
 
 ## Start here
 
-1. Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the production four-box flow.
-2. Read [`docs/product/PRODUCT_CONTRACT.md`](docs/product/PRODUCT_CONTRACT.md) for taxonomy / output authority (when present).
-3. Read [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) for verified current gaps (when present).
-4. For framing behavior, read relevant files under `knowledge/framing/`.
-5. Read only the repository files relevant to the current task.
+1. Read [`docs/product/V1_FRAMING_INTELLIGENCE_SPEC.md`](docs/product/V1_FRAMING_INTELLIGENCE_SPEC.md) for **HOW** V1 may know, resolve, calculate, and account (product / architecture authority).
+2. Read the Master Taxonomy PDF under `docs/product/` and [`docs/product/PRODUCT_CONTRACT.md`](docs/product/PRODUCT_CONTRACT.md) for **WHAT** the finished product must account for / output vocabulary. Taxonomy does not decide what exists.
+3. Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the current production four-box spine (CLI/UI → `runFramingTakeoff`) and repo guidance. Where it conflicts with the V1 spec, the spec wins.
+4. Read [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) for verified current gaps (HEAD capability, not V1 scope).
+5. For framing construction behavior, read relevant files under `knowledge/framing/`.
+6. Read only the repository files relevant to the current task.
 
 Do not treat [`docs/history/`](docs/history/) as authoritative.
 
 ## Source of truth
 
-- `docs/ARCHITECTURE.md` — system architecture and engine-wide rules
+- `docs/product/V1_FRAMING_INTELLIGENCE_SPEC.md` — **HOW** (product / architecture authority). Wins where other repo docs conflict.
+- Master Taxonomy PDF + `docs/product/PRODUCT_CONTRACT.md` — **WHAT** (completeness / output vocabulary). Taxonomy does not decide existence.
+- `docs/ARCHITECTURE.md` — current production flow and repo guidance, not the V1 HOW ceiling
 - Construction Brain (`knowledge/framing/`) — construction behavior
-- `docs/product/` — finished-product completeness / contractor output contract
+- `docs/LIMITATIONS.md` — verified current gaps, not V1 scope
 - Existing code and tests — current implementation conventions
 
 Do not duplicate or redefine rules from these sources.

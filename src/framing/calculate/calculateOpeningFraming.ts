@@ -11,7 +11,9 @@ import {
 } from "../schemas/material.schema.js";
 import type { BuildingWall, WallSegment } from "../schemas/wall.schema.js";
 import type { Opening, OpeningCategory } from "../schemas/opening.schema.js";
+import { createJackStudCountUnresolved } from "../resolve/honestyRecords.js";
 import { isWoodStudWallType } from "../resolve/wallFramingPropertyPaths.js";
+import type { UnresolvedRecord } from "../schemas/honesty-records.schema.js";
 import {
   OPENING_QUANTITY_KEYS,
 } from "../validators/rule-ids.js";
@@ -37,6 +39,7 @@ const STUD_SPACING_PROPERTY_PATH = "assembly.studSpacingInches";
 export type OpeningFramingCalculationResult = {
   materials: FramingMaterialLineItem[];
   assumptions: Assumption[];
+  unresolved: UnresolvedRecord[];
 };
 
 function compareIds(left: string, right: string): number {
@@ -230,7 +233,7 @@ function calculateOpeningCripples(
   const belowEligible = opening.category === "window";
 
   if (!aboveEligible && !belowEligible) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   const abovePreconditions = aboveEligible
@@ -241,12 +244,12 @@ function calculateOpeningCripples(
     : null;
 
   if (!abovePreconditions && !belowPreconditions) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   const preconditions = abovePreconditions ?? belowPreconditions;
   if (!preconditions) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   const perOccurrenceCount = crippleCountPerOccurrence(
@@ -310,7 +313,7 @@ function calculateOpeningCripples(
   }
 
   if (materials.length === 0) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   const quantityKeyForRegistry = affectedQuantityKeys[0]!;
@@ -320,7 +323,7 @@ function calculateOpeningCripples(
     context: { objectId: opening.id },
   });
   if (registered.outcome !== "assumed") {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
   // Single assumption covering all emitted cripple quantityKeys for this opening.
   const assumption = createOpeningCrippleLayoutAssumption(
@@ -337,6 +340,7 @@ function calculateOpeningCripples(
       }),
     ),
     assumptions: [assumption],
+    unresolved: [],
   };
 }
 
@@ -431,17 +435,7 @@ function calculateOpeningJackStuds(
   const contributingObjects = [opening, wall, segment];
 
   if (!isOpeningEligibleForJackStuds(opening, wall, segment)) {
-    return { materials: [], assumptions: [] };
-  }
-
-  if (
-    !isQuantityInputResolved(
-      opening.quantity,
-      opening.resolutionTraces,
-      QUANTITY_PROPERTY_PATH,
-    )
-  ) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   if (
@@ -451,7 +445,21 @@ function calculateOpeningJackStuds(
       JACK_STUD_COUNT_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [] };
+    return {
+      materials: [],
+      assumptions: [],
+      unresolved: [createJackStudCountUnresolved(opening)],
+    };
+  }
+
+  if (
+    !isQuantityInputResolved(
+      opening.quantity,
+      opening.resolutionTraces,
+      QUANTITY_PROPERTY_PATH,
+    )
+  ) {
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   const quantity = opening.jackStudCount * opening.quantity;
@@ -476,10 +484,10 @@ function calculateOpeningJackStuds(
   });
 
   if (!lineItem) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
-  return { materials: [lineItem], assumptions: [] };
+  return { materials: [lineItem], assumptions: [], unresolved: [] };
 }
 
 function calculateOpeningKingStuds(
@@ -491,7 +499,7 @@ function calculateOpeningKingStuds(
   const contributingObjects = [opening, wall, segment];
 
   if (!isOpeningEligibleForKingStuds(opening, wall, segment)) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   if (
@@ -501,12 +509,12 @@ function calculateOpeningKingStuds(
       QUANTITY_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   const kingStudCount = resolveKingStudCountPerOccurrence(opening);
   if (!kingStudCount) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   const quantity = kingStudCount.count * opening.quantity;
@@ -540,12 +548,13 @@ function calculateOpeningKingStuds(
   });
 
   if (!lineItem) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   return {
     materials: [lineItem],
     assumptions: kingStudCount.assumption ? [kingStudCount.assumption] : [],
+    unresolved: [],
   };
 }
 
@@ -558,11 +567,11 @@ function calculateOpeningRoughSill(
   const contributingObjects = [opening, wall, segment];
 
   if (opening.category !== "window") {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   if (!isOpeningEligibleForWallFraming(opening, wall, segment)) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   if (
@@ -572,7 +581,7 @@ function calculateOpeningRoughSill(
       QUANTITY_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   if (
@@ -582,14 +591,14 @@ function calculateOpeningRoughSill(
       ROUGH_WIDTH_PROPERTY_PATH,
     )
   ) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   const roughSillLinearFeet =
     opening.dimensions.roughWidthFeet * opening.quantity;
   const studSize = wall.assembly.studSize;
   if (studSize === null) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   const consulted = consultAssumptionRegistry({
@@ -601,7 +610,7 @@ function calculateOpeningRoughSill(
     },
   });
   if (consulted.outcome !== "assumed") {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
   const sillSizeAssumption = consulted.assumption;
 
@@ -632,12 +641,13 @@ function calculateOpeningRoughSill(
   });
 
   if (!lineItem) {
-    return { materials: [], assumptions: [] };
+    return { materials: [], assumptions: [], unresolved: [] };
   }
 
   return {
     materials: [lineItem],
     assumptions: [sillSizeAssumption],
+    unresolved: [],
   };
 }
 
@@ -661,6 +671,7 @@ export function calculateOpeningFraming(
 
   const materials: FramingMaterialLineItem[] = [];
   const assumptions: Assumption[] = [];
+  const unresolved: UnresolvedRecord[] = [];
 
   for (const opening of sortedOpenings) {
     const segment = resolveParentSegment(opening, segmentsById);
@@ -689,7 +700,13 @@ export function calculateOpeningFraming(
       ...sillResult.assumptions,
       ...crippleResult.assumptions,
     );
+    unresolved.push(
+      ...kingResult.unresolved,
+      ...jackResult.unresolved,
+      ...sillResult.unresolved,
+      ...crippleResult.unresolved,
+    );
   }
 
-  return { materials, assumptions };
+  return { materials, assumptions, unresolved };
 }

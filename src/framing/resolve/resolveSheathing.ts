@@ -320,7 +320,7 @@ function resolveOneSystem(
 
   const values = {
     name: resolvedStringValue(decisions.name, subjectKey) ?? subjectKey,
-    level: resolvedStringValue(decisions.level, "Unresolved") ?? "Unresolved",
+    level: resolvedStringValue(decisions.level, null),
     application,
     constructionPhase,
     panelSpecification: {
@@ -354,6 +354,7 @@ function resolveOneSystem(
 
   return {
     id: systemId,
+    physicalId: systemId,
     objectType: "sheathing-system",
     resolutionTraces,
     ...values,
@@ -436,6 +437,7 @@ function resolveOneArea(
 
   return {
     id: areaId,
+    physicalId: areaId,
     objectType: "sheathing-area",
     resolutionTraces,
     parentSystemId,

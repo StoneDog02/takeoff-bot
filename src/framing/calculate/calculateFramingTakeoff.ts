@@ -5,12 +5,23 @@ import { calculateRoofFraming } from "./calculateRoofFraming.js";
 import { calculateSheathing } from "./calculateSheathing.js";
 import { calculateStructuralMembers } from "./calculateStructuralMembers.js";
 import { calculateWallFraming } from "./calculateWallFraming.js";
+import {
+  mergeReviewRecords,
+  mergeUnresolvedRecords,
+  reviewsFromAssumptions,
+} from "../resolve/honestyRecords.js";
+import type {
+  ReviewRecord,
+  UnresolvedRecord,
+} from "../schemas/honesty-records.schema.js";
 import type { FramingMaterialLineItem } from "../schemas/material.schema.js";
 import type { FramingConstruction } from "../schemas/framingConstruction.schema.js";
 
 export type FramingTakeoffCalculationResult = {
   materials: FramingMaterialLineItem[];
   assumptions: Assumption[];
+  unresolved: UnresolvedRecord[];
+  reviews: ReviewRecord[];
 };
 
 /**
@@ -18,6 +29,8 @@ export type FramingTakeoffCalculationResult = {
  *
  * No Stage 13 validation permission (D20–D22).
  * Opening governed assumptions remain reachable via calculateOpeningFraming.
+ * Unresolved and Review records are inspectable here; they do not block the
+ * pipeline or enter taxonomy accounting terminals.
  */
 export function calculateFramingTakeoff(
   construction: FramingConstruction,
@@ -43,5 +56,14 @@ export function calculateFramingTakeoff(
   materials.push(...calculateRoofFraming(construction.roofFraming));
   materials.push(...calculateSheathing(construction.sheathing));
 
-  return { materials, assumptions };
+  const unresolved = mergeUnresolvedRecords(
+    construction.unresolved ?? [],
+    openingResult.unresolved,
+  );
+  const reviews = mergeReviewRecords(
+    construction.reviews ?? [],
+    reviewsFromAssumptions(assumptions, construction),
+  );
+
+  return { materials, assumptions, unresolved, reviews };
 }

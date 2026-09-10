@@ -23,8 +23,8 @@ export type GeometryLengthAssignment =
 
 /**
  * Converts a geometry observation into lengthFeet Evidence for a physical run.
- * Fails closed for wall-type marks, chain segments, low confidence, and
- * ambiguous / unparsable dimensions.
+ * Fails closed for wall-type marks, chain segments, non-explicit authority,
+ * and ambiguous / unparsable dimensions. Confidence is telemetry only.
  * Wall-run lengthFeet only. Do not emit floor-area joistLayoutLengthFeet here;
  * layout is a separate Evidence record from the region read.
  */
@@ -84,14 +84,6 @@ export function assignLengthEvidenceFromGeometryObservation(
       status: "rejected",
       observationId: observation.id,
       reason: `authorityMethod=${observation.authorityMethod} not authorized for V1 length assignment`,
-    };
-  }
-
-  if (observation.confidenceLabel === "low") {
-    return {
-      status: "rejected",
-      observationId: observation.id,
-      reason: "low confidence observations do not authorize lengthFeet",
     };
   }
 

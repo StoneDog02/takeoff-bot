@@ -314,7 +314,7 @@ function resolveOneSystem(
 
   const values = {
     name: resolvedStringValue(decisions.name, subjectKey) ?? subjectKey,
-    level: resolvedStringValue(decisions.level, "Unresolved") ?? "Unresolved",
+    level: resolvedStringValue(decisions.level, null),
     constructionPhase,
     assembly: {
       framingType: resolvedStringValue(decisions["assembly.framingType"], null),
@@ -328,6 +328,7 @@ function resolveOneSystem(
 
   return {
     id: systemId,
+    physicalId: systemId,
     objectType: "roof-framing-system",
     resolutionTraces,
     ...values,
@@ -412,6 +413,7 @@ function resolveOnePlane(
 
   return {
     id: planeId,
+    physicalId: planeId,
     objectType: "roof-plane",
     resolutionTraces,
     parentSystemId,

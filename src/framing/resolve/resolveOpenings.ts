@@ -1109,6 +1109,7 @@ function resolveOneOpening(
 
   return {
     id: openingId,
+    physicalId: openingId,
     objectType: "opening",
     resolutionTraces,
     category,

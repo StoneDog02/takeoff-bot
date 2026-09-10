@@ -116,6 +116,35 @@ describe("selectPagesForDrawingCompiler", () => {
     );
   });
 
+  it("selects a framing-relevant plan-layout page even when confidence is low", () => {
+    const page = classifiedPage({
+      pageNumber: 3,
+      pageKind: "plan",
+      contentRoles: ["plan-layout"],
+      scopeHints: ["wall", "framing"],
+      relevantToFraming: true,
+      confidenceLabel: "low",
+    });
+
+    assert.equal(shouldCompilePage(page), true);
+    assert.deepEqual(
+      selectPagesForDrawingCompiler({ classifiedPages: [page] }),
+      [3],
+    );
+  });
+
+  it("still skips a low-confidence elevation without plan-layout", () => {
+    const page = classifiedPage({
+      pageNumber: 6,
+      pageKind: "elevation",
+      contentRoles: ["elevation"],
+      scopeHints: ["wall", "framing"],
+      confidenceLabel: "low",
+    });
+
+    assert.equal(shouldCompilePage(page), false);
+  });
+
   it("respects TAKEOFF_COMPILER_MAX_PAGES", () => {
     process.env.TAKEOFF_COMPILER_MAX_PAGES = "1";
     const pages = [

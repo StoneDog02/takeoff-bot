@@ -93,9 +93,6 @@ function isPrimaryCandidate(
   if (page.pageKind === "unknown" || page.needsVisualClassification) {
     return false;
   }
-  if (page.confidenceLabel === "low") {
-    return false;
-  }
   if (!pageHasPlanLayoutContent(page)) {
     return false;
   }
@@ -267,6 +264,7 @@ export interface IntentExtractionRoutingPlan {
  *
  * Multiple valid primaries are NOT an error — they become sequential bundles
  * via buildSequentialExtractionPageBundles.
+ * confidenceLabel is telemetry only; it does not exclude primary or support.
  */
 export function planIntentExtractionRouting(input: {
   pages: readonly ClassifiedPlanPage[];
@@ -332,8 +330,7 @@ export function planIntentExtractionRouting(input: {
         page.needsVisualClassification ||
         page.pageKind === "unknown" ||
         (page.pageKind === "mixed" &&
-          resolvedContentRoles(page).length === 0) ||
-        page.confidenceLabel === "low",
+          resolvedContentRoles(page).length === 0),
     )
     .map((page) => page.pageNumber);
 

@@ -33,6 +33,8 @@ Entry points: `src/app.ts` (CLI) and `src/ui/framingTakeoffService.ts` (UI).
 
 Both call `runFramingTakeoff`. There is no separate stage pipeline for production.
 
+This four-box is the **live production spine**, not the finished V1 architecture. V1 grows this spine toward spec Phases A–E as capabilities exist; do not treat empty phase shells as current. For identity, Unresolved / Review, ReadComplete, and BOM, read [`docs/product/V1_FRAMING_INTELLIGENCE_SPEC.md`](product/V1_FRAMING_INTELLIGENCE_SPEC.md). Where this document conflicts with that spec, the spec wins.
+
 ---
 
 ## Locked principles
@@ -51,6 +53,7 @@ Both call `runFramingTakeoff`. There is no separate stage pipeline for productio
 
 | Layer | Job |
 |-------|-----|
+| V1 Framing Intelligence Spec (`docs/product/`) | HOW V1 may know / resolve / calculate / account — product architecture authority |
 | Construction Brain (`knowledge/framing/`) | How residential framing works and how the engine should reason |
 | PDF ingest / classification | What pages exist and what roles they play |
 | Drawing compiler / project reading | Geometry, schedules, project-local meaning |
@@ -66,12 +69,10 @@ Both call `runFramingTakeoff`. There is no separate stage pipeline for productio
 
 ## Product completeness
 
-Authoritative product contract:
+- **HOW:** [`docs/product/V1_FRAMING_INTELLIGENCE_SPEC.md`](product/V1_FRAMING_INTELLIGENCE_SPEC.md)
+- **WHAT:** [`docs/product/PRODUCT_CONTRACT.md`](product/PRODUCT_CONTRACT.md) and the Master Taxonomy PDF under `docs/product/`
 
-- [`docs/product/PRODUCT_CONTRACT.md`](product/PRODUCT_CONTRACT.md)
-- Master Taxonomy PDF under `docs/product/`
-
-Known current capability limits:
+Known current capability limits (HEAD, not V1 scope):
 
 - [`docs/LIMITATIONS.md`](LIMITATIONS.md)
 

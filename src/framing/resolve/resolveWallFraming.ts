@@ -350,6 +350,7 @@ function resolveOneWall(
 
   const wall: BuildingWall = {
     id: wallId,
+    physicalId: wallId,
     objectType: "building-wall",
     resolutionTraces: wallTraces,
     name: subjectKey,
@@ -362,6 +363,7 @@ function resolveOneWall(
 
   const segment: WallSegment = {
     id: segmentId,
+    physicalId: segmentId,
     objectType: "wall-segment",
     resolutionTraces: segmentTraces,
     parentWallId: wallId,

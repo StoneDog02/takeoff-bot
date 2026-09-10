@@ -56,6 +56,8 @@ import { resolveRoofFraming } from "../resolve/resolveRoofFraming.js";
 import { resolveSheathing } from "../resolve/resolveSheathing.js";
 import { resolveStructuralMembers } from "../resolve/resolveStructuralMembers.js";
 import { resolveWallFraming } from "../resolve/resolveWallFraming.js";
+import { assignCanonicalPhysicalIds } from "../resolve/assignCanonicalPhysicalIds.js";
+import { attachRequiredLevelUnresolved } from "../resolve/honestyRecords.js";
 import { linkOpeningHeaderRelationships } from "../resolve/linkOpeningHeaderRelationships.js";
 import {
   framingConstructionSchema,
@@ -237,14 +239,18 @@ export function buildFramingConstructionFromEvidence(
     openings,
     structuralMembers,
   );
-  return framingConstructionSchema.parse({
-    walls,
-    openings: linked.openings,
-    structuralMembers: linked.structuralMembers,
-    floorFraming: resolveFloorFraming([...evidence]),
-    roofFraming: resolveRoofFraming([...evidence]),
-    sheathing: resolveSheathing([...evidence]),
-  });
+  return attachRequiredLevelUnresolved(
+    assignCanonicalPhysicalIds(
+      framingConstructionSchema.parse({
+        walls,
+        openings: linked.openings,
+        structuralMembers: linked.structuralMembers,
+        floorFraming: resolveFloorFraming([...evidence]),
+        roofFraming: resolveRoofFraming([...evidence]),
+        sheathing: resolveSheathing([...evidence]),
+      }),
+    ),
+  );
 }
 
 /**

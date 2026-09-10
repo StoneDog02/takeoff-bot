@@ -11,6 +11,7 @@ import {
 } from "../schemas/framing-artifacts.schema.js";
 import type { Opening } from "../schemas/opening.schema.js";
 import type { StructuralMember } from "../schemas/structural-member.schema.js";
+import { shareLinkedHeaderPhysicalIdPayloads } from "./assignCanonicalPhysicalIds.js";
 import {
   createOpeningObjectId,
   createStructuralMemberObjectId,
@@ -430,12 +431,17 @@ export function linkOpeningHeaderRelationships(
     memberTagResult.openings,
   );
 
-  return {
+  const linked = {
     openings: openingsPayloadSchema.parse({ openings: memberTagResult.openings }),
     structuralMembers: structuralMembersPayloadSchema.parse({
       structuralMembers: linkedMembers,
     }),
   };
+
+  return shareLinkedHeaderPhysicalIdPayloads(
+    linked.openings,
+    linked.structuralMembers,
+  );
 }
 
 export function openingHeaderLinksChanged(

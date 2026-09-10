@@ -505,7 +505,7 @@ function resolveOneSystem(
 
   const values = {
     name: resolvedStringValue(decisions.name, subjectKey) ?? subjectKey,
-    level: resolvedStringValue(decisions.level, "Unresolved") ?? "Unresolved",
+    level: resolvedStringValue(decisions.level, null),
     constructionPhase,
     assembly: {
       joistType: resolvedStringValue(decisions["assembly.joistType"], null),
@@ -520,6 +520,7 @@ function resolveOneSystem(
 
   return {
     id: systemId,
+    physicalId: systemId,
     objectType: "floor-framing-system",
     resolutionTraces,
     ...values,
@@ -634,6 +635,7 @@ function resolveOneArea(
 
   return {
     id: areaId,
+    physicalId: areaId,
     objectType: "floor-framing-area",
     resolutionTraces,
     parentSystemId,

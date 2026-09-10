@@ -265,6 +265,7 @@ function resolveOneMember(
 
   return {
     id: memberId,
+    physicalId: memberId,
     objectType: "structural-member",
     resolutionTraces,
     ...values,

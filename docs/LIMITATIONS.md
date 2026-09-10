@@ -2,6 +2,8 @@
 
 Verified statement of what the engine **currently does and does not** do.
 
+This document describes current HEAD capability, not the V1 target in [`docs/product/V1_FRAMING_INTELLIGENCE_SPEC.md`](product/V1_FRAMING_INTELLIGENCE_SPEC.md).
+
 This is not a backlog. Update only when behavior is verified in code/tests.
 
 Authority for construction rules remains Construction Brain under `knowledge/framing/`. Product completeness vocabulary remains [`docs/product/`](product/).

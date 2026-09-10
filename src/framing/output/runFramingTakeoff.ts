@@ -4,7 +4,10 @@ import type { PlanIndex } from "../../pdf/PlanIndex.js";
 import type { GovernedProjectDictionary } from "../../project-reading/schemas/projectDictionary.schema.js";
 import { calculateFramingTakeoff } from "../calculate/calculateFramingTakeoff.js";
 import { buildProductAccounting } from "../product/buildProductAccounting.js";
-import type { FramingConstruction } from "../schemas/framingConstruction.schema.js";
+import {
+  framingConstructionSchema,
+  type FramingConstruction,
+} from "../schemas/framingConstruction.schema.js";
 import { readFramingPlans } from "../read/readFramingPlans.js";
 import type { FramingTakeoff } from "../schemas/framingTakeoff.schema.js";
 import type { ProductAccounting } from "../schemas/productAccounting.schema.js";
@@ -74,6 +77,11 @@ export async function runFramingTakeoff(
     }
 
     const calculated = calculateFramingTakeoff(construction);
+    construction = framingConstructionSchema.parse({
+      ...construction,
+      unresolved: calculated.unresolved,
+      reviews: calculated.reviews,
+    });
     const createdAt = new Date().toISOString();
     const takeoff = buildFramingTakeoff({
       projectId: input.projectId,

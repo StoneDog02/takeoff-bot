@@ -9,6 +9,7 @@ import { classifyPlanPagesDeterministically } from "../../src/pdf/classifyPlanPa
 import {
   deriveRoleAssignmentsFromPageClassification,
   listPrimaryCandidatesForIntent,
+  planIntentExtractionRouting,
 } from "../../src/pdf/deriveRoleAssignmentsFromPageClassification.js";
 import type { PlanIndex } from "../../src/pdf/PlanIndex.js";
 import {
@@ -290,6 +291,92 @@ describe("routing from classification", () => {
       assignments.filter((assignment) => assignment.role === "primary").length,
       2,
     );
+  });
+
+  it("does not exclude a low-confidence plan-layout page from primary assignment", () => {
+    const page = classified({
+      pageNumber: 7,
+      pageKind: "plan",
+      pageType: "plan",
+      scopeHints: ["wall", "framing"],
+      contentRoles: ["plan-layout"],
+      relevantToFraming: true,
+      confidenceLabel: "low",
+    });
+    const primaries = listPrimaryCandidatesForIntent({
+      pages: [page],
+      intent: "wall-framing",
+    });
+    assert.deepEqual(
+      primaries.map((candidate) => candidate.pageNumber),
+      [7],
+    );
+    const assignments = deriveRoleAssignmentsFromPageClassification({
+      pages: [page],
+      intent: "wall-framing",
+    });
+    assert.ok(assignments);
+    assert.deepEqual(
+      assignments.map((assignment) => [assignment.pageNumber, assignment.role]),
+      [[7, "primary"]],
+    );
+    const routing = planIntentExtractionRouting({
+      pages: [page],
+      intent: "wall-framing",
+    });
+    assert.deepEqual(routing.primaryPageNumbers, [7]);
+    assert.equal(routing.ambiguousPageNumbers.includes(7), false);
+  });
+
+  it("does not exclude a low-confidence notes/schedule page from support", () => {
+    const pages = [
+      classified({
+        pageNumber: 1,
+        pageKind: "plan",
+        pageType: "plan",
+        scopeHints: ["wall", "framing"],
+        contentRoles: ["plan-layout"],
+        relevantToFraming: true,
+        confidenceLabel: "high",
+      }),
+      classified({
+        pageNumber: 2,
+        pageKind: "notes",
+        pageType: "notes",
+        scopeHints: ["general"],
+        contentRoles: ["notes"],
+        relevantToFraming: true,
+        confidenceLabel: "low",
+      }),
+      classified({
+        pageNumber: 3,
+        pageKind: "schedule",
+        pageType: "schedule",
+        scopeHints: ["wall", "framing"],
+        contentRoles: ["schedule"],
+        relevantToFraming: true,
+        confidenceLabel: "low",
+      }),
+    ];
+    const assignments = deriveRoleAssignmentsFromPageClassification({
+      pages,
+      intent: "wall-framing",
+    });
+    assert.ok(assignments);
+    assert.deepEqual(
+      assignments.map((assignment) => [assignment.pageNumber, assignment.role]),
+      [
+        [1, "primary"],
+        [3, "supporting"],
+        [2, "global"],
+      ],
+    );
+    const routing = planIntentExtractionRouting({
+      pages,
+      intent: "wall-framing",
+    });
+    assert.equal(routing.ambiguousPageNumbers.includes(2), false);
+    assert.equal(routing.ambiguousPageNumbers.includes(3), false);
   });
 });
 

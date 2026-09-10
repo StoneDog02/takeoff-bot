@@ -36,7 +36,11 @@ export const sheathingPanelSpecificationSchema = z.object({
 export const sheathingSystemSchema = resolvedObjectBaseSchema.extend({
   objectType: z.literal("sheathing-system"),
   name: z.string().trim().min(1),
-  level: z.string().trim().min(1),
+  /**
+   * Building level is a construction fact. It stays null until Evidence
+   * can resolve it. Do not store the string "Unresolved".
+   */
+  level: z.string().trim().min(1).nullable().default(null),
   application: sheathingApplicationSchema,
   constructionPhase: sheathingConstructionPhaseSchema,
   panelSpecification: sheathingPanelSpecificationSchema,

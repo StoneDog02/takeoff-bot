@@ -188,6 +188,13 @@ export const ASSUMPTION_RULE_IDS = {
   targetConflict: "assumption.target.conflict",
 } as const;
 
+export const HONESTY_RULE_IDS = {
+  jackStudCountUnresolved: "opening.jackStudCount.unresolved",
+  floorSystemLevelUnresolved: "floor-framing-system.level.unresolved",
+  roofSystemLevelUnresolved: "roof-framing-system.level.unresolved",
+  sheathingSystemLevelUnresolved: "sheathing-system.level.unresolved",
+} as const;
+
 export type AssumptionRuleId =
   (typeof ASSUMPTION_RULE_IDS)[keyof typeof ASSUMPTION_RULE_IDS];
 

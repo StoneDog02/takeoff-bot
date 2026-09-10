@@ -38,6 +38,7 @@ export function isDrawingCompilerEnabled(): boolean {
 /**
  * Select plan pages for Drawing Compiler execution (wall-framing intent).
  * Uses pipeline ClassifiedPlanPage routing — not compiler page-role.
+ * confidenceLabel is telemetry only; it does not skip compile candidates.
  */
 export function selectPagesForDrawingCompiler(input: {
   classifiedPages: readonly ClassifiedPlanPage[];
@@ -112,10 +113,6 @@ export function shouldCompilePage(
     hintsOverlap(page.scopeHints, WALL_FRAMING_SCOPE_HINTS)
   ) {
     return true;
-  }
-
-  if (page.confidenceLabel === "low") {
-    return false;
   }
 
   if (!page.relevantToFraming && !emptyIndexText) {
