@@ -422,7 +422,11 @@ function deriveWallClassificationForKingStuds(
   };
 }
 
-type KingStudResolutionResult =
+/**
+ * King stud resolution result type.
+ * Exported for testing the forbidden path per S3-DEC-1.
+ */
+export type KingStudResolutionResult =
   | { outcome: "resolved"; count: number; assumption: Assumption | null }
   | { outcome: "forbidden"; unresolved: UnresolvedRecord }
   | { outcome: "insufficient-resolution"; unresolved: UnresolvedRecord }
@@ -434,10 +438,15 @@ type KingStudResolutionResult =
  *
  * Returns the count and optional assumption when eligible, or an unresolved
  * record when the assumption is forbidden or needs more resolution.
+ *
+ * @param classificationOverride - Test seam: override wall classification
+ *   to exercise forbidden/insufficient-resolution paths without inventing
+ *   a tall-wall classifier. Production code passes undefined.
  */
 function resolveKingStudCountPerOccurrence(
   opening: Opening,
   wall: BuildingWall,
+  classificationOverride?: WallClassificationContext,
 ): KingStudResolutionResult {
   if (
     isQuantityInputResolved(
@@ -449,7 +458,8 @@ function resolveKingStudCountPerOccurrence(
     return { outcome: "resolved", count: opening.kingStudCount, assumption: null };
   }
 
-  const wallClassification = deriveWallClassificationForKingStuds(wall);
+  const wallClassification =
+    classificationOverride ?? deriveWallClassificationForKingStuds(wall);
 
   const consulted = consultAssumptionRegistry({
     quantityKey: OPENING_QUANTITY_KEYS.kingStuds,
@@ -487,6 +497,21 @@ function resolveKingStudCountPerOccurrence(
     case "not-registered":
       return { outcome: "not-eligible" };
   }
+}
+
+/**
+ * Test-only export: resolve king stud count with injectable classification.
+ *
+ * Used by S3-DEC-1 calculator-path tests to exercise the forbidden branch
+ * without inventing a tall-wall classifier. Injects `isIdentifiedSpecial=true`
+ * + `structuralJambImplicated=true` to trigger forbidden.
+ */
+export function _testResolveKingStudCount(
+  opening: Opening,
+  wall: BuildingWall,
+  classificationOverride: WallClassificationContext,
+): KingStudResolutionResult {
+  return resolveKingStudCountPerOccurrence(opening, wall, classificationOverride);
 }
 
 function calculateOpeningJackStuds(

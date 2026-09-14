@@ -7,13 +7,17 @@ import {
   WALL_ASSUMPTION_RULE_IDS,
   type AssumptionRegistryContext,
 } from "../../src/framing/assumptions/index.js";
-import { calculateOpeningFraming } from "../../src/framing/calculate/calculateOpeningFraming.js";
+import {
+  calculateOpeningFraming,
+  _testResolveKingStudCount,
+} from "../../src/framing/calculate/calculateOpeningFraming.js";
 import { createMaterialLineItemId } from "../../src/framing/calculate/ids.js";
 import type {
   OpeningsPayload,
   WallFramingPayload,
 } from "../../src/framing/schemas/framing-artifacts.schema.js";
 import type { Opening } from "../../src/framing/schemas/opening.schema.js";
+import type { BuildingWall } from "../../src/framing/schemas/wall.schema.js";
 import {
   HONESTY_RULE_IDS,
   OPENING_QUANTITY_KEYS,
@@ -299,6 +303,53 @@ describe("WALL-ASSUME-005 calculator path (S3-DEC-1)", () => {
       ).length,
       0,
     );
+  });
+
+  /**
+   * Calculator-path test for forbidden branch.
+   *
+   * Since HEAD cannot set isIdentifiedSpecial=true without inventing a classifier,
+   * we inject a forbidden classification via the _testResolveKingStudCount seam.
+   * This proves the calculator path emits Unresolved when assumption is forbidden.
+   */
+  it("forbidden via injected classification → no king count, emits UnresolvedRecord", () => {
+    const opening = buildOpening();
+    const wall = buildWallFraming().walls[0] as BuildingWall;
+
+    const forbiddenClassification = {
+      isIdentifiedSpecial: true,
+      structuralJambImplicated: true,
+    };
+
+    const result = _testResolveKingStudCount(
+      opening,
+      wall,
+      forbiddenClassification,
+    );
+
+    assert.equal(result.outcome, "forbidden", "Resolution outcome is forbidden");
+
+    if (result.outcome === "forbidden") {
+      assert.equal(
+        result.unresolved.reasonCode,
+        HONESTY_RULE_IDS.kingStudCountForbidden,
+        "UnresolvedRecord has king forbidden reasonCode",
+      );
+      assert.equal(
+        result.unresolved.diagnosticFamily,
+        "FORBIDDEN_ASSUMPTION",
+        "UnresolvedRecord has FORBIDDEN_ASSUMPTION diagnostic family",
+      );
+      assert.equal(
+        result.unresolved.propertyPath,
+        "kingStudCount",
+        "UnresolvedRecord targets kingStudCount property",
+      );
+      assert.ok(
+        result.unresolved.explanation.includes("forbidden"),
+        "UnresolvedRecord explanation mentions forbidden",
+      );
+    }
   });
 });
 
