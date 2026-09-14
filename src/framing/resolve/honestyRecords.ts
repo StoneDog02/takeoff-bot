@@ -57,6 +57,28 @@ export function createJackStudCountUnresolved(
   });
 }
 
+/**
+ * King stud count Unresolved when WALL-ASSUME-005 is forbidden.
+ *
+ * Per V1 Spec §21: once a wall is identified as engineered/tall/special
+ * with structural jamb design implicated, WALL-ASSUME-005 is forbidden.
+ * Produces Unresolved when king count is required.
+ */
+export function createKingStudCountForbiddenUnresolved(
+  opening: Opening,
+): UnresolvedRecord {
+  const physicalId = opening.physicalId ?? opening.id;
+  return unresolvedRecordSchema.parse({
+    id: honestyRecordId("UR", physicalId, "kingStudCount", "forbidden"),
+    physicalId,
+    propertyPath: "kingStudCount",
+    reasonCode: HONESTY_RULE_IDS.kingStudCountForbidden,
+    diagnosticFamily: "FORBIDDEN_ASSUMPTION",
+    explanation:
+      "Opening is eligible for king studs but WALL-ASSUME-005 is forbidden; host wall is identified as engineered/tall/special with structural jamb design implicated.",
+  });
+}
+
 function createSystemLevelUnresolved(
   physicalId: ObjectId,
   objectType:
