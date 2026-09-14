@@ -58,6 +58,20 @@ export function createJackStudCountUnresolved(
 }
 
 export function createHeaderDesignUnresolved(
+  opening: Opening,
+): UnresolvedRecord {
+  const physicalId = opening.physicalId ?? opening.id;
+  return unresolvedRecordSchema.parse({
+    id: honestyRecordId("UR", physicalId, "headerDesign"),
+    physicalId,
+    propertyPath: "headerMemberId",
+    reasonCode: HONESTY_RULE_IDS.headerDesignUnresolved,
+    diagnosticFamily: "READ_GAP",
+    explanation:
+      "Opening is eligible for a header but no established header design exists; no header size/plies are invented from opening width.",
+  });
+}
+
 /**
  * King stud count Unresolved when WALL-ASSUME-005 is forbidden.
  *
@@ -70,13 +84,6 @@ export function createKingStudCountForbiddenUnresolved(
 ): UnresolvedRecord {
   const physicalId = opening.physicalId ?? opening.id;
   return unresolvedRecordSchema.parse({
-    id: honestyRecordId("UR", physicalId, "headerDesign"),
-    physicalId,
-    propertyPath: "headerMemberId",
-    reasonCode: HONESTY_RULE_IDS.headerDesignUnresolved,
-    diagnosticFamily: "READ_GAP",
-    explanation:
-      "Opening is eligible for a header but no established header design exists; no header size/plies are invented from opening width.",
     id: honestyRecordId("UR", physicalId, "kingStudCount", "forbidden"),
     physicalId,
     propertyPath: "kingStudCount",

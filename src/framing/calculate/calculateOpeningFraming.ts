@@ -17,6 +17,7 @@ import type { Opening, OpeningCategory } from "../schemas/opening.schema.js";
 import {
   createJackStudCountUnresolved,
   createKingStudCountForbiddenUnresolved,
+  createHeaderDesignUnresolved,
 } from "../resolve/honestyRecords.js";
 import { isWoodStudWallType } from "../resolve/wallFramingPropertyPaths.js";
 import type { UnresolvedRecord } from "../schemas/honesty-records.schema.js";
