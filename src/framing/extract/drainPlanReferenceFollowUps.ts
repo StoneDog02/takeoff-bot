@@ -57,6 +57,14 @@ import {
   type BoundDesignIdentityCollection,
 } from "./boundDesignIdentity.schema.js";
 
+/**
+ * Function signature for evidence extraction. Production uses Claude.
+ * Tests may inject a mock to avoid live API calls.
+ */
+export type ExtractEvidenceFn = (
+  input: ExtractFramingEvidenceInput,
+) => Promise<ExtractedFramingEvidencePayload>;
+
 export interface DrainPlanReferenceFollowUpsInput {
   planIndex: PlanIndex;
   pages: readonly ClassifiedPlanPage[];
@@ -79,6 +87,11 @@ export interface DrainPlanReferenceFollowUpsInput {
   tileOverlapFraction?: ExtractFramingEvidenceInput["tileOverlapFraction"];
   onApiCall?: ExtractFramingEvidenceInput["onApiCall"];
   onUsage?: ExtractFramingEvidenceInput["onUsage"];
+  /**
+   * Test seam. Production uses Claude. Must invoke onApiCall when provided
+   * so ledger / apiCallCount stay accurate.
+   */
+  extractEvidence?: ExtractEvidenceFn;
 }
 
 export interface DrainPlanReferenceFollowUpsResult {
@@ -555,6 +568,8 @@ export async function drainPlanReferenceFollowUps(
     spend.imagesSent += bundle.imageBudget.estimatedImages;
     apiCallCount += 1;
 
+    const extractEvidence = input.extractEvidence ?? extractFramingEvidenceViaClaude;
+
     try {
       const extractionProjectContext = buildExtractionProjectContext({
         intent: bundle.intent,
@@ -563,7 +578,7 @@ export async function drainPlanReferenceFollowUps(
         compiledPages: input.compiledPages ?? [],
         buildingAssemblies: input.buildingAssemblies,
       });
-      const passResult = await extractFramingEvidenceViaClaude({
+      const passResult = await extractEvidence({
         planIndex: input.planIndex,
         pageClassification: input.pageClassification,
         planReadingOrder: input.planReadingOrder,
