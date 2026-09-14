@@ -2,7 +2,6 @@ import { z } from "zod";
 
 import type { PropertyResolutionTrace } from "../../core/schemas/resolved-object.schema.js";
 import type { FramingConstruction } from "../schemas/framingConstruction.schema.js";
-import { isQuantityInputResolved } from "../calculate/isQuantityInputResolved.js";
 import {
   requiredFieldsForIntents,
   type CalculatorRequiredField,
@@ -12,9 +11,23 @@ import {
   layoutTextIndicatesExplicitConcreteSlab,
 } from "../resolve/floorAreaMaterialCompatibility.js";
 
+/**
+ * Resolution methods that represent project-source-backed values.
+ * Per V1 spec §13.5: ReadComplete established status requires value backed by
+ * project sources, not by assumptions or approved-defaults.
+ */
+const PROJECT_SOURCE_BACKED_METHODS: readonly string[] = [
+  "explicit-project-value",
+  "deterministic-calculation",
+  "supported-inference",
+  "identity-binding-merge",
+  "user-override",
+];
+
 export const readCompleteFieldStatusSchema = z.enum([
   "established",
   "unresolved-after-read",
+  "unattempted",
   "not-applicable",
 ]);
 
@@ -22,11 +35,21 @@ export type ReadCompleteFieldStatus = z.infer<
   typeof readCompleteFieldStatusSchema
 >;
 
+export const attemptedPathSchema = z.object({
+  pathKind: z.string().trim().min(1),
+  wasAttempted: z.boolean(),
+});
+
+export type AttemptedPath = z.infer<typeof attemptedPathSchema>;
+
 export const readCompleteFieldSchema = z.object({
   propertyPath: z.string().trim().min(1),
   label: z.string().trim().min(1),
   status: readCompleteFieldStatusSchema,
+  attemptedPaths: z.array(attemptedPathSchema).default([]),
 });
+
+export type ReadCompleteField = z.infer<typeof readCompleteFieldSchema>;
 
 export const readCompleteConditionSchema = z.object({
   conditionId: z.string().trim().min(1),
@@ -42,15 +65,99 @@ export const readCompleteReportSchema = z.object({
 
 export type ReadCompleteReport = z.infer<typeof readCompleteReportSchema>;
 
+/**
+ * Determines whether a trace represents a project-source-backed value.
+ * Assumptions and approved-defaults do not count as source exhaustion.
+ *
+ * Per S2-RC-1 contract: A value with assumptionIds is NOT project-source-backed
+ * even if the method is otherwise source-backed.
+ */
+function isProjectSourceBacked(trace: PropertyResolutionTrace): boolean {
+  if ((trace.assumptionIds?.length ?? 0) > 0) {
+    return false;
+  }
+  return PROJECT_SOURCE_BACKED_METHODS.includes(trace.method);
+}
+
+/**
+ * Derives attempted paths from resolution traces.
+ * A path is considered "attempted" if there is a trace for this property,
+ * regardless of method (including unresolved traces indicating attempted extraction).
+ */
+function deriveAttemptedPaths(
+  traces: readonly PropertyResolutionTrace[],
+  propertyPath: string,
+): AttemptedPath[] {
+  const matchingTraces = traces.filter((t) => t.propertyPath === propertyPath);
+  if (matchingTraces.length === 0) {
+    return [];
+  }
+  const pathKinds = new Set<string>();
+  for (const trace of matchingTraces) {
+    pathKinds.add(trace.method);
+  }
+  return Array.from(pathKinds).map((pathKind) => ({
+    pathKind,
+    wasAttempted: true,
+  }));
+}
+
+/**
+ * Determines field status per S2-RC-1 contract:
+ * - established: value present AND backed by project-source (not assumption/approved-default)
+ * - unresolved-after-read: value missing but paths were attempted
+ * - unattempted: required field with no attempted paths
+ *
+ * Assumptions do not count as source exhaustion per V1 spec §13.5.
+ */
 function fieldStatus(
   value: unknown,
   traces: readonly PropertyResolutionTrace[],
   propertyPath: string,
-): ReadCompleteFieldStatus {
-  if (isQuantityInputResolved(value, traces, propertyPath)) {
-    return "established";
+): { status: ReadCompleteFieldStatus; attemptedPaths: AttemptedPath[] } {
+  const attemptedPaths = deriveAttemptedPaths(traces, propertyPath);
+  const hasAttemptedPaths = attemptedPaths.length > 0;
+
+  const matchingTrace = traces.find((t) => t.propertyPath === propertyPath);
+
+  if (value !== null && value !== undefined) {
+    if (matchingTrace?.method === "unresolved") {
+      return {
+        status: hasAttemptedPaths ? "unresolved-after-read" : "unattempted",
+        attemptedPaths,
+      };
+    }
+    if (matchingTrace && isProjectSourceBacked(matchingTrace)) {
+      return { status: "established", attemptedPaths };
+    }
+    if (matchingTrace?.method === "approved-default") {
+      return {
+        status: hasAttemptedPaths ? "unresolved-after-read" : "unattempted",
+        attemptedPaths,
+      };
+    }
+    if (
+      matchingTrace &&
+      (matchingTrace.assumptionIds?.length ?? 0) > 0 &&
+      !isProjectSourceBacked(matchingTrace)
+    ) {
+      return {
+        status: hasAttemptedPaths ? "unresolved-after-read" : "unattempted",
+        attemptedPaths,
+      };
+    }
+    if (!matchingTrace) {
+      return { status: "unattempted", attemptedPaths };
+    }
+    // Fail-closed: non-allowlisted method with present value → unresolved-after-read
+    // Never return established for methods not on the project-source allowlist
+    return { status: "unresolved-after-read", attemptedPaths };
   }
-  return "unresolved-after-read";
+
+  if (hasAttemptedPaths) {
+    return { status: "unresolved-after-read", attemptedPaths };
+  }
+  return { status: "unattempted", attemptedPaths };
 }
 
 function fieldsFor(
@@ -60,15 +167,23 @@ function fieldsFor(
     traces: readonly PropertyResolutionTrace[];
     notApplicable?: boolean;
   },
-) {
+): ReadCompleteField[] {
   return specs.map((spec) => {
     const resolved = lookup(spec.propertyPath);
+    if (resolved.notApplicable) {
+      return {
+        propertyPath: spec.propertyPath,
+        label: spec.label,
+        status: "not-applicable" as const,
+        attemptedPaths: [],
+      };
+    }
+    const result = fieldStatus(resolved.value, resolved.traces, spec.propertyPath);
     return {
       propertyPath: spec.propertyPath,
       label: spec.label,
-      status: resolved.notApplicable
-        ? ("not-applicable" as const)
-        : fieldStatus(resolved.value, resolved.traces, spec.propertyPath),
+      status: result.status,
+      attemptedPaths: result.attemptedPaths,
     };
   });
 }

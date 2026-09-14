@@ -15,13 +15,39 @@ function resolvedTrace(propertyPath: string) {
     propertyPath,
     method: "explicit-project-value" as const,
     explanation: "fixture",
-    evidenceIds: [],
-    notes: [],
+    assumptionIds: [],
+  };
+}
+
+function unresolvedTrace(propertyPath: string) {
+  return {
+    propertyPath,
+    method: "unresolved" as const,
+    explanation: "path attempted but value not found",
+    assumptionIds: [],
+  };
+}
+
+function approvedDefaultTrace(propertyPath: string) {
+  return {
+    propertyPath,
+    method: "approved-default" as const,
+    explanation: "governed fallback",
+    assumptionIds: [],
+  };
+}
+
+function assumptionTrace(propertyPath: string, assumptionId: string) {
+  return {
+    propertyPath,
+    method: "supported-inference" as const,
+    explanation: "assumption applied",
+    assumptionIds: [assumptionId],
   };
 }
 
 describe("READ complete checklist", () => {
-  it("marks missing crawl layout length unresolved-after-read", () => {
+  it("marks missing crawl layout length unattempted when no trace exists (S2-RC-1 AC5)", () => {
     const construction: FramingConstruction = {
       ...emptyFramingConstruction(),
       floorFraming: {
@@ -76,7 +102,7 @@ describe("READ complete checklist", () => {
     const layout = crawl.fields.find(
       (field) => field.propertyPath === "joistLayoutLengthFeet",
     );
-    assert.equal(layout?.status, "unresolved-after-read");
+    assert.equal(layout?.status, "unattempted");
     assert.equal(
       report.conditions.some((condition) =>
         /truss package/i.test(condition.name),
@@ -85,7 +111,67 @@ describe("READ complete checklist", () => {
     );
   });
 
-  it("does not mint joistLayoutLengthFeet when crawl type+size+spacing+17' have no layout", () => {
+  it("marks missing crawl layout length unresolved-after-read when path was attempted (S2-RC-1 AC3)", () => {
+    const construction: FramingConstruction = {
+      ...emptyFramingConstruction(),
+      floorFraming: {
+        systems: [
+          {
+            id: "FFS-CRAWL",
+            objectType: "floor-framing-system",
+            resolutionTraces: [
+              resolvedTrace("assembly.joistType"),
+              resolvedTrace("assembly.joistSize"),
+              resolvedTrace("assembly.joistSpacingInches"),
+            ],
+            name: "Crawl floor",
+            level: "Crawl",
+            constructionPhase: "new",
+            assembly: {
+              joistType: "i-joist",
+              joistSize: "TJI 210",
+              joistSpacingInches: 16,
+              rimBoard: null,
+            },
+            areaIds: ["FFA-CRAWL"],
+          },
+        ],
+        areas: [
+          {
+            id: "FFA-CRAWL",
+            objectType: "floor-framing-area",
+            resolutionTraces: [
+              resolvedTrace("joistMemberLengthFeet"),
+              unresolvedTrace("joistLayoutLengthFeet"),
+            ],
+            parentSystemId: "FFS-CRAWL",
+            layout: "crawl",
+            framingDirection: null,
+            spanDirection: "north-south",
+            joistLayoutLengthFeet: null,
+            joistMemberLengthFeet: 17,
+            areaSquareFeet: null,
+            boundingWallIds: [],
+            openingIds: [],
+            structuralMemberIds: [],
+          },
+        ],
+      },
+    };
+
+    const report = buildReadCompleteReport(construction);
+    const crawl = report.conditions.find(
+      (condition) => condition.conditionId === "FFA-CRAWL",
+    );
+    assert.ok(crawl);
+    const layout = crawl.fields.find(
+      (field) => field.propertyPath === "joistLayoutLengthFeet",
+    );
+    assert.equal(layout?.status, "unresolved-after-read");
+    assert.ok(layout?.attemptedPaths.length > 0);
+  });
+
+  it("does not mint joistLayoutLengthFeet when crawl type+size+spacing+17' have no layout (unattempted)", () => {
     function crawlEvidence(
       id: string,
       subjectKind: "floor-framing-system" | "floor-framing-area",
@@ -174,7 +260,197 @@ describe("READ complete checklist", () => {
     assert.equal(
       crawl.fields.find((field) => field.propertyPath === "joistLayoutLengthFeet")
         ?.status,
-      "unresolved-after-read",
+      "unattempted",
+    );
+  });
+
+  it("marks field with approved-default as not established (S2-RC-1 AC4)", () => {
+    const construction: FramingConstruction = {
+      ...emptyFramingConstruction(),
+      walls: {
+        walls: [
+          {
+            id: "W-W-001",
+            objectType: "building-wall",
+            resolutionTraces: [
+              resolvedTrace("assembly.heightFeet"),
+              resolvedTrace("assembly.studSize"),
+              approvedDefaultTrace("assembly.studSpacingInches"),
+              resolvedTrace("assembly.plateCount"),
+            ],
+            name: "W-001",
+            level: "1",
+            wallType: "wood stud wall",
+            semanticTypeKey: null,
+            bindingAuthorityGrade: null,
+            location: "exterior",
+            bearingStatus: "non-bearing",
+            isShearOrBraced: null,
+            fireRating: null,
+            constructionPhase: "new",
+            assembly: {
+              material: null,
+              studSize: "2x4",
+              studSpacingInches: 16,
+              heightFeet: 8,
+              plateCount: 3,
+              sheathing: null,
+            },
+            segmentIds: ["WS-W-001"],
+          },
+        ],
+        segments: [
+          {
+            id: "WS-W-001",
+            objectType: "wall-segment",
+            resolutionTraces: [resolvedTrace("lengthFeet")],
+            parentWallId: "W-W-001",
+            lengthFeet: 20,
+            openingIds: [],
+          },
+        ],
+      },
+    };
+    const report = buildReadCompleteReport(construction);
+    const wall = report.conditions.find((condition) => condition.conditionId === "WS-W-001");
+    assert.ok(wall);
+    const spacingField = wall.fields.find(
+      (field) => field.propertyPath === "assembly.studSpacingInches",
+    );
+    assert.notEqual(spacingField?.status, "established");
+    assert.equal(spacingField?.status, "unresolved-after-read");
+    assert.ok(spacingField?.attemptedPaths.length > 0);
+  });
+
+  it("marks field with only assumption trace as not established (S2-RC-1 AC4)", () => {
+    const construction: FramingConstruction = {
+      ...emptyFramingConstruction(),
+      walls: {
+        walls: [
+          {
+            id: "W-W-002",
+            objectType: "building-wall",
+            resolutionTraces: [
+              resolvedTrace("assembly.heightFeet"),
+              resolvedTrace("assembly.studSize"),
+              resolvedTrace("assembly.studSpacingInches"),
+              {
+                propertyPath: "assembly.plateCount",
+                method: "supported-inference" as const,
+                explanation: "governed assumption applied",
+                assumptionIds: ["WALL-ASSUME-004"],
+              },
+            ],
+            name: "W-002",
+            level: "1",
+            wallType: "wood stud wall",
+            semanticTypeKey: null,
+            bindingAuthorityGrade: null,
+            location: "exterior",
+            bearingStatus: "non-bearing",
+            isShearOrBraced: null,
+            fireRating: null,
+            constructionPhase: "new",
+            assembly: {
+              material: null,
+              studSize: "2x4",
+              studSpacingInches: 16,
+              heightFeet: 8,
+              plateCount: 3,
+              sheathing: null,
+            },
+            segmentIds: ["WS-W-002"],
+          },
+        ],
+        segments: [
+          {
+            id: "WS-W-002",
+            objectType: "wall-segment",
+            resolutionTraces: [resolvedTrace("lengthFeet")],
+            parentWallId: "W-W-002",
+            lengthFeet: 15,
+            openingIds: [],
+          },
+        ],
+      },
+    };
+    const report = buildReadCompleteReport(construction);
+    const wall = report.conditions.find((condition) => condition.conditionId === "WS-W-002");
+    assert.ok(wall);
+    const plateField = wall.fields.find(
+      (field) => field.propertyPath === "assembly.plateCount",
+    );
+    assert.notEqual(plateField?.status, "established");
+    assert.equal(plateField?.status, "unresolved-after-read");
+    assert.ok(plateField?.attemptedPaths.length > 0);
+  });
+
+  it("marks field with non-allowlisted method as unresolved-after-read, not established (fail-closed)", () => {
+    const construction: FramingConstruction = {
+      ...emptyFramingConstruction(),
+      walls: {
+        walls: [
+          {
+            id: "W-W-003",
+            objectType: "building-wall",
+            resolutionTraces: [
+              resolvedTrace("assembly.heightFeet"),
+              resolvedTrace("assembly.studSize"),
+              resolvedTrace("assembly.studSpacingInches"),
+              {
+                propertyPath: "assembly.plateCount",
+                method: "semantic-cluster-pending-physical-link" as const,
+                explanation: "cluster-pending value, not project-source-backed",
+                assumptionIds: [],
+              },
+            ],
+            name: "W-003",
+            level: "1",
+            wallType: "wood stud wall",
+            semanticTypeKey: null,
+            bindingAuthorityGrade: null,
+            location: "exterior",
+            bearingStatus: "non-bearing",
+            isShearOrBraced: null,
+            fireRating: null,
+            constructionPhase: "new",
+            assembly: {
+              material: null,
+              studSize: "2x4",
+              studSpacingInches: 16,
+              heightFeet: 8,
+              plateCount: 3,
+              sheathing: null,
+            },
+            segmentIds: ["WS-W-003"],
+          },
+        ],
+        segments: [
+          {
+            id: "WS-W-003",
+            objectType: "wall-segment",
+            resolutionTraces: [resolvedTrace("lengthFeet")],
+            parentWallId: "W-W-003",
+            lengthFeet: 12,
+            openingIds: [],
+          },
+        ],
+      },
+    };
+    const report = buildReadCompleteReport(construction);
+    const wall = report.conditions.find((condition) => condition.conditionId === "WS-W-003");
+    assert.ok(wall);
+    const plateField = wall.fields.find(
+      (field) => field.propertyPath === "assembly.plateCount",
+    );
+    assert.notEqual(plateField?.status, "established");
+    assert.equal(plateField?.status, "unresolved-after-read");
+    assert.ok(plateField?.attemptedPaths.length > 0);
+    assert.equal(
+      plateField?.attemptedPaths.some(
+        (p) => p.pathKind === "semantic-cluster-pending-physical-link",
+      ),
+      true,
     );
   });
 
