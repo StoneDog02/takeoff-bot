@@ -149,7 +149,9 @@ function fieldStatus(
     if (!matchingTrace) {
       return { status: "unattempted", attemptedPaths };
     }
-    return { status: "established", attemptedPaths };
+    // Fail-closed: non-allowlisted method with present value → unresolved-after-read
+    // Never return established for methods not on the project-source allowlist
+    return { status: "unresolved-after-read", attemptedPaths };
   }
 
   if (hasAttemptedPaths) {

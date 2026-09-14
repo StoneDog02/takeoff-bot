@@ -385,6 +385,75 @@ describe("READ complete checklist", () => {
     assert.ok(plateField?.attemptedPaths.length > 0);
   });
 
+  it("marks field with non-allowlisted method as unresolved-after-read, not established (fail-closed)", () => {
+    const construction: FramingConstruction = {
+      ...emptyFramingConstruction(),
+      walls: {
+        walls: [
+          {
+            id: "W-W-003",
+            objectType: "building-wall",
+            resolutionTraces: [
+              resolvedTrace("assembly.heightFeet"),
+              resolvedTrace("assembly.studSize"),
+              resolvedTrace("assembly.studSpacingInches"),
+              {
+                propertyPath: "assembly.plateCount",
+                method: "semantic-cluster-pending-physical-link" as const,
+                explanation: "cluster-pending value, not project-source-backed",
+                assumptionIds: [],
+              },
+            ],
+            name: "W-003",
+            level: "1",
+            wallType: "wood stud wall",
+            semanticTypeKey: null,
+            bindingAuthorityGrade: null,
+            location: "exterior",
+            bearingStatus: "non-bearing",
+            isShearOrBraced: null,
+            fireRating: null,
+            constructionPhase: "new",
+            assembly: {
+              material: null,
+              studSize: "2x4",
+              studSpacingInches: 16,
+              heightFeet: 8,
+              plateCount: 3,
+              sheathing: null,
+            },
+            segmentIds: ["WS-W-003"],
+          },
+        ],
+        segments: [
+          {
+            id: "WS-W-003",
+            objectType: "wall-segment",
+            resolutionTraces: [resolvedTrace("lengthFeet")],
+            parentWallId: "W-W-003",
+            lengthFeet: 12,
+            openingIds: [],
+          },
+        ],
+      },
+    };
+    const report = buildReadCompleteReport(construction);
+    const wall = report.conditions.find((condition) => condition.conditionId === "WS-W-003");
+    assert.ok(wall);
+    const plateField = wall.fields.find(
+      (field) => field.propertyPath === "assembly.plateCount",
+    );
+    assert.notEqual(plateField?.status, "established");
+    assert.equal(plateField?.status, "unresolved-after-read");
+    assert.ok(plateField?.attemptedPaths.length > 0);
+    assert.equal(
+      plateField?.attemptedPaths.some(
+        (p) => p.pathKind === "semantic-cluster-pending-physical-link",
+      ),
+      true,
+    );
+  });
+
   it("marks joist calculator inputs not-applicable on explicit concrete-slab floor areas", () => {
     const construction: FramingConstruction = {
       ...emptyFramingConstruction(),
