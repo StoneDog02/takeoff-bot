@@ -5,16 +5,28 @@ import type {
 } from "../../core/schemas/identity.schema.js";
 import { OPENING_QUANTITY_KEYS } from "../validators/rule-ids.js";
 
+/**
+ * V1 Spec assumption rule ID for window sill material.
+ * @see docs/product/V1_FRAMING_INTELLIGENCE_SPEC.md §15.5, §19
+ */
+const WALL_ASSUME_006 = "WALL-ASSUME-006";
+
 export function createOpeningRoughSillSizeAssumptionId(
   openingId: ObjectId,
 ): AssumptionId {
-  return `A-opening-roughSillSize-default-object-${openingId}` as AssumptionId;
+  return `A-${WALL_ASSUME_006}-roughSillSize-object-${openingId}` as AssumptionId;
 }
 
 /**
- * Industry-default rough sill size assumption for one window opening.
+ * WALL-ASSUME-006 — Window Sill Material.
  *
- * Created at calculation time when explicit sill size evidence is absent.
+ * Ordinary conventional window framing: sill dimensional size follows
+ * resolved wall stud size.
+ *
+ * Created at calculation time when explicit sill size evidence is absent
+ * and eligibility evaluation returns "eligible".
+ *
+ * @see docs/product/V1_FRAMING_INTELLIGENCE_SPEC.md §15.5, §19
  */
 export function createOpeningRoughSillSizeAssumption(
   openingId: ObjectId,
@@ -31,9 +43,9 @@ export function createOpeningRoughSillSizeAssumption(
     assumedValue: wallStudSize,
     source: {
       type: "construction-brain",
-      reference: "knowledge/framing/13-opening-wall-framing-calculations.md",
+      reference: `${WALL_ASSUME_006}: knowledge/framing/13-opening-wall-framing-calculations.md`,
       explanation:
-        "Industry default rough sill size inherits wall stud size when explicit sill size is absent.",
+        `${WALL_ASSUME_006} — Window Sill Material. Sill dimensional size follows resolved wall stud size for ordinary conventional window framing.`,
     },
     reasonUsed:
       "No explicit rough sill size was resolved for this window opening from project evidence.",
