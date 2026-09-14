@@ -45,6 +45,17 @@ import {
   type PlanReferenceFollowUpAudit,
   type PlanReferenceTrace,
 } from "./planReferenceTrace.schema.js";
+import {
+  boundDesignIdentityCollectionSchema,
+  createBoundDesignIdentity,
+  createDeferredSourceKind,
+  createEstablishedSourceKind,
+  createMissingSourceKind,
+  createUnattemptedSourceKind,
+  createUnresolvedSourceKind,
+  type BoundDesignIdentity,
+  type BoundDesignIdentityCollection,
+} from "./boundDesignIdentity.schema.js";
 
 export interface DrainPlanReferenceFollowUpsInput {
   planIndex: PlanIndex;
@@ -77,6 +88,15 @@ export interface DrainPlanReferenceFollowUpsResult {
   }>;
   trace: PlanReferenceTrace;
   apiCallCount: number;
+  /**
+   * S2-XB-1: Bound design identities tracked during reference drain.
+   * Per V1 spec §13.4 + locked amendment: binds plan mark, schedule/dictionary
+   * definition, and detail/section to one project design identity. Partial
+   * bindings (some source kinds missing/deferred/unattempted) remain inspectable
+   * with explicit missing paths. Dictionary is context, not hop completion.
+   * Budget exhaustion is not ReadComplete established.
+   */
+  boundDesignIdentities: BoundDesignIdentityCollection;
 }
 
 function collectDomainsFromEvidence(
@@ -214,11 +234,31 @@ export async function drainPlanReferenceFollowUps(
 
   const processedNavigationKeys = new Set<string>();
 
+  // S2-XB-1: Track bound design identities during reference drain.
+  // Per V1 spec §13.4 + locked amendment: binds plan mark, schedule/dictionary
+  // definition, and detail/section to one project design identity.
+  const boundIdentities: BoundDesignIdentity[] = [];
+  let dictionaryHitsWithContinuedHops = 0;
+  let budgetDeferredReferences = 0;
+
   while (true) {
     const nextItem = selectNextReadyQueueItem(queue);
     if (!nextItem) {
       break;
     }
+
+    // S2-XB-1: Check dictionary for definition context BEFORE budget check.
+    // Dictionary is context, not hop completion. A dictionary hit does NOT
+    // skip required plan/detail hops.
+    const dictionaryHit = lookupProjectDictionaryDefinitionFromTexts(
+      input.projectDictionary ?? null,
+      [
+        nextItem.detailNumber ?? "",
+        nextItem.originatingObservations[0]?.originatingSubjectKey ?? "",
+        nextItem.originatingObservations[0]?.originalText ?? "",
+      ],
+    );
+    // Note: dictionaryHit is used as context below, NOT as hop completion
 
     const blockReason =
       referenceBudgetBlockReason(
@@ -235,25 +275,47 @@ export async function drainPlanReferenceFollowUps(
       });
       referencesSkipped += 1;
       skippedReasons.push(`${nextItem.navigationKey}: ${blockReason}`);
+      budgetDeferredReferences += 1;
+
+      // S2-XB-1: Create partial bound design identity for budget-deferred reference.
+      // Budget exhaustion is NOT ReadComplete established. The detail path is
+      // explicitly deferred, not silently complete.
+      const subjectKey =
+        nextItem.originatingObservations[0]?.originatingSubjectKey ?? nextItem.navigationKey;
+      const subjectKind =
+        nextItem.originatingObservations[0]?.originatingSubjectKind ?? "unknown";
+
+      boundIdentities.push(
+        createBoundDesignIdentity({
+          subjectKey,
+          subjectKind,
+          planMark: createEstablishedSourceKind({
+            reason: "Plan mark from originating evidence.",
+            sourcePageNumber: nextItem.originatingObservations[0]?.sourcePageNumber,
+            sourceSheetId: nextItem.targetSheetId ?? undefined,
+          }),
+          definition: dictionaryHit
+            ? createEstablishedSourceKind({
+                reason: `Dictionary definition found (${dictionaryHit.semanticTypeKey}).`,
+                semanticTypeKey: dictionaryHit.semanticTypeKey,
+                sourcePageNumber: dictionaryHit.sourcePage,
+              })
+            : createUnattemptedSourceKind(
+                "No dictionary definition found; schedule lookup unattempted.",
+              ),
+          detail: createDeferredSourceKind(
+            `Detail hop deferred: ${blockReason}`,
+            nextItem.id,
+          ),
+        }),
+      );
       continue;
     }
 
-    const dictionaryHit = lookupProjectDictionaryDefinitionFromTexts(
-      input.projectDictionary ?? null,
-      [
-        nextItem.detailNumber ?? "",
-        nextItem.originatingObservations[0]?.originatingSubjectKey ?? "",
-        nextItem.originatingObservations[0]?.originalText ?? "",
-      ],
-    );
+    // S2-XB-1: Dictionary hit is context, NOT hop completion.
+    // We continue to process the plan/detail hop even if dictionary hit exists.
     if (dictionaryHit) {
-      queue = markQueueItemStatus(queue, nextItem.id, {
-        queueStatus: "processed",
-        statusReason: `Resolved from Plan Dictionary lookup (${dictionaryHit.semanticTypeKey}); skipped Claude follow-up.`,
-      });
-      referencesFollowed += 1;
-      processedNavigationKeys.add(nextItem.navigationKey);
-      continue;
+      dictionaryHitsWithContinuedHops += 1;
     }
 
     let bundle: ExtractionPageBundle | null = null;
@@ -337,6 +399,38 @@ export async function drainPlanReferenceFollowUps(
               referencesSkipped += 1;
               skippedReasons.push(`${nextItem.navigationKey}: ${message}`);
               processedNavigationKeys.add(nextItem.navigationKey);
+
+              // S2-XB-1: Create partial bound design identity for localization failure.
+              const subjectKey =
+                nextItem.originatingObservations[0]?.originatingSubjectKey ?? nextItem.navigationKey;
+              const subjectKind =
+                nextItem.originatingObservations[0]?.originatingSubjectKind ?? "unknown";
+
+              boundIdentities.push(
+                createBoundDesignIdentity({
+                  subjectKey,
+                  subjectKind,
+                  planMark: createEstablishedSourceKind({
+                    reason: "Plan mark from originating evidence.",
+                    sourcePageNumber: nextItem.originatingObservations[0]?.sourcePageNumber,
+                    sourceSheetId: nextItem.targetSheetId ?? undefined,
+                  }),
+                  definition: dictionaryHit
+                    ? createEstablishedSourceKind({
+                        reason: `Dictionary definition found (${dictionaryHit.semanticTypeKey}).`,
+                        semanticTypeKey: dictionaryHit.semanticTypeKey,
+                        sourcePageNumber: dictionaryHit.sourcePage,
+                      })
+                    : createMissingSourceKind(
+                        "No dictionary definition found for this mark.",
+                        nextItem.id,
+                      ),
+                  detail: createUnresolvedSourceKind(
+                    `Detail localization failed: ${message}`,
+                    nextItem.id,
+                  ),
+                }),
+              );
               continue;
             }
           } else {
@@ -371,6 +465,38 @@ export async function drainPlanReferenceFollowUps(
       skippedReasons.push(
         `${nextItem.navigationKey}: Could not build referenced extraction bundle.`,
       );
+
+      // S2-XB-1: Create partial bound design identity for failed bundle creation.
+      const subjectKey =
+        nextItem.originatingObservations[0]?.originatingSubjectKey ?? nextItem.navigationKey;
+      const subjectKind =
+        nextItem.originatingObservations[0]?.originatingSubjectKind ?? "unknown";
+
+      boundIdentities.push(
+        createBoundDesignIdentity({
+          subjectKey,
+          subjectKind,
+          planMark: createEstablishedSourceKind({
+            reason: "Plan mark from originating evidence.",
+            sourcePageNumber: nextItem.originatingObservations[0]?.sourcePageNumber,
+            sourceSheetId: nextItem.targetSheetId ?? undefined,
+          }),
+          definition: dictionaryHit
+            ? createEstablishedSourceKind({
+                reason: `Dictionary definition found (${dictionaryHit.semanticTypeKey}).`,
+                semanticTypeKey: dictionaryHit.semanticTypeKey,
+                sourcePageNumber: dictionaryHit.sourcePage,
+              })
+            : createMissingSourceKind(
+                "No dictionary definition found for this mark.",
+                nextItem.id,
+              ),
+          detail: createUnresolvedSourceKind(
+            "Could not build referenced extraction bundle.",
+            nextItem.id,
+          ),
+        }),
+      );
       continue;
     }
 
@@ -387,6 +513,39 @@ export async function drainPlanReferenceFollowUps(
       });
       referencesSkipped += 1;
       skippedReasons.push(`${nextItem.navigationKey}: ${imageBlock}`);
+      budgetDeferredReferences += 1;
+
+      // S2-XB-1: Create partial bound design identity for image budget-deferred.
+      const subjectKey =
+        nextItem.originatingObservations[0]?.originatingSubjectKey ?? nextItem.navigationKey;
+      const subjectKind =
+        nextItem.originatingObservations[0]?.originatingSubjectKind ?? "unknown";
+
+      boundIdentities.push(
+        createBoundDesignIdentity({
+          subjectKey,
+          subjectKind,
+          planMark: createEstablishedSourceKind({
+            reason: "Plan mark from originating evidence.",
+            sourcePageNumber: nextItem.originatingObservations[0]?.sourcePageNumber,
+            sourceSheetId: nextItem.targetSheetId ?? undefined,
+          }),
+          definition: dictionaryHit
+            ? createEstablishedSourceKind({
+                reason: `Dictionary definition found (${dictionaryHit.semanticTypeKey}).`,
+                semanticTypeKey: dictionaryHit.semanticTypeKey,
+                sourcePageNumber: dictionaryHit.sourcePage,
+              })
+            : createMissingSourceKind(
+                "No dictionary definition found for this mark.",
+                nextItem.id,
+              ),
+          detail: createDeferredSourceKind(
+            `Detail hop deferred: ${imageBlock}`,
+            nextItem.id,
+          ),
+        }),
+      );
       continue;
     }
 
@@ -438,6 +597,50 @@ export async function drainPlanReferenceFollowUps(
       referencesFollowed += 1;
       processedNavigationKeys.add(nextItem.navigationKey);
 
+      // S2-XB-1: Create bound design identity for successfully processed reference.
+      // Complete-case: plan mark + schedule/dictionary def + detail inspectable
+      // as one bound design. Partial-case: subset bound with explicit missing path.
+      const subjectKey =
+        nextItem.originatingObservations[0]?.originatingSubjectKey ?? nextItem.navigationKey;
+      const subjectKind =
+        nextItem.originatingObservations[0]?.originatingSubjectKind ?? "unknown";
+      const hasDetailNumber = nextItem.detailNumber !== null;
+
+      boundIdentities.push(
+        createBoundDesignIdentity({
+          subjectKey,
+          subjectKind,
+          planMark: createEstablishedSourceKind({
+            reason: "Plan mark from originating evidence.",
+            sourcePageNumber: nextItem.originatingObservations[0]?.sourcePageNumber,
+            sourceSheetId: nextItem.targetSheetId ?? undefined,
+          }),
+          definition: dictionaryHit
+            ? createEstablishedSourceKind({
+                reason: `Dictionary definition found (${dictionaryHit.semanticTypeKey}).`,
+                semanticTypeKey: dictionaryHit.semanticTypeKey,
+                sourcePageNumber: dictionaryHit.sourcePage,
+              })
+            : createMissingSourceKind(
+                "No dictionary definition found for this mark.",
+                nextItem.id,
+              ),
+          detail: hasDetailNumber
+            ? createEstablishedSourceKind({
+                reason: `Detail extracted from ${nextItem.detailNumber} on sheet ${nextItem.targetSheetId}.`,
+                queueItemId: nextItem.id,
+                sourcePageNumber: nextItem.targetPageNumber ?? undefined,
+                sourceSheetId: nextItem.targetSheetId ?? undefined,
+                detailNumber: nextItem.detailNumber ?? undefined,
+                extractionPassId,
+              })
+            : createMissingSourceKind(
+                "Reference was sheet-only, no detail number specified.",
+                nextItem.id,
+              ),
+        }),
+      );
+
       const followUpInventory = inventoryPlanReferencesFromEvidence({
         evidence: passResult.evidence,
         planIndex: input.planIndex,
@@ -460,6 +663,39 @@ export async function drainPlanReferenceFollowUps(
       });
       referencesSkipped += 1;
       skippedReasons.push(`${nextItem.navigationKey}: ${message}`);
+
+      // S2-XB-1: Create partial bound design identity for failed extraction.
+      // Detail path is unresolved, not silently complete.
+      const subjectKey =
+        nextItem.originatingObservations[0]?.originatingSubjectKey ?? nextItem.navigationKey;
+      const subjectKind =
+        nextItem.originatingObservations[0]?.originatingSubjectKind ?? "unknown";
+
+      boundIdentities.push(
+        createBoundDesignIdentity({
+          subjectKey,
+          subjectKind,
+          planMark: createEstablishedSourceKind({
+            reason: "Plan mark from originating evidence.",
+            sourcePageNumber: nextItem.originatingObservations[0]?.sourcePageNumber,
+            sourceSheetId: nextItem.targetSheetId ?? undefined,
+          }),
+          definition: dictionaryHit
+            ? createEstablishedSourceKind({
+                reason: `Dictionary definition found (${dictionaryHit.semanticTypeKey}).`,
+                semanticTypeKey: dictionaryHit.semanticTypeKey,
+                sourcePageNumber: dictionaryHit.sourcePage,
+              })
+            : createMissingSourceKind(
+                "No dictionary definition found for this mark.",
+                nextItem.id,
+              ),
+          detail: createUnresolvedSourceKind(
+            `Detail extraction failed: ${message}`,
+            nextItem.id,
+          ),
+        }),
+      );
     }
 
     if (processedNavigationKeys.size >= queue.budget.maxReferenceHops) {
@@ -489,5 +725,18 @@ export async function drainPlanReferenceFollowUps(
     followUp,
   });
 
-  return { passes, trace, apiCallCount };
+  // S2-XB-1: Build bound design identity collection with audit summary.
+  const boundDesignIdentities: BoundDesignIdentityCollection =
+    boundDesignIdentityCollectionSchema.parse({
+      identities: boundIdentities,
+      audit: {
+        totalIdentities: boundIdentities.length,
+        completeIdentities: boundIdentities.filter((id) => id.isComplete).length,
+        partialIdentities: boundIdentities.filter((id) => !id.isComplete).length,
+        dictionaryHitsWithContinuedHops,
+        budgetDeferredReferences,
+      },
+    });
+
+  return { passes, trace, apiCallCount, boundDesignIdentities };
 }
