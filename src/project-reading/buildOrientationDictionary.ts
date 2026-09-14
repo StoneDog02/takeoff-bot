@@ -68,7 +68,7 @@ export async function buildOrientationDictionary(
 ): Promise<BuildOrientationDictionaryResult> {
   const t0 = performance.now();
   const schedulePage = input.schedulePageNumber ?? 1;
-  const planPage = input.planPageNumber ?? 4;
+  const planPage = input.planPageNumber ?? 1;
 
   await input.facade.precompilePages([planPage]);
 
@@ -201,11 +201,11 @@ export async function buildOrientationDictionary(
 
   const unresolved: ProjectDictionary["unresolved"] = [
     {
-      id: "unresolved-sw-subtype-p4",
+      id: `unresolved-sw-subtype-p${planPage}`,
       question:
-        "Which physical runs on p4 (if any) bind to specific SW schedule subtypes (SW1–SW5)?",
+        `Which physical runs on p${planPage} (if any) bind to specific SW schedule subtypes (SW1–SW5)?`,
       reason:
-        "Graphic convention and keyed notes establish shear-wall class and schedule definitions; per-wall SW* tags are not recoverable on Beckstead p4.",
+        `Graphic convention and keyed notes establish shear-wall class and schedule definitions; per-wall SW* tags are not recoverable on plan page ${planPage}.`,
     },
   ];
 
@@ -216,7 +216,7 @@ export async function buildOrientationDictionary(
     experimentBranch: "compiler_heavy",
     observations: [
       {
-        id: "obs-heavy-lines-p4",
+        id: `obs-heavy-lines-p${planPage}`,
         claim: `${lineAudit.heavyLineNearRunCount} heavy-linework segments coincide with PBG runs on page ${planPage}.`,
         provenance: [
           {

@@ -369,6 +369,12 @@ export async function readFramingPlans(
         page.pageKind === "schedule" || page.contentRoles.includes("schedule"),
     )?.pageNumber;
 
+    const planPageFromClassification = pageClassification.pages.find(
+      (page) =>
+        page.pageKind === "framing-plan" ||
+        (page.pageKind === "plan" && page.relevantToFraming),
+    )?.pageNumber;
+
     if (runCompiler && isProjectOrientationEnabled()) {
       const facade = await CompilerInvestigationFacade.create(
         input.planIndex.pdfPath,
@@ -378,6 +384,7 @@ export async function readFramingPlans(
         pdfPath: input.planIndex.pdfPath,
         facade,
         schedulePageNumber: schedulePageFromClassification,
+        planPageNumber: planPageFromClassification,
       });
       const dictionaryWithLearning: ProjectDictionary = {
         ...built.dictionary,
