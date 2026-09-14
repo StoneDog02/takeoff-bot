@@ -14,6 +14,7 @@ import {
 export const honestyDiagnosticFamilySchema = z.enum([
   "READ_GAP",
   "CALCULATOR_GAP",
+  "FORBIDDEN_ASSUMPTION",
 ]);
 
 /**

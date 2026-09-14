@@ -1,6 +1,9 @@
 import type { Assumption } from "../../core/schemas/assumption.schema.js";
 import type { ObjectId } from "../../core/schemas/identity.schema.js";
-import { consultAssumptionRegistry } from "../assumptions/assumptionRegistry.js";
+import {
+  consultAssumptionRegistry,
+  type WallClassificationContext,
+} from "../assumptions/assumptionRegistry.js";
 import type {
   OpeningsPayload,
   WallFramingPayload,
@@ -13,7 +16,7 @@ import type { BuildingWall, WallSegment } from "../schemas/wall.schema.js";
 import type { Opening, OpeningCategory } from "../schemas/opening.schema.js";
 import {
   createJackStudCountUnresolved,
-  createHeaderDesignUnresolved,
+  createKingStudCountForbiddenUnresolved,
 } from "../resolve/honestyRecords.js";
 import { isWoodStudWallType } from "../resolve/wallFramingPropertyPaths.js";
 import type { UnresolvedRecord } from "../schemas/honesty-records.schema.js";
@@ -399,9 +402,52 @@ function isOpeningEligibleForJackStuds(
   return isOpeningEligibleForWallFraming(opening, wall, segment);
 }
 
+/**
+ * Derive wall classification for WALL-ASSUME-005 eligibility from existing
+ * wall object identification only.
+ *
+ * Per S3-DEC-1: If HEAD has no explicit identification field/flag for
+ * engineered/tall/special, `isIdentifiedSpecial` is false. Do not parse
+ * height, invent wallType token matching, or create a tall-wall classifier.
+ *
+ * The king stud consult is for jamb/full-height support, so
+ * `structuralJambImplicated` is always true for this path.
+ */
+function deriveWallClassificationForKingStuds(
+  _wall: BuildingWall,
+): WallClassificationContext {
+  return {
+    isIdentifiedSpecial: false,
+    structuralJambImplicated: true,
+  };
+}
+
+/**
+ * King stud resolution result type.
+ * Exported for testing the forbidden path per S3-DEC-1.
+ */
+export type KingStudResolutionResult =
+  | { outcome: "resolved"; count: number; assumption: Assumption | null }
+  | { outcome: "forbidden"; unresolved: UnresolvedRecord }
+  | { outcome: "insufficient-resolution"; unresolved: UnresolvedRecord }
+  | { outcome: "not-eligible" };
+
+/**
+ * Resolve king stud count per occurrence, consulting WALL-ASSUME-005 when
+ * explicit count is absent.
+ *
+ * Returns the count and optional assumption when eligible, or an unresolved
+ * record when the assumption is forbidden or needs more resolution.
+ *
+ * @param classificationOverride - Test seam: override wall classification
+ *   to exercise forbidden/insufficient-resolution paths without inventing
+ *   a tall-wall classifier. Production code passes undefined.
+ */
 function resolveKingStudCountPerOccurrence(
   opening: Opening,
-): { count: number; assumption: Assumption | null } | null {
+  wall: BuildingWall,
+  classificationOverride?: WallClassificationContext,
+): KingStudResolutionResult {
   if (
     isQuantityInputResolved(
       opening.kingStudCount,
@@ -409,24 +455,63 @@ function resolveKingStudCountPerOccurrence(
       KING_STUD_COUNT_PROPERTY_PATH,
     )
   ) {
-    return { count: opening.kingStudCount, assumption: null };
+    return { outcome: "resolved", count: opening.kingStudCount, assumption: null };
   }
+
+  const wallClassification =
+    classificationOverride ?? deriveWallClassificationForKingStuds(wall);
 
   const consulted = consultAssumptionRegistry({
     quantityKey: OPENING_QUANTITY_KEYS.kingStuds,
     propertyPath: KING_STUD_COUNT_PROPERTY_PATH,
-    context: { objectId: opening.id },
+    context: {
+      objectId: opening.id,
+      wallClassification,
+    },
   });
-  if (consulted.outcome !== "assumed") {
-    return null;
+
+  switch (consulted.outcome) {
+    case "assumed":
+      if (typeof consulted.assumedValue !== "number") {
+        return { outcome: "not-eligible" };
+      }
+      return {
+        outcome: "resolved",
+        count: consulted.assumedValue,
+        assumption: consulted.assumption,
+      };
+
+    case "forbidden":
+      return {
+        outcome: "forbidden",
+        unresolved: createKingStudCountForbiddenUnresolved(opening),
+      };
+
+    case "insufficient-resolution":
+      return {
+        outcome: "insufficient-resolution",
+        unresolved: createKingStudCountForbiddenUnresolved(opening),
+      };
+
+    case "not-eligible":
+    case "not-registered":
+      return { outcome: "not-eligible" };
   }
-  if (typeof consulted.assumedValue !== "number") {
-    return null;
-  }
-  return {
-    count: consulted.assumedValue,
-    assumption: consulted.assumption,
-  };
+}
+
+/**
+ * Test-only export: resolve king stud count with injectable classification.
+ *
+ * Used by S3-DEC-1 calculator-path tests to exercise the forbidden branch
+ * without inventing a tall-wall classifier. Injects `isIdentifiedSpecial=true`
+ * + `structuralJambImplicated=true` to trigger forbidden.
+ */
+export function _testResolveKingStudCount(
+  opening: Opening,
+  wall: BuildingWall,
+  classificationOverride: WallClassificationContext,
+): KingStudResolutionResult {
+  return resolveKingStudCountPerOccurrence(opening, wall, classificationOverride);
 }
 
 function calculateOpeningJackStuds(
@@ -543,25 +628,34 @@ function calculateOpeningKingStuds(
     return { materials: [], assumptions: [], unresolved: [] };
   }
 
-  const kingStudCount = resolveKingStudCountPerOccurrence(opening);
-  if (!kingStudCount) {
+  const resolution = resolveKingStudCountPerOccurrence(opening, wall);
+
+  if (resolution.outcome === "forbidden" || resolution.outcome === "insufficient-resolution") {
+    return {
+      materials: [],
+      assumptions: [],
+      unresolved: [resolution.unresolved],
+    };
+  }
+
+  if (resolution.outcome === "not-eligible") {
     return { materials: [], assumptions: [], unresolved: [] };
   }
 
-  const quantity = kingStudCount.count * opening.quantity;
+  const quantity = resolution.count * opening.quantity;
   const usedPropertyPaths = [
     QUANTITY_PROPERTY_PATH,
     STUD_SIZE_PROPERTY_PATH,
   ];
 
-  if (kingStudCount.assumption === null) {
+  if (resolution.assumption === null) {
     usedPropertyPaths.push(KING_STUD_COUNT_PROPERTY_PATH);
   }
 
   const provenance = collectLineItemProvenance(contributingObjects, usedPropertyPaths);
   const assumptionIds = [
     ...provenance.assumptionIds,
-    ...(kingStudCount.assumption ? [kingStudCount.assumption.id] : []),
+    ...(resolution.assumption ? [resolution.assumption.id] : []),
   ];
 
   const lineItem = emitLineItem({
@@ -584,7 +678,7 @@ function calculateOpeningKingStuds(
 
   return {
     materials: [lineItem],
-    assumptions: kingStudCount.assumption ? [kingStudCount.assumption] : [],
+    assumptions: resolution.assumption ? [resolution.assumption] : [],
     unresolved: [],
   };
 }

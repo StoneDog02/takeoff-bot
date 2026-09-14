@@ -191,6 +191,7 @@ export const ASSUMPTION_RULE_IDS = {
 export const HONESTY_RULE_IDS = {
   jackStudCountUnresolved: "opening.jackStudCount.unresolved",
   headerDesignUnresolved: "opening.headerDesign.unresolved",
+  kingStudCountForbidden: "opening.kingStudCount.forbidden",
   floorSystemLevelUnresolved: "floor-framing-system.level.unresolved",
   roofSystemLevelUnresolved: "roof-framing-system.level.unresolved",
   sheathingSystemLevelUnresolved: "sheathing-system.level.unresolved",
