@@ -62,15 +62,21 @@ function mapDefinitionsToDictionary(
 
 /**
  * P2 orientation: L.6 schedule extraction + keyed-note probe + graphic-rule hypotheses.
+ *
+ * Plan page is optional. When classification does not identify a plan page,
+ * skip plan-page precompile and line-style observations rather than inventing
+ * a default page number.
  */
 export async function buildOrientationDictionary(
   input: BuildOrientationDictionaryInput,
 ): Promise<BuildOrientationDictionaryResult> {
   const t0 = performance.now();
   const schedulePage = input.schedulePageNumber ?? 1;
-  const planPage = input.planPageNumber ?? 1;
+  const planPage = input.planPageNumber;
 
-  await input.facade.precompilePages([planPage]);
+  if (planPage != null) {
+    await input.facade.precompilePages([planPage]);
+  }
 
   const rowBand = await extractScheduleFromRowBands({
     pdfPath: input.pdfPath,
@@ -116,17 +122,22 @@ export async function buildOrientationDictionary(
     ocrText: keyedNoteProbe.ocrText,
   });
 
-  const lineAudit = await input.facade.getLineStyleObservations(planPage);
   let selectedOwnershipRunKey: string | null = null;
-  for (const entry of lineAudit.entries) {
-    if (
-      entry.isHeavyLine &&
-      entry.nearRunKey &&
-      entry.distancePt != null &&
-      entry.distancePt < 25
-    ) {
-      selectedOwnershipRunKey = entry.nearRunKey;
-      break;
+  let lineAuditHeavyCount = 0;
+
+  if (planPage != null) {
+    const lineAudit = await input.facade.getLineStyleObservations(planPage);
+    lineAuditHeavyCount = lineAudit.heavyLineNearRunCount;
+    for (const entry of lineAudit.entries) {
+      if (
+        entry.isHeavyLine &&
+        entry.nearRunKey &&
+        entry.distancePt != null &&
+        entry.distancePt < 25
+      ) {
+        selectedOwnershipRunKey = entry.nearRunKey;
+        break;
+      }
     }
   }
 
@@ -151,33 +162,35 @@ export async function buildOrientationDictionary(
     });
   }
 
-  hypotheses.push({
-    id: "hyp-graphic-shear-class",
-    status: keyedNoteProbe.hasSwKeyedNote ? "established_rule" : "hypothesis",
-    conventionClass: "heavy-linework",
-    claim:
-      "Heavy structural wall linework on main floor plan indicates shear-wall class when S1.1 keyed-note / schedule vocabulary governs graphic convention.",
-    provenance: [
-      {
-        kind: "compiler",
-        pageNumber: planPage,
-        toolCallId: "orientation-line-style-audit",
-      },
-      ...(keyedNoteProbe.hasSwKeyedNote
-        ? [
-            {
-              kind: "ocr" as const,
-              pageNumber: schedulePage,
-              region: keyedNoteProbe.region,
-              toolCallId: noteToolCallId,
-            },
-          ]
-        : []),
-    ],
-  });
+  if (planPage != null) {
+    hypotheses.push({
+      id: "hyp-graphic-shear-class",
+      status: keyedNoteProbe.hasSwKeyedNote ? "established_rule" : "hypothesis",
+      conventionClass: "heavy-linework",
+      claim:
+        "Heavy structural wall linework on main floor plan indicates shear-wall class when S1.1 keyed-note / schedule vocabulary governs graphic convention.",
+      provenance: [
+        {
+          kind: "compiler",
+          pageNumber: planPage,
+          toolCallId: "orientation-line-style-audit",
+        },
+        ...(keyedNoteProbe.hasSwKeyedNote
+          ? [
+              {
+                kind: "ocr" as const,
+                pageNumber: schedulePage,
+                region: keyedNoteProbe.region,
+                toolCallId: noteToolCallId,
+              },
+            ]
+          : []),
+      ],
+    });
+  }
 
   const bindings: ProjectDictionary["bindings"] = [];
-  if (selectedOwnershipRunKey && keyedNoteProbe.hasSwKeyedNote) {
+  if (planPage != null && selectedOwnershipRunKey && keyedNoteProbe.hasSwKeyedNote) {
     bindings.push({
       physicalRunKey: selectedOwnershipRunKey,
       referenceKey: "shear-wall",
@@ -199,45 +212,49 @@ export async function buildOrientationDictionary(
     });
   }
 
-  const unresolved: ProjectDictionary["unresolved"] = [
-    {
+  const unresolved: ProjectDictionary["unresolved"] = [];
+  if (planPage != null) {
+    unresolved.push({
       id: `unresolved-sw-subtype-p${planPage}`,
       question:
         `Which physical runs on p${planPage} (if any) bind to specific SW schedule subtypes (SW1–SW5)?`,
       reason:
         `Graphic convention and keyed notes establish shear-wall class and schedule definitions; per-wall SW* tags are not recoverable on plan page ${planPage}.`,
-    },
-  ];
+    });
+  }
+
+  const observations: ProjectDictionary["observations"] = [];
+  if (planPage != null) {
+    observations.push({
+      id: `obs-heavy-lines-p${planPage}`,
+      claim: `${lineAuditHeavyCount} heavy-linework segments coincide with PBG runs on page ${planPage}.`,
+      provenance: [
+        {
+          kind: "compiler",
+          pageNumber: planPage,
+          toolCallId: "orientation-line-style-audit",
+        },
+      ],
+    });
+  }
+  observations.push({
+    id: `obs-schedule-defs-p${schedulePage}`,
+    claim: `Schedule definitions extracted: ${definitions.length} row(s) on page ${schedulePage}.`,
+    provenance: [
+      {
+        kind: "compiler",
+        pageNumber: schedulePage,
+        toolCallId: "orientation-schedule-extraction",
+      },
+    ],
+  });
 
   const dictionary: ProjectDictionary = {
     projectId: input.projectId,
     generatedAt: new Date().toISOString(),
     interpreterModel: "orientation-l7-deterministic",
     experimentBranch: "compiler_heavy",
-    observations: [
-      {
-        id: `obs-heavy-lines-p${planPage}`,
-        claim: `${lineAudit.heavyLineNearRunCount} heavy-linework segments coincide with PBG runs on page ${planPage}.`,
-        provenance: [
-          {
-            kind: "compiler",
-            pageNumber: planPage,
-            toolCallId: "orientation-line-style-audit",
-          },
-        ],
-      },
-      {
-        id: "obs-schedule-defs-p1",
-        claim: `Schedule definitions extracted: ${definitions.length} row(s) on page ${schedulePage}.`,
-        provenance: [
-          {
-            kind: "compiler",
-            pageNumber: schedulePage,
-            toolCallId: "orientation-schedule-extraction",
-          },
-        ],
-      },
-    ],
+    observations,
     hypotheses,
     definitions: dictionaryDefinitions,
     bindings,
@@ -256,7 +273,7 @@ export async function buildOrientationDictionary(
     definitions,
     establishedRules: hypotheses.filter((h) => h.status === "established_rule"),
     dictionaryDefinitions,
-    referenceMechanismHint: "GRAPHIC_CONVENTION",
+    referenceMechanismHint: planPage != null ? "GRAPHIC_CONVENTION" : null,
     graphicConventionAuthorized: hypotheses.some(
       (h) =>
         h.id === "hyp-graphic-shear-class" && h.status === "established_rule",
