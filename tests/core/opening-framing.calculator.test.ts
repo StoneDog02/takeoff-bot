@@ -837,3 +837,182 @@ describe("calculateFramingTakeoff opening quantities", () => {
   });
 });
 
+describe("S4-OP-1 opening framing Unresolved projections", () => {
+  it("emits jackStudCount Unresolved when jackStudCount is missing and does not invent from width", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([
+        buildOpening({
+          jackStudCount: null,
+          resolutionTraces: [
+            resolvedTrace("quantity"),
+            resolvedTrace("dimensions.roughWidthFeet"),
+            resolvedTrace("dimensions.roughHeightFeet"),
+          ],
+        }),
+      ]),
+      buildWallFraming(),
+    );
+
+    const jackLines = result.materials.filter(
+      (item) => item.quantityKey === OPENING_QUANTITY_KEYS.jackStuds,
+    );
+    const jackUnresolved = result.unresolved.filter(
+      (record) => record.propertyPath === "jackStudCount",
+    );
+
+    assert.equal(jackLines.length, 0);
+    assert.equal(jackUnresolved.length, 1);
+    assert.match(
+      jackUnresolved[0]?.explanation ?? "",
+      /no quantity is invented from opening width/i,
+    );
+  });
+
+  it("emits headerDesign Unresolved when headerMemberId is missing and does not invent header size", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([
+        buildOpening({
+          headerMemberId: null,
+          resolutionTraces: [
+            resolvedTrace("quantity"),
+            resolvedTrace("dimensions.roughWidthFeet"),
+            resolvedTrace("dimensions.roughHeightFeet"),
+          ],
+        }),
+      ]),
+      buildWallFraming(),
+    );
+
+    const headerLines = result.materials.filter(
+      (item) => item.quantityKey === OPENING_QUANTITY_KEYS.header,
+    );
+    const headerUnresolved = result.unresolved.filter(
+      (record) => record.propertyPath === "headerMemberId",
+    );
+
+    assert.equal(headerLines.length, 0);
+    assert.equal(headerUnresolved.length, 1);
+    assert.match(
+      headerUnresolved[0]?.explanation ?? "",
+      /no header size\/plies are invented from opening width/i,
+    );
+  });
+
+  it("does not emit header Unresolved when headerMemberId is linked", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([
+        buildOpening({
+          headerMemberId: "SM-HDR-001",
+          resolutionTraces: [
+            resolvedTrace("quantity"),
+            resolvedTrace("dimensions.roughWidthFeet"),
+            resolvedTrace("dimensions.roughHeightFeet"),
+          ],
+        }),
+      ]),
+      buildWallFraming(),
+    );
+
+    const headerUnresolved = result.unresolved.filter(
+      (record) => record.propertyPath === "headerMemberId",
+    );
+
+    assert.equal(headerUnresolved.length, 0);
+  });
+
+  it("does not emit duplicate opening-header line when headerMemberId is linked", () => {
+    const openings = buildOpenings([
+      buildOpening({
+        headerMemberId: "SM-HDR-001",
+        resolutionTraces: [
+          resolvedTrace("quantity"),
+          resolvedTrace("dimensions.roughWidthFeet"),
+          resolvedTrace("dimensions.roughHeightFeet"),
+        ],
+      }),
+    ]);
+    const result = calculateOpeningFraming(openings, buildWallFraming());
+
+    const headerLines = result.materials.filter(
+      (item) =>
+        item.quantityKey === OPENING_QUANTITY_KEYS.header ||
+        /header/i.test(item.canonicalClassification ?? ""),
+    );
+
+    assert.equal(headerLines.length, 0);
+  });
+
+  it("emits both jack and header Unresolved for eligible opening missing both", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([
+        buildOpening({
+          jackStudCount: null,
+          headerMemberId: null,
+          resolutionTraces: [
+            resolvedTrace("quantity"),
+            resolvedTrace("dimensions.roughWidthFeet"),
+            resolvedTrace("dimensions.roughHeightFeet"),
+          ],
+        }),
+      ]),
+      buildWallFraming(),
+    );
+
+    const jackUnresolved = result.unresolved.filter(
+      (record) => record.propertyPath === "jackStudCount",
+    );
+    const headerUnresolved = result.unresolved.filter(
+      (record) => record.propertyPath === "headerMemberId",
+    );
+
+    assert.equal(jackUnresolved.length, 1);
+    assert.equal(headerUnresolved.length, 1);
+    assert.equal(result.unresolved.length, 2);
+  });
+
+  it("does not emit header Unresolved for non-wood walls", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([
+        buildOpening({
+          headerMemberId: null,
+        }),
+      ]),
+      buildWallFraming({
+        wallType: "light-gauge-metal-stud-wall",
+        assembly: {
+          material: "light-gauge-metal",
+          studSize: "6-in",
+          studSpacingInches: 16,
+          heightFeet: 8,
+          plateCount: 2,
+          sheathing: null,
+        },
+      }),
+    );
+
+    const headerUnresolved = result.unresolved.filter(
+      (record) => record.propertyPath === "headerMemberId",
+    );
+
+    assert.equal(headerUnresolved.length, 0);
+  });
+
+  it("does not emit header Unresolved for garage-door openings", () => {
+    const result = calculateOpeningFraming(
+      buildOpenings([
+        buildOpening({
+          category: "garage-door",
+          headerMemberId: null,
+        }),
+      ]),
+      buildWallFraming(),
+    );
+
+    const headerUnresolved = result.unresolved.filter(
+      (record) => record.propertyPath === "headerMemberId",
+    );
+
+    assert.equal(headerUnresolved.length, 0);
+  });
+});
+

@@ -578,6 +578,34 @@ function calculateOpeningJackStuds(
   return { materials: [lineItem], assumptions: [], unresolved: [] };
 }
 
+function isOpeningEligibleForHeader(
+  opening: Opening,
+  wall: BuildingWall,
+  segment: WallSegment,
+): boolean {
+  return isOpeningEligibleForWallFraming(opening, wall, segment);
+}
+
+function calculateOpeningHeader(
+  opening: Opening,
+  wall: BuildingWall,
+  segment: WallSegment,
+): OpeningFramingCalculationResult {
+  if (!isOpeningEligibleForHeader(opening, wall, segment)) {
+    return { materials: [], assumptions: [], unresolved: [] };
+  }
+
+  if (opening.headerMemberId !== null) {
+    return { materials: [], assumptions: [], unresolved: [] };
+  }
+
+  return {
+    materials: [],
+    assumptions: [],
+    unresolved: [createHeaderDesignUnresolved(opening)],
+  };
+}
+
 function calculateOpeningKingStuds(
   opening: Opening,
   wall: BuildingWall,
@@ -785,23 +813,27 @@ export function calculateOpeningFraming(
     const jackResult = calculateOpeningJackStuds(opening, wall, segment);
     const sillResult = calculateOpeningRoughSill(opening, wall, segment);
     const crippleResult = calculateOpeningCripples(opening, wall, segment);
+    const headerResult = calculateOpeningHeader(opening, wall, segment);
     materials.push(
       ...kingResult.materials,
       ...jackResult.materials,
       ...sillResult.materials,
       ...crippleResult.materials,
+      ...headerResult.materials,
     );
     assumptions.push(
       ...kingResult.assumptions,
       ...jackResult.assumptions,
       ...sillResult.assumptions,
       ...crippleResult.assumptions,
+      ...headerResult.assumptions,
     );
     unresolved.push(
       ...kingResult.unresolved,
       ...jackResult.unresolved,
       ...sillResult.unresolved,
       ...crippleResult.unresolved,
+      ...headerResult.unresolved,
     );
   }
 

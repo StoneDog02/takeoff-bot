@@ -162,6 +162,41 @@ describe("S3-UN-1 honesty records", () => {
     );
   });
 
+  it("does not emit headerDesign Unresolved when headerMemberId is linked", () => {
+    const construction = openingTakeoffConstruction();
+    const calculated = calculateFramingTakeoff(construction);
+
+    const headerUnresolved = calculated.unresolved.filter(
+      (record) => record.propertyPath === "headerMemberId",
+    );
+
+    assert.equal(headerUnresolved.length, 0);
+  });
+
+  it("emits headerDesign Unresolved when headerMemberId is missing", () => {
+    const construction = openingTakeoffConstruction();
+    construction.openings.openings = construction.openings.openings.map((opening) => ({
+      ...opening,
+      headerMemberId: null,
+    }));
+    const calculated = calculateFramingTakeoff(construction);
+
+    const headerUnresolved = calculated.unresolved.filter(
+      (record) => record.propertyPath === "headerMemberId",
+    );
+
+    assert.equal(headerUnresolved.length, 1);
+    assert.equal(
+      headerUnresolved[0]?.reasonCode,
+      HONESTY_RULE_IDS.headerDesignUnresolved,
+    );
+    assert.equal(headerUnresolved[0]?.physicalId, "O-001");
+    assert.match(
+      headerUnresolved[0]?.explanation ?? "",
+      /no header size\/plies are invented from opening width/i,
+    );
+  });
+
   it("keeps king/sill/cripple quantities while surfacing reviewRequired Reviews", () => {
     const construction = openingTakeoffConstruction();
     const calculated = calculateFramingTakeoff(construction);
