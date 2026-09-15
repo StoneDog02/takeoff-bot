@@ -6,6 +6,7 @@ import {
   countRegularlySpacedJoists,
   isSimpleAreaJoistLinearFeetTypeSupported,
 } from "../../src/framing/calculate/calculateFloorFraming.js";
+import { enumerateJoistLayoutPositionsInches } from "../../src/framing/calculate/netStudDeduction.js";
 import type { FloorFramingPayload } from "../../src/framing/schemas/framing-artifacts.schema.js";
 import { framingMaterialLineItemSchema } from "../../src/framing/schemas/material.schema.js";
 import type {
@@ -292,5 +293,60 @@ describe("calculateFloorFraming", () => {
       materials.some((item) => item.sourceObjectIds.includes("SM-008")),
       false,
     );
+  });
+});
+
+/**
+ * S4-LY-1: Joist position-census fixture.
+ *
+ * Per V1 spec §16.2 / §18: purchased regularly spaced joist count = enumerated layout positions.
+ * The formula `ceil((L*12)/spacing)+1` is a sanity check, not authority.
+ */
+describe("joist position-census (S4-LY-1)", () => {
+  it("count equals position array length for 20 ft @ 16 in OC (Brain worked example)", () => {
+    const positions = enumerateJoistLayoutPositionsInches(20, 16);
+    const count = countRegularlySpacedJoists(20, 16);
+    assert.equal(count, positions.length, "count must equal enumerated positions");
+    assert.equal(count, 16);
+    assert.equal(positions[0], 0);
+    assert.equal(positions[positions.length - 1], 240);
+  });
+
+  it("count equals position array length for 40 ft @ 16 in OC (W4-C crawl case)", () => {
+    const positions = enumerateJoistLayoutPositionsInches(40, 16);
+    const count = countRegularlySpacedJoists(40, 16);
+    assert.equal(count, positions.length, "count must equal enumerated positions");
+    assert.equal(count, 31);
+    assert.equal(positions[0], 0);
+    assert.equal(positions[positions.length - 1], 480);
+  });
+
+  it("count equals position array length for 12 ft @ 16 in OC (short final bay)", () => {
+    const positions = enumerateJoistLayoutPositionsInches(12, 16);
+    const count = countRegularlySpacedJoists(12, 16);
+    assert.equal(count, positions.length, "count must equal enumerated positions");
+    assert.equal(count, 10);
+  });
+
+  it("count equals position array length for 19.5 ft @ 16 in OC (non-integer spaces)", () => {
+    const positions = enumerateJoistLayoutPositionsInches(19.5, 16);
+    const count = countRegularlySpacedJoists(19.5, 16);
+    assert.equal(count, positions.length, "count must equal enumerated positions");
+    assert.equal(count, 16);
+  });
+
+  it("count equals position array length for 24 in OC spacing", () => {
+    const positions = enumerateJoistLayoutPositionsInches(24, 24);
+    const count = countRegularlySpacedJoists(24, 24);
+    assert.equal(count, positions.length, "count must equal enumerated positions");
+    assert.equal(count, 13);
+  });
+
+  it("W4-C 31 joists: positions are [0, 16, 32, ... 480] with 31 elements", () => {
+    const positions = enumerateJoistLayoutPositionsInches(40, 16);
+    assert.equal(positions.length, 31, "W4-C crawl must have 31 joist positions");
+    const expectedPositions = Array.from({ length: 31 }, (_, i) => i * 16);
+    expectedPositions[30] = 480;
+    assert.deepEqual(positions, expectedPositions);
   });
 });

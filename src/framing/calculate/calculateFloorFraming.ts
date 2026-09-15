@@ -15,6 +15,9 @@ import { FLOOR_QUANTITY_KEYS } from "../validators/rule-ids.js";
 import { collectLineItemProvenance } from "./collectLineItemProvenance.js";
 import { createMaterialLineItemId } from "./ids.js";
 import { isQuantityInputResolved } from "./isQuantityInputResolved.js";
+import { countRegularlySpacedJoists } from "./netStudDeduction.js";
+
+export { countRegularlySpacedJoists };
 
 const LAYOUT_LENGTH_PROPERTY_PATH = "joistLayoutLengthFeet";
 const MEMBER_LENGTH_PROPERTY_PATH = "joistMemberLengthFeet";
@@ -58,18 +61,6 @@ export function isSimpleAreaJoistLinearFeetTypeSupported(
     token.startsWith("dimensional-") ||
     token === "dimensional"
   );
-}
-
-/**
- * Baseline regularly spaced floor joist count for one Floor Framing Area.
- *
- * Formula: `knowledge/framing/14-floor-framing-calculations.md`.
- */
-export function countRegularlySpacedJoists(
-  joistLayoutLengthFeet: number,
-  joistSpacingInches: number,
-): number {
-  return Math.ceil((joistLayoutLengthFeet * 12) / joistSpacingInches) + 1;
 }
 
 function emitLineItem(
