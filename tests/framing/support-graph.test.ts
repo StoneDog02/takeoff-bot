@@ -35,6 +35,7 @@ describe("S3-SG-1 SupportGraph on FramingConstruction", () => {
       }),
       ...buildHeaderEvidenceForSubject("HDR-001", "E-HDR-001", {
         lengthFeet: 6,
+        supportedOpeningTag: "O-001",
       }),
     ];
 
@@ -49,15 +50,32 @@ describe("S3-SG-1 SupportGraph on FramingConstruction", () => {
     assert.ok(opening);
     assert.ok(member);
     assert.equal(opening.headerMemberId, "SM-HDR-001");
+    assert.ok(
+      member.supportedObjectIds.includes("O-001"),
+      "member.supportedObjectIds must include the opening",
+    );
 
     assert.ok(construction.supportGraph);
     assert.equal(construction.supportGraph.edges.length, 1);
 
     const edge = construction.supportGraph.edges[0];
     assert.ok(edge);
-    assert.equal(edge.supportedPhysicalId, opening.physicalId);
+    assert.equal(
+      edge.supportedPhysicalId,
+      opening.id,
+      "supportedPhysicalId = opening.id (occurrence ObjectId, not shared physicalId)",
+    );
     assert.equal(edge.conditionKind, "opening-header");
-    assert.equal(edge.supportingPhysicalId, member.physicalId);
+    assert.equal(
+      edge.supportingPhysicalId,
+      member.physicalId,
+      "supportingPhysicalId = header member physicalId",
+    );
+    assert.notEqual(
+      edge.supportedPhysicalId,
+      edge.supportingPhysicalId,
+      "No self-loop: supported !== supporting",
+    );
   });
 
   it("AC2: no-invented-edge fixture — no joist/beam/post/hanger/panel/connection edges invented", () => {
@@ -131,23 +149,37 @@ describe("S3-SG-1 SupportGraph on FramingConstruction", () => {
     assert.equal(connectionEdges.length, 0, "No connection edges should be invented");
   });
 
-  it("AC3: two-plates-stay-two fixture — distinct sill/plates remain distinct (no universal merge)", () => {
+  it("AC3: two-plates-stay-two fixture — distinct wall segments (plate carriers) remain distinct (no universal merge)", () => {
     const construction = buildFramingConstructionFromEvidence([
       ...buildWallEvidenceForSubject("W-001", "E-W001"),
       ...buildWallEvidenceForSubject("W-002", "E-W002"),
     ]);
 
-    assert.equal(construction.walls.walls.length, 2);
-    const [first, second] = construction.walls.walls;
-    assert.ok(first);
-    assert.ok(second);
-    assert.notEqual(first.id, second.id);
-    assert.notEqual(first.physicalId, second.physicalId);
-    assert.equal(first.physicalId, first.id);
-    assert.equal(second.physicalId, second.id);
+    assert.equal(construction.walls.segments.length, 2, "Two wall segments (plate carriers)");
+    const [firstSegment, secondSegment] = construction.walls.segments;
+    assert.ok(firstSegment);
+    assert.ok(secondSegment);
+    assert.notEqual(firstSegment.id, secondSegment.id);
+    assert.notEqual(firstSegment.physicalId, secondSegment.physicalId);
+    assert.equal(firstSegment.physicalId, firstSegment.id);
+    assert.equal(secondSegment.physicalId, secondSegment.id);
 
-    const wallPhysicalIds = new Set([first.physicalId, second.physicalId]);
-    assert.equal(wallPhysicalIds.size, 2, "Two walls should have two distinct physicalIds");
+    const segmentPhysicalIds = new Set([firstSegment.physicalId, secondSegment.physicalId]);
+    assert.equal(
+      segmentPhysicalIds.size,
+      2,
+      "Two wall segments (plate carriers) should have two distinct physicalIds",
+    );
+
+    assert.equal(construction.walls.walls.length, 2, "Two walls");
+    const [firstWall, secondWall] = construction.walls.walls;
+    assert.ok(firstWall);
+    assert.ok(secondWall);
+    assert.notEqual(firstWall.physicalId, secondWall.physicalId);
+    assert.ok(
+      firstWall.assembly.plateCount != null || secondWall.assembly.plateCount != null,
+      "At least one wall has plate count (plate data)",
+    );
   });
 
   it("AC4: idempotent projection — running buildSupportGraph twice yields the same edges", () => {
@@ -160,6 +192,7 @@ describe("S3-SG-1 SupportGraph on FramingConstruction", () => {
       }),
       ...buildHeaderEvidenceForSubject("HDR-001", "E-HDR-001", {
         lengthFeet: 6,
+        supportedOpeningTag: "O-001",
       }),
       ...buildOpeningEvidenceForSubject("O-002", "E-O002", {
         category: "door",
@@ -169,6 +202,7 @@ describe("S3-SG-1 SupportGraph on FramingConstruction", () => {
       }),
       ...buildHeaderEvidenceForSubject("HDR-002", "E-HDR-002", {
         lengthFeet: 4,
+        supportedOpeningTag: "O-002",
       }),
     ];
 
@@ -260,5 +294,104 @@ describe("S3-SG-1 SupportGraph on FramingConstruction", () => {
 
     assert.ok(construction.supportGraph);
     assert.deepEqual(construction.supportGraph.edges, []);
+  });
+
+  it("edge requires BOTH headerMemberId AND supportedObjectIds established by linker", () => {
+    const records = [
+      ...buildOpeningEvidenceForSubject("O-LINKED", "E-LINKED", {
+        category: "window",
+        nominalWidthFeet: 3,
+        nominalHeightFeet: 4,
+        headerMemberTag: "HDR-LINKED",
+      }),
+      ...buildHeaderEvidenceForSubject("HDR-LINKED", "E-HDR-LINKED", {
+        lengthFeet: 6,
+      }),
+    ];
+
+    const construction = buildFramingConstructionFromEvidence(records);
+    const opening = construction.openings.openings.find(
+      (o) => o.id === "O-LINKED",
+    );
+    const member = construction.structuralMembers.structuralMembers.find(
+      (m) => m.id === "SM-HDR-LINKED",
+    );
+    assert.ok(opening);
+    assert.ok(member);
+
+    assert.equal(
+      opening.headerMemberId,
+      "SM-HDR-LINKED",
+      "Linker sets opening.headerMemberId",
+    );
+    assert.ok(
+      member.supportedObjectIds.includes("O-LINKED"),
+      "Linker backlinks: member.supportedObjectIds includes the opening",
+    );
+
+    assert.equal(
+      construction.supportGraph.edges.length,
+      1,
+      "Edge emitted when both sides are linked by the linker",
+    );
+
+    const edge = construction.supportGraph.edges[0];
+    assert.ok(edge);
+    assert.equal(edge.supportedPhysicalId, opening.id);
+    assert.equal(edge.supportingPhysicalId, member.physicalId);
+    assert.notEqual(edge.supportedPhysicalId, edge.supportingPhysicalId);
+  });
+
+  it("self-loop prevented: supportedPhysicalId !== supportingPhysicalId", () => {
+    const records = [
+      ...buildOpeningEvidenceForSubject("O-SL", "E-OSL", {
+        category: "window",
+        nominalWidthFeet: 3,
+        nominalHeightFeet: 4,
+        headerMemberTag: "HDR-SL",
+      }),
+      ...buildHeaderEvidenceForSubject("HDR-SL", "E-HDR-SL", {
+        lengthFeet: 6,
+        supportedOpeningTag: "O-SL",
+      }),
+    ];
+
+    const construction = buildFramingConstructionFromEvidence(records);
+
+    const opening = construction.openings.openings.find((o) => o.id === "O-SL");
+    const member = construction.structuralMembers.structuralMembers.find(
+      (m) => m.id === "SM-HDR-SL",
+    );
+    assert.ok(opening);
+    assert.ok(member);
+
+    assert.equal(
+      opening.physicalId,
+      member.physicalId,
+      "S3-ID-1: linked opening shares physicalId with header for purchase-once",
+    );
+
+    for (const edge of construction.supportGraph.edges) {
+      assert.notEqual(
+        edge.supportedPhysicalId,
+        edge.supportingPhysicalId,
+        "Self-loop prevented: supported !== supporting",
+      );
+    }
+
+    if (construction.supportGraph.edges.length > 0) {
+      const edge = construction.supportGraph.edges[0];
+      assert.ok(edge);
+      assert.equal(
+        edge.supportedPhysicalId,
+        opening.id,
+        "supportedPhysicalId = opening.id (ObjectId), not physicalId",
+      );
+      assert.equal(
+        edge.supportingPhysicalId,
+        member.physicalId,
+        "supportingPhysicalId = member.physicalId",
+      );
+    }
   });
 });

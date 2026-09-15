@@ -32,6 +32,15 @@ function compareEdges(left: SupportEdge, right: SupportEdge): number {
  * S3-SG-1 scope: only project already-established opening↔header links from
  * linkOpeningHeaderRelationships (headerMemberId + supportedObjectIds).
  *
+ * An edge is emitted ONLY when BOTH sides are established:
+ * - opening.headerMemberId points at the member
+ * - member.supportedObjectIds includes that opening
+ *
+ * Edge endpoints:
+ * - supportedPhysicalId = opening.id (the occurrence ObjectId, NOT the shared
+ *   physicalId which may equal the header for purchase-once)
+ * - supportingPhysicalId = member.physicalId (header member's canonical id)
+ *
  * Does NOT invent joist, beam, post, hanger, panel, or connection edges.
  * Missing header design stays Unresolved, not an invented edge.
  *
@@ -57,8 +66,16 @@ export function buildSupportGraph(
       continue;
     }
 
-    const supportedPhysicalId = opening.physicalId ?? opening.id;
+    if (!member.supportedObjectIds.includes(opening.id)) {
+      continue;
+    }
+
+    const supportedPhysicalId = opening.id;
     const supportingPhysicalId = member.physicalId ?? member.id;
+
+    if (supportedPhysicalId === supportingPhysicalId) {
+      continue;
+    }
 
     const edgeKey = `${supportedPhysicalId}|opening-header|${supportingPhysicalId}`;
 
