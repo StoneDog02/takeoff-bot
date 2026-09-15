@@ -349,6 +349,8 @@ function resolveOneSystem(
         decisions["panelSpecification.specificationReference"],
         null,
       ),
+      panelWidthInches: null,
+      panelHeightInches: null,
     },
   };
 
@@ -444,6 +446,9 @@ function resolveOneArea(
     ...values,
     coveredObjectIds,
     openingIds,
+    surfaceWidthFeet: null,
+    surfaceHeightFeet: null,
+    panelPieces: [],
   };
 }
 
