@@ -1,5 +1,6 @@
 import type { Assumption } from "../../core/schemas/assumption.schema.js";
 import { calculateFloorFraming } from "./calculateFloorFraming.js";
+import { calculateFoundationInterface } from "./calculateFoundationInterface.js";
 import { calculateOpeningFraming } from "./calculateOpeningFraming.js";
 import { calculateRoofFraming } from "./calculateRoofFraming.js";
 import { calculateSheathing } from "./calculateSheathing.js";
@@ -56,9 +57,15 @@ export function calculateFramingTakeoff(
   materials.push(...calculateRoofFraming(construction.roofFraming));
   materials.push(...calculateSheathing(construction.sheathing));
 
+  const foundationResult = calculateFoundationInterface(
+    construction.foundationInterface,
+  );
+  materials.push(...foundationResult.materials);
+
   const unresolved = mergeUnresolvedRecords(
     construction.unresolved ?? [],
     openingResult.unresolved,
+    foundationResult.unresolved,
   );
   const reviews = mergeReviewRecords(
     construction.reviews ?? [],

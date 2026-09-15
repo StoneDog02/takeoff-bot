@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   floorFramingPayloadSchema,
+  foundationInterfacePayloadSchema,
   openingsPayloadSchema,
   roofFramingPayloadSchema,
   sheathingPayloadSchema,
@@ -27,6 +28,7 @@ export const framingConstructionSchema = z.object({
   floorFraming: floorFramingPayloadSchema,
   roofFraming: roofFramingPayloadSchema,
   sheathing: sheathingPayloadSchema,
+  foundationInterface: foundationInterfacePayloadSchema.default({ sillSegments: [] }),
   supportGraph: supportGraphSchema.default({ edges: [] }),
   unresolved: z.array(unresolvedRecordSchema).default([]),
   reviews: z.array(reviewRecordSchema).default([]),
@@ -42,6 +44,7 @@ export function emptyFramingConstruction(): FramingConstruction {
     floorFraming: { systems: [], areas: [] },
     roofFraming: { systems: [], planes: [] },
     sheathing: { systems: [], areas: [] },
+    foundationInterface: { sillSegments: [] },
     supportGraph: { edges: [] },
     unresolved: [],
     reviews: [],
