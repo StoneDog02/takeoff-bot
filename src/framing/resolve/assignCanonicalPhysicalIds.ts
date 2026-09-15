@@ -112,6 +112,7 @@ export function collectConstructionBagObjects(
     ...construction.roofFraming.planes,
     ...construction.sheathing.systems,
     ...construction.sheathing.areas,
+    ...construction.foundationInterface.sillSegments,
   ];
 }
 
@@ -152,6 +153,11 @@ export function assignCanonicalPhysicalIds(
     sheathing: {
       systems: construction.sheathing.systems.map(defaultPhysicalIdFromObjectId),
       areas: construction.sheathing.areas.map(defaultPhysicalIdFromObjectId),
+    },
+    foundationInterface: {
+      sillSegments: construction.foundationInterface.sillSegments.map(
+        defaultPhysicalIdFromObjectId,
+      ),
     },
     supportGraph: construction.supportGraph ?? { edges: [] },
     unresolved: construction.unresolved ?? [],

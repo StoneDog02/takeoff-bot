@@ -188,6 +188,20 @@ export const ASSUMPTION_RULE_IDS = {
   targetConflict: "assumption.target.conflict",
 } as const;
 
+export const FOUNDATION_INTERFACE_RULE_IDS = {
+  sillSegmentLengthResolved: "foundation.sillSegment.length.resolved",
+  sillMaterialSizeResolved: "foundation.sillSegment.material.size.resolved",
+  sillTreatmentResolved: "foundation.sillSegment.treatment.resolved",
+  supportTypeResolved: "foundation.sillSegment.supportType.resolved",
+} as const;
+
+export type FoundationInterfaceRuleId =
+  (typeof FOUNDATION_INTERFACE_RULE_IDS)[keyof typeof FOUNDATION_INTERFACE_RULE_IDS];
+
+export const FOUNDATION_INTERFACE_QUANTITY_KEYS = {
+  sillLF: "foundation.sill-linear-feet",
+} as const;
+
 export const HONESTY_RULE_IDS = {
   jackStudCountUnresolved: "opening.jackStudCount.unresolved",
   headerDesignUnresolved: "opening.headerDesign.unresolved",
@@ -195,6 +209,7 @@ export const HONESTY_RULE_IDS = {
   floorSystemLevelUnresolved: "floor-framing-system.level.unresolved",
   roofSystemLevelUnresolved: "roof-framing-system.level.unresolved",
   sheathingSystemLevelUnresolved: "sheathing-system.level.unresolved",
+  foundationSillSizeUnresolved: "foundation-sill.material.size.unresolved",
 } as const;
 
 export type AssumptionRuleId =

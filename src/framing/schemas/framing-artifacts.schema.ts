@@ -7,6 +7,10 @@ import {
   floorFramingAreaSchema,
   floorFramingSystemSchema,
 } from "./floor-framing.schema.js";
+import {
+  foundationInterfacePayloadSchema,
+  foundationSillSegmentSchema,
+} from "./foundation-sill.schema.js";
 import { framingMaterialLineItemSchema } from "./material.schema.js";
 import { openingSchema } from "./opening.schema.js";
 import {
@@ -143,6 +147,13 @@ export const sheathingPayloadSchema = z.object({
   systems: z.array(sheathingSystemSchema),
   areas: z.array(sheathingAreaSchema),
 });
+
+export { foundationInterfacePayloadSchema };
+
+export const foundationInterfaceArtifactSchema = createTypedArtifactEnvelopeSchema(
+  "foundation-interface",
+  foundationInterfacePayloadSchema,
+);
 
 export const assumptionsPayloadSchema = z.object({
   assumptions: z.array(assumptionSchema),
@@ -290,6 +301,7 @@ export type StructuralMembersPayload = z.infer<
   typeof structuralMembersPayloadSchema
 >;
 export type SheathingPayload = z.infer<typeof sheathingPayloadSchema>;
+export type FoundationInterfacePayload = z.infer<typeof foundationInterfacePayloadSchema>;
 export type AssumptionsPayload = z.infer<typeof assumptionsPayloadSchema>;
 export type FramingObjectsPayload = z.infer<
   typeof framingObjectsPayloadSchema
