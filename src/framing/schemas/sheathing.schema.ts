@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { objectIdSchema } from "../../core/schemas/identity.schema.js";
 import { resolvedObjectBaseSchema } from "../../core/schemas/resolved-object.schema.js";
+import { physicalPanelPieceSchema } from "./panel-layout.schema.js";
 
 export const sheathingApplicationSchema = z.enum([
   "wall",
@@ -22,6 +23,9 @@ export const sheathingConstructionPhaseSchema = z.enum([
  *
  * These fields record extracted specification data. They do not define
  * material taxonomy or compute panel counts.
+ *
+ * Per S4-PN-1: explicit panel W×L (panelWidthInches, panelHeightInches) are
+ * required for physical panel layout. Do NOT invent 4×8 when missing.
  */
 export const sheathingPanelSpecificationSchema = z.object({
   panelType: z.string().trim().min(1).nullable().default(null),
@@ -31,6 +35,8 @@ export const sheathingPanelSpecificationSchema = z.object({
   exposureRating: z.string().trim().min(1).nullable().default(null),
   edgeTreatment: z.string().trim().min(1).nullable().default(null),
   specificationReference: z.string().trim().min(1).nullable().default(null),
+  panelWidthInches: z.number().finite().positive().nullable().default(null),
+  panelHeightInches: z.number().finite().positive().nullable().default(null),
 });
 
 export const sheathingSystemSchema = resolvedObjectBaseSchema.extend({
@@ -54,6 +60,9 @@ export const sheathingAreaSchema = resolvedObjectBaseSchema.extend({
   areaSquareFeet: z.number().finite().positive().nullable().default(null),
   coveredObjectIds: z.array(objectIdSchema).default([]),
   openingIds: z.array(objectIdSchema).default([]),
+  surfaceWidthFeet: z.number().finite().positive().nullable().default(null),
+  surfaceHeightFeet: z.number().finite().positive().nullable().default(null),
+  panelPieces: z.array(physicalPanelPieceSchema).default([]),
 });
 
 export type SheathingApplication = z.infer<typeof sheathingApplicationSchema>;

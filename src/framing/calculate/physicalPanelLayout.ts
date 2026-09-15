@@ -25,6 +25,8 @@ import {
   type PhysicalPanelPiece,
   type UnsupportedEdgeRequirement,
 } from "../schemas/panel-layout.schema.js";
+
+export type { PanelLayoutResult, PhysicalPanelPiece };
 import {
   enumerateStudLayoutPositionsInches,
   enumerateJoistLayoutPositionsInches,
