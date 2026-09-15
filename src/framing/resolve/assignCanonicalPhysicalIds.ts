@@ -153,6 +153,7 @@ export function assignCanonicalPhysicalIds(
       systems: construction.sheathing.systems.map(defaultPhysicalIdFromObjectId),
       areas: construction.sheathing.areas.map(defaultPhysicalIdFromObjectId),
     },
+    supportGraph: construction.supportGraph ?? { edges: [] },
     unresolved: construction.unresolved ?? [],
     reviews: construction.reviews ?? [],
   });

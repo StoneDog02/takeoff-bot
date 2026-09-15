@@ -12,6 +12,7 @@ import {
   reviewRecordSchema,
   unresolvedRecordSchema,
 } from "./honesty-records.schema.js";
+import { supportGraphSchema } from "./support-graph.schema.js";
 
 /**
  * Production reader → calculator boundary for the factory reset.
@@ -26,6 +27,7 @@ export const framingConstructionSchema = z.object({
   floorFraming: floorFramingPayloadSchema,
   roofFraming: roofFramingPayloadSchema,
   sheathing: sheathingPayloadSchema,
+  supportGraph: supportGraphSchema.default({ edges: [] }),
   unresolved: z.array(unresolvedRecordSchema).default([]),
   reviews: z.array(reviewRecordSchema).default([]),
 });
@@ -40,6 +42,7 @@ export function emptyFramingConstruction(): FramingConstruction {
     floorFraming: { systems: [], areas: [] },
     roofFraming: { systems: [], planes: [] },
     sheathing: { systems: [], areas: [] },
+    supportGraph: { edges: [] },
     unresolved: [],
     reviews: [],
   };
