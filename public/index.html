@@ -31,6 +31,14 @@
         >
           Export Developer Run
         </button>
+        <button
+          id="export-benchmark-csv-btn"
+          type="button"
+          class="secondary hidden"
+          disabled
+        >
+          Export Benchmark CSV
+        </button>
         <button id="run-takeoff-btn" type="button">Run Takeoff</button>
       </div>
     </header>
@@ -82,6 +90,45 @@
             </thead>
             <tbody></tbody>
           </table>
+        </div>
+        <h3>Beckstead framing benchmark</h3>
+        <p id="benchmark-run-meta" class="panel-summary">
+          Run a takeoff to load the canonical CMP + XPL grade sheet.
+        </p>
+        <p id="benchmark-error" class="panel-summary hidden"></p>
+        <div id="benchmark-summary" class="benchmark-summary-grid hidden">
+          <section class="benchmark-block" id="benchmark-coverage">
+            <h4>Coverage</h4>
+            <dl></dl>
+          </section>
+          <section class="benchmark-block" id="benchmark-agreement">
+            <h4>Quantity agreement</h4>
+            <p class="benchmark-agreement-note"></p>
+            <dl></dl>
+          </section>
+          <section class="benchmark-block" id="benchmark-explainability">
+            <h4>Explainability / resolution</h4>
+            <dl></dl>
+          </section>
+        </div>
+        <div class="table-wrap">
+          <table id="benchmark-table">
+            <thead>
+              <tr>
+                <th>Family / spec</th>
+                <th>Our qty</th>
+                <th>Burton qty</th>
+                <th>Delta</th>
+                <th>Status</th>
+                <th>Diagnostic class</th>
+                <th>Provenance</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="benchmark-row-detail" class="benchmark-detail">
+          <p>Select a comparison row to inspect OUR-side provenance.</p>
         </div>
       </section>
     </main>

@@ -144,6 +144,48 @@ export function createUiServer(service = new FramingTakeoffService()) {
         return;
       }
 
+      const benchmarkJsonMatch = pathname.match(
+        /^\/api\/sessions\/([^/]+)\/beckstead-benchmark$/,
+      );
+      if (request.method === "GET" && benchmarkJsonMatch) {
+        const sessionId = decodeURIComponent(benchmarkJsonMatch[1]!);
+        try {
+          const result = service.getBecksteadBenchmark(sessionId);
+          sendJson(response, 200, result);
+        } catch (error) {
+          if (error instanceof DeveloperExportForbiddenError) {
+            sendJson(response, 403, { error: error.message });
+            return;
+          }
+          sendJson(response, 404, { error: "Session not found." });
+        }
+        return;
+      }
+
+      const benchmarkCsvMatch = pathname.match(
+        /^\/api\/sessions\/([^/]+)\/beckstead-benchmark\.csv$/,
+      );
+      if (request.method === "GET" && benchmarkCsvMatch) {
+        const sessionId = decodeURIComponent(benchmarkCsvMatch[1]!);
+        try {
+          const csv = service.getBecksteadBenchmarkCsv(sessionId);
+          response.writeHead(200, {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition":
+              'attachment; filename="beckstead-burton-benchmark.csv"',
+            "Cache-Control": "no-store",
+          });
+          response.end(csv);
+        } catch (error) {
+          if (error instanceof DeveloperExportForbiddenError) {
+            sendJson(response, 403, { error: error.message });
+            return;
+          }
+          sendJson(response, 404, { error: "Session not found." });
+        }
+        return;
+      }
+
       sendJson(response, 404, { error: "Not found." });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

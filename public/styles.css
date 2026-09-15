@@ -205,8 +205,105 @@ tbody tr.gap-unaccounted {
   background: #f8fafc;
 }
 
+.benchmark-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.benchmark-block {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+}
+
+.benchmark-block h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #4b5563;
+}
+
+.benchmark-block dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+}
+
+.benchmark-agreement-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: #4b5563;
+}
+
+.benchmark-detail {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+.benchmark-detail h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+}
+
+.benchmark-related {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.375rem;
+}
+
+tbody tr.benchmark-row {
+  cursor: pointer;
+}
+
+tbody tr.benchmark-row.selected {
+  outline: 2px solid #6366f1;
+}
+
+tbody tr.status-match {
+  background: #f0fdf4;
+}
+
+tbody tr.status-within {
+  background: #ecfeff;
+}
+
+tbody tr.status-outside {
+  background: #fff7ed;
+}
+
+tbody tr.status-ours-only {
+  background: #f5f3ff;
+}
+
+tbody tr.status-not-comparable {
+  background: #f8fafc;
+}
+
+tbody tr.status-missing-ours {
+  background: #fafafa;
+}
+
+tbody tr.status-unresolved {
+  background: #fffbeb;
+}
+
 @media (max-width: 900px) {
   .path-input {
     min-width: 100%;
+  }
+
+  .benchmark-summary-grid {
+    grid-template-columns: 1fr;
   }
 }

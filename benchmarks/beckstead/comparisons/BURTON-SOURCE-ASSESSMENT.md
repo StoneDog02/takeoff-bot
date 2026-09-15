@@ -71,3 +71,4 @@ Burton lines are **purchasable stock / package BOM** — downstream of calculate
 - **Investigation trigger** — missing categories, scope gaps, methodology differences
 - **Not ground truth** — do not tune engine to maximize Burton agreement
 - **Scope tags required** on every comparison row before any numeric delta
+- **Fixture status (B-FIX-1):** `normalized/burton-takeoff.normalized.json` is a freeze **candidate**. All 90 product lines are classified; every `comparisonEligible` is false until Stoney + ChatGPT review.

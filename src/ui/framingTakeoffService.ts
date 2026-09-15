@@ -4,6 +4,11 @@ import { resolveUseMockAi } from "../config/aiMode.js";
 import { isAnthropicConfigured } from "../config/env.js";
 import { generateUiSessionId } from "../core/utils/ids.js";
 import { indexPlan } from "../pdf/indexPlan.js";
+import { compareBurtonBenchmark } from "../framing/benchmark/compareBurtonBenchmark.js";
+import { explainBurtonBenchmarkComparison } from "../framing/benchmark/explainBurtonBenchmark.js";
+import { exportBurtonBenchmarkCsv } from "../framing/benchmark/exportBurtonBenchmarkCsv.js";
+import { loadBurtonBenchmarkFixture } from "../framing/benchmark/loadBurtonBenchmarkFixture.js";
+import type { BenchmarkComparisonResult } from "../framing/benchmark/benchmarkComparison.schema.js";
 import {
   runFramingTakeoff,
   type RunFramingTakeoffResult,
@@ -14,6 +19,7 @@ import {
   buildDeveloperRunExport,
   type DeveloperRunExport,
 } from "./buildDeveloperRunExport.js";
+import { loadOptionalExplainInputs } from "./loadOptionalExplainInputs.js";
 
 export type UiAccessMode = "customer" | "developer";
 
@@ -54,6 +60,7 @@ type FramingTakeoffSession = {
   projectId: string;
   pdfPath: string;
   result: RunFramingTakeoffResult;
+  benchmarkResult?: BenchmarkComparisonResult;
 };
 
 /**
@@ -177,11 +184,56 @@ export class FramingTakeoffService {
     return buildDeveloperRunExport(state);
   }
 
-  private toViewState(sessionId: string): TakeoffViewState {
+  /**
+   * Developer-only canonical CMP → XPL result. Cached per session.
+   * Does not recompute comparison in the UI client.
+   */
+  getBecksteadBenchmark(sessionId: string): BenchmarkComparisonResult {
+    if (this.accessMode !== "developer") {
+      throw new DeveloperExportForbiddenError();
+    }
+    const session = this.requireSession(sessionId);
+    if (session.benchmarkResult) {
+      return session.benchmarkResult;
+    }
+    const takeoff = session.result.takeoff;
+    if (!takeoff) {
+      throw new Error(`Session '${sessionId}' has no takeoff.`);
+    }
+    const benchmark = loadBurtonBenchmarkFixture(process.cwd());
+    const comparison = compareBurtonBenchmark({
+      takeoff,
+      benchmark,
+      runId: session.id,
+      runKind: "live",
+    });
+    const extras = loadOptionalExplainInputs(session.result.debugPaths);
+    const explained = explainBurtonBenchmarkComparison({
+      comparison,
+      takeoff,
+      construction: session.result.construction ?? undefined,
+      constructionKind: "session-post-calc",
+      evidence: extras.evidence,
+      readComplete: extras.readComplete,
+    });
+    session.benchmarkResult = explained;
+    return explained;
+  }
+
+  getBecksteadBenchmarkCsv(sessionId: string): string {
+    return exportBurtonBenchmarkCsv(this.getBecksteadBenchmark(sessionId));
+  }
+
+  private requireSession(sessionId: string): FramingTakeoffSession {
     const session = this.sessions.get(sessionId);
     if (!session) {
       throw new Error(`Unknown UI session '${sessionId}'.`);
     }
+    return session;
+  }
+
+  private toViewState(sessionId: string): TakeoffViewState {
+    const session = this.requireSession(sessionId);
     const takeoff = session.result.takeoff!;
     const accounting = session.result.accounting!;
 
@@ -208,6 +260,7 @@ export class FramingTakeoffService {
       materialCount: takeoff.materials.length,
       limitations: [
         "Developer mode: same contractor takeoff plus taxonomy accounting diagnostics.",
+        "Beckstead benchmark is a separate diagnostic grade sheet (coverage / quantity agreement / explainability). It is not a combined accuracy score.",
         "Customer mode omits diagnostics (TAKEOFF_UI_ACCESS=customer).",
       ],
     };
